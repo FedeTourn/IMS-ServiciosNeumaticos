@@ -1,0 +1,23 @@
+# ------------------------------
+# Archivo .gitignore Global (Raíz del Proyecto)
+# ------------------------------
+
+# 1. Archivos de Entorno (CRÍTICO)
+# Ignora todos los archivos .env sensibles que contienen credenciales de DB o tokens.
+# Asegúrate de que tu .env en /backend sea ignorado.
+.env
+
+# 2. Carpetas de Dependencias Generales
+# Ya están ignoradas por el .gitignore de /frontend, pero lo añadimos por si acaso.
+/node_modules
+
+# 3. Ignorar carpetas Node/NPM
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 4. Ignorar subproyectos que tienen su propia configuración:
+# Nota: Esto no ignora el código fuente, solo las carpetas de dependencias y compilación si estuvieran en la raíz.
+# Dejamos la carpeta 'frontend' para que se use su propio .gitignore interno.
+# Si tu backend tiene su propio node_modules en /backend:
+/backend/node_modules

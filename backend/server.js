@@ -1,6 +1,22 @@
-const express = require('express');
+// Este es el punto de inicio de la aplicación
+const app = require('./src/app');
+require('dotenv').config(); // Carga las variables del .env
+const port = process.env.PORT || 3001;
+
+// Escucha en el puerto definido
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+  console.log(`Access at: http://localhost:${port}`);
+});
+
+
+
+
+
+/* const express = require('express');
 const mysql = require('mysql2/promise');
 const cors = require('cors');
+
 
 const app = express();
 app.use(cors());
@@ -29,4 +45,4 @@ app.get('/ping', async (req, res) => {
   }
 });
 
-app.listen(3001, () => console.log('Backend corriendo en http://localhost:3001'));
+app.listen(3001, () => console.log('Backend corriendo en http://localhost:3001')); */
