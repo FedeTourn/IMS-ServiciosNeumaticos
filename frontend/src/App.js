@@ -25,7 +25,7 @@ function App() {
 export default App; */
 
 
-// frontend/src/App.js
+/* // frontend/src/App.js
 import React, { useState, useEffect } from 'react';
 import './App.css'; 
 
@@ -56,6 +56,23 @@ function App() {
         <p>Backend Status: {message}</p>
         <p>✅ Frontend running on port 3000 (usually)</p>
       </header>
+    </div>
+  );
+}
+
+export default App; */
+
+
+import React from 'react';
+import './App.css'; 
+import LoginPage from './pages/Login/LoginPage';
+
+function App() {
+  // En un proyecto real usarías react-router-dom para manejar las rutas
+  // Pero por ahora, mostramos directamente la página de Login
+  return (
+    <div className="App">
+      <LoginPage />
     </div>
   );
 }
