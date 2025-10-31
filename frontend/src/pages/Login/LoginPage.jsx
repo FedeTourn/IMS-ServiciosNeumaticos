@@ -1,14 +1,22 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const LoginPage = () => {
     // 1. LLAMA AL HOOK useAuth UNA SOLA VEZ AL INICIO
     // Desestructura todas las funciones y valores que necesites.
     const { signIn, signOut, isAuthenticated, user } = useAuth(); // <-- HOOKS EN EL NIVEL SUPERIOR
+    const navigate = useNavigate();
     
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+
+    if (isAuthenticated) {
+        // Si el usuario está autenticado
+        navigate('/dashboard', { replace: true });
+        return null; // No renderiza nada mientras se redirige
+    }
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -21,23 +29,13 @@ const LoginPage = () => {
 
         try {
             // Usa la función signIn desestructurada
-            await signIn(username, password); 
+            await signIn(username, password);
+            // Si tiene éxito, navegar al dashboard
+            navigate('/dashboard', { replace: true });
         } catch (err) {
             setError(err.message || "Login failed. Check server status.");
         }
     };
-
-    if (isAuthenticated) {
-        // Si el usuario está autenticado, muestra el mensaje y el botón de cerrar sesión
-        return (
-            <div style={{ padding: '20px', border: '1px solid green' }}>
-                <h2>¡Login Exitoso! ✅</h2>
-                <p>Bienvenido, {user.full_name} ({user.role})</p>
-                {/* 2. USA LA FUNCIÓN signOut DESESTRUCTURADA */}
-                <button onClick={signOut}>Cerrar Sesión</button> 
-            </div>
-        );
-    }
 
     // Formulario de Login
     return (
