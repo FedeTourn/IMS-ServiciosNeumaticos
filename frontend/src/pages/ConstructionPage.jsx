@@ -13,7 +13,7 @@ const ConstructionPage = () => {
             padding: '50px', 
             backgroundColor: '#fff3cd', 
             border: '1px solid #ffeeba',
-            margin: '50px',
+            margin: '0',
             borderRadius: '8px'
         }}>
             <h1 style={{ color: '#856404' }}>🚧 Pantalla en Construcción 🚧</h1>

@@ -10,7 +10,6 @@ const menuItems = [
     { name: 'Crear Orden', path: '/crear-orden', icon: '📝' },
     { name: 'Consultar Stock', path: '/consultar-stock', icon: '🛒' },
     { name: 'Estados de Cuenta', path: '/estados-cuenta', icon: '💰' },
-    // Puedes añadir una sección para Clientes aquí también:
     { name: 'Clientes', path: '/clientes', icon: '👥' },
 ];
 

@@ -7,6 +7,9 @@ import InicioPage from './pages/Inicio/InicioPage';
 import LoginPage from './pages/Login/LoginPage';
 import ConstructionPage from './pages/ConstructionPage';
 import Layout from './components/Layout/Layout';
+import ClientsPage from './pages/Clients/ClientsPage';
+import CreateClientPage from './pages/Clients/CreateClientPage';
+import UpdateClientPage from './pages/Clients/UpdateClientPage';
 
 import './App.css';
 
@@ -40,6 +43,12 @@ function App() {
                 <Layout>
                   <Routes>
                     <Route path='/Inicio' element={<InicioPage />}/>
+
+                    {/* --- RUTAS DE CLIENTES --- */}
+                    <Route path="/clientes" element={<ClientsPage />} /> 
+                    <Route path="/crear-cliente" element={<CreateClientPage />} /> {/* Usar la página de construcción temporalmente */}
+                    <Route path="/modificar-cliente/:id_cliente" element={<UpdateClientPage />} /> {/* Usar la página de construcción temporalmente */}
+                    {/* ------------------------- */}
                     
                     {/* --- RUTAS DE CONSTRUCCIÓN --- */}
                     <Route path="/productos-reparar" element={<ConstructionPage />} />

@@ -4,8 +4,7 @@ const db = require('./config/db.config'); // Importa el pool de conexiones para 
 
 // Importa el nuevo módulo de rutas de autenticación
 const authRoutes = require('./routes/auth.routes');
-
-
+const clientRoutes = require('./routes/client.routes'); // <-- AÑADIR ESTO
 
 // Esto va despues de todas las importaciones pq "levanta" la app express
 const app = express();
@@ -17,6 +16,7 @@ app.use(express.json()); // Para poder recibir datos JSON en las peticiones
 // --- RUTAS DE LA APLICACIÓN ---
 // Define el prefijo base /api/auth para todas las rutas del módulo
 app.use('/api/auth', authRoutes);
+app.use('/api/clients', clientRoutes);
 
 
 

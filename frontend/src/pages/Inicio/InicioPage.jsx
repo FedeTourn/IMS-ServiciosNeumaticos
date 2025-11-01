@@ -15,17 +15,7 @@ const InicioPage = () => {
 
     return (
         
-        <div style={{ padding: '20px', backgroundColor: '#f4f4f4', minHeight: '100vh' }}>
-            {/*<header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', borderBottom: '1px solid #ddd', paddingBottom: '10px' }}>
-                <h1 style={{ margin: 0 }}>Dashboard | Servicios Neumáticos</h1>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                    <span style={{ marginRight: '15px' }}>Usuario: <strong>{user.username}</strong> ({user.role})</span>
-                    <button onClick={signOut} style={{ padding: '8px 15px', backgroundColor: '#dc3545', color: 'white', border: 'none', cursor: 'pointer' }}>
-                        Cerrar Sesión
-                    </button>
-                </div>
-            </header>*/}
-            
+        <div style={{ padding: '0px', minHeight: '100vh' }}>
             <main>
                 <p>¡Bienvenido! Este es el punto de inicio para la gestión del taller.</p>
 
