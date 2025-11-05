@@ -7,9 +7,14 @@ import InicioPage from './pages/Inicio/InicioPage';
 import LoginPage from './pages/Login/LoginPage';
 import ConstructionPage from './pages/ConstructionPage';
 import Layout from './components/Layout/Layout';
+// Rutas del cliente
 import ClientsPage from './pages/Clients/ClientsPage';
 import CreateClientPage from './pages/Clients/CreateClientPage';
 import UpdateClientPage from './pages/Clients/UpdateClientPage';
+//Rutas del producto
+import ProductsPage from './pages/Products/ProductsPage';
+import RegisterReceptionPage from './pages/Products/RegisterReceptionPage';
+import UpdateProductPage from './pages/Products/UpdateProductPage';
 
 import './App.css';
 
@@ -46,13 +51,17 @@ function App() {
 
                     {/* --- RUTAS DE CLIENTES --- */}
                     <Route path="/clientes" element={<ClientsPage />} /> 
-                    <Route path="/crear-cliente" element={<CreateClientPage />} /> {/* Usar la página de construcción temporalmente */}
-                    <Route path="/modificar-cliente/:id_cliente" element={<UpdateClientPage />} /> {/* Usar la página de construcción temporalmente */}
+                    <Route path="/crear-cliente" element={<CreateClientPage />} />
+                    <Route path="/modificar-cliente/:id_cliente" element={<UpdateClientPage />} />
+                    {/* ------------------------- */}
+                    
+                    {/* --- RUTAS DE PRODUCTOS --- */}
+                    <Route path="/productos-reparar" element={<ProductsPage />} />
+                    <Route path="/producto/:id_producto" element={<UpdateProductPage />} />
+                    <Route path="/registrar-recepcion" element={<RegisterReceptionPage />} />
                     {/* ------------------------- */}
                     
                     {/* --- RUTAS DE CONSTRUCCIÓN --- */}
-                    <Route path="/productos-reparar" element={<ConstructionPage />} />
-                    <Route path="/registrar-recepcion" element={<ConstructionPage />} />
                     <Route path="/crear-orden" element={<ConstructionPage />} />
                     <Route path="/consultar-stock" element={<ConstructionPage />} />
                     <Route path="/estados-cuenta" element={<ConstructionPage />} />
