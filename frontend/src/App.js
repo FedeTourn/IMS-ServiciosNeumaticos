@@ -7,11 +7,17 @@ import InicioPage from './pages/Inicio/InicioPage';
 import LoginPage from './pages/Login/LoginPage';
 import ConstructionPage from './pages/ConstructionPage';
 import Layout from './components/Layout/Layout';
+
+// Rutas de Configuracion
+import ConfigurationPage from './pages/Configuration/ConfigurationPage';
+import UserListPage from './pages/Configuration/UserListPage';
+import UpdateUserPage from './pages/Configuration/UpdateUserPage';
+import CreateUserPage from './pages/Configuration/CreateUserPage';
 // Rutas del cliente
 import ClientsPage from './pages/Clients/ClientsPage';
 import CreateClientPage from './pages/Clients/CreateClientPage';
 import UpdateClientPage from './pages/Clients/UpdateClientPage';
-//Rutas del producto
+// Rutas del producto
 import ProductsPage from './pages/Products/ProductsPage';
 import RegisterReceptionPage from './pages/Products/RegisterReceptionPage';
 import UpdateProductPage from './pages/Products/UpdateProductPage';
@@ -60,6 +66,21 @@ function App() {
                     <Route path="/producto/:id_producto" element={<UpdateProductPage />} />
                     <Route path="/registrar-recepcion" element={<RegisterReceptionPage />} />
                     {/* ------------------------- */}
+
+                    {/* ... (Otras Rutas) ... */}
+    
+                    {/* --- RUTA PRINCIPAL DE CONFIGURACIÓN --- */}
+                    <Route path="/configuracion" element={<ConfigurationPage />} /> 
+
+                    {/* --- SUB-RUTAS DE GESTIÓN DE USUARIOS --- */}
+                    <Route path="/configuracion/usuarios" element={<UserListPage />} />
+                    <Route path="/configuracion/alta-usuario" element={<CreateUserPage />} />
+                    <Route path="/configuracion/modificar-usuario/:id_user" element={<UpdateUserPage />} />
+                    <Route path="/configuracion/roles" element={<ConstructionPage />} /> {/* Temporal: Consulta de Roles */}
+                    <Route path="/configuracion/alta-rol" element={<ConstructionPage />} /> {/* Temporal: Alta de Rol */}
+
+                    {/* --- SUB-RUTAS DE OTRAS CONFIGURACIONES (Mantenidas como Construcción) --- */}
+                    {/* ... (Las rutas de productos y otros irán aquí) ... */}
                     
                     {/* --- RUTAS DE CONSTRUCCIÓN --- */}
                     <Route path="/crear-orden" element={<ConstructionPage />} />

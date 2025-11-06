@@ -14,7 +14,7 @@ const LoginPage = () => {
 
     if (isAuthenticated) {
         // Si el usuario está autenticado
-        navigate('/dashboard', { replace: true });
+        navigate('/Inicio', { replace: true });
         return null; // No renderiza nada mientras se redirige
     }
 
@@ -30,8 +30,8 @@ const LoginPage = () => {
         try {
             // Usa la función signIn desestructurada
             await signIn(username, password);
-            // Si tiene éxito, navegar al dashboard
-            navigate('/dashboard', { replace: true });
+            // Si tiene éxito, navegar al inicio
+            navigate('/Inicio', { replace: true });
         } catch (err) {
             setError(err.message || "Login failed. Check server status.");
         }
@@ -39,8 +39,8 @@ const LoginPage = () => {
 
     // Formulario de Login
     return (
-        <div style={{ maxWidth: '400px', margin: '50px auto', padding: '20px', border: '1px solid #ccc' }}>
-            <h2>Inicio de Sesión - UTN Taller</h2>
+        <div style={{ maxWidth: '400px', margin: '50px auto', padding: '20px', border: '1px solid #ccc'}}>
+            <h2>Inicio de Sesión - Servicios Neumáticos</h2>
             <form onSubmit={handleSubmit}>
                 <div style={{ marginBottom: '15px' }}>
                     <label>Usuario:</label>

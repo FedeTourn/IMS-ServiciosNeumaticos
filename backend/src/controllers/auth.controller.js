@@ -1,4 +1,6 @@
 const User = require('../models/User');
+const Role = require('../models/Role');
+
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
@@ -106,5 +108,94 @@ exports.login = async (req, res) => {
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({ message: "Internal server error during login." });
+    }
+};
+
+// --- 4. CONSULTAR LISTA DE USUARIOS ---
+exports.getAllUsers = async (req, res) => {
+    try {
+        const users = await User.findAll();
+        res.status(200).json(users);
+    } catch (error) {
+        console.error("Error getting user list:", error);
+        res.status(500).json({ message: "Error retrieving user list." });
+    }
+};
+
+// --- 5. CONSULTAR USUARIO POR ID ---
+exports.getUserById = async (req, res) => {
+    const { id_user } = req.params;
+    try {
+        const user = await User.findById(id_user);
+        if (!user) {
+            return res.status(404).json({ message: "User not found." });
+        }
+        res.status(200).json(user);
+    } catch (error) {
+        console.error("Error getting user by ID:", error);
+        res.status(500).json({ message: "Error retrieving user data." });
+    }
+};
+
+// --- 6. MODIFICAR USUARIO ---
+exports.updateUser = async (req, res) => {
+    const { id_user } = req.params;
+    let { full_name, id_role, is_active, password } = req.body;
+    let updateData = { full_name, id_role, is_active };
+
+    try {
+        // Hashing de contraseña opcional
+        if (password) {
+             if (password.length < 8) {
+                return res.status(400).json({ message: "Password must be at least 8 characters long." });
+            }
+            const password_hash = await bcrypt.hash(password, 10);
+            updateData.password_hash = password_hash;
+        }
+
+        const affectedRows = await User.update(id_user, updateData);
+        
+        if (affectedRows === 0) {
+            return res.status(404).json({ message: "User not found or no changes made." });
+        }
+
+        res.status(200).json({ message: "User updated successfully." });
+    } catch (error) {
+        console.error("Error updating user:", error);
+        res.status(500).json({ message: "Error updating user data." });
+    }
+};
+
+// --- CONSULTAR LISTA DE ROLES ---
+exports.getAllRoles = async (req, res) => {
+    try {
+        const roles = await Role.findAll();
+        res.status(200).json(roles);
+    } catch (error) {
+        console.error("Error getting roles list:", error);
+        res.status(500).json({ message: "Error retrieving roles list." });
+    }
+};
+
+// --- CREAR NUEVO ROL ---
+exports.createRole = async (req, res) => {
+    let { name } = req.body;
+
+    if (!name) {
+        return res.status(400).json({ message: "Role name is required." });
+    }
+    
+    // Estandarización: Usar el formatter (asumiendo que ya está importado)
+    name = formatter.toUpperCase(name); 
+
+    try {
+        const newRoleId = await Role.create({ name });
+        res.status(201).json({ message: "Role created successfully.", id_role: newRoleId });
+    } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ message: "A role with this name already exists." });
+        }
+        console.error("Error creating new role:", error);
+        res.status(500).json({ message: "Error creating new role." });
     }
 };

@@ -11,8 +11,28 @@ const getAuthHeaders = () => {
 /**
  * Consulta la lista de todos los productos (Válvulas).
  */
-export const fetchProducts = async () => {
+/* export const fetchProducts = async () => {
     const response = await fetch(API_URL, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to fetch products.");
+    }
+    return response.json();
+}; */
+
+/**
+ * Consulta la lista de todos los productos, con opciones de filtro/ordenamiento.
+ */
+export const fetchProducts = async (params = {}) => {
+    // Construye el query string a partir de los parámetros
+    const queryParams = new URLSearchParams(params).toString();
+    const url = `${API_URL}${queryParams ? '?' + queryParams : ''}`;
+    
+    const response = await fetch(url, { // Usa la URL con parámetros
         method: 'GET',
         headers: getAuthHeaders(),
     });

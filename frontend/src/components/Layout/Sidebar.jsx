@@ -11,6 +11,7 @@ const menuItems = [
     { name: 'Consultar Stock', path: '/consultar-stock', icon: '🛒' },
     { name: 'Estados de Cuenta', path: '/estados-cuenta', icon: '💰' },
     { name: 'Clientes', path: '/clientes', icon: '👥' },
+    { name: 'Configuración', path: '/configuracion', icon: '⚙️' },
 ];
 
 const Sidebar = ({ isCollapsed, onToggle }) => {
@@ -32,7 +33,7 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
     const logoStyle = {
         padding: '10px 0',
         textAlign: 'center',
-        fontSize: isCollapsed ? '1.5em' : '2em',
+        fontSize: isCollapsed ? '1.5em' : '1.5em',
         fontWeight: 'bold',
         marginBottom: '20px',
         borderBottom: '1px solid #34495e'

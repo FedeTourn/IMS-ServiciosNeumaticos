@@ -11,17 +11,21 @@ const getAuthHeaders = () => {
 };
 
 /**
- * Consulta la lista de clientes.
+ * Consulta la lista de clientes, con opciones de filtro/ordenamiento.
  */
-export const fetchClients = async () => {
-    // Nota: Debemos añadir el token JWT en el header.
-    const response = await fetch(API_URL, {
+export const fetchClients = async (params = {}) => {
+    // Construye el query string a partir de los parámetros
+    const queryParams = new URLSearchParams(params).toString();
+    const url = `${API_URL}${queryParams ? '?' + queryParams : ''}`;
+    
+    const response = await fetch(url, { // Usa la URL con parámetros
         method: 'GET',
         headers: getAuthHeaders(),
     });
 
     if (!response.ok) {
-        throw new Error("Failed to fetch clients.");
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to fetch clients.");
     }
     return response.json();
 };
@@ -43,35 +47,37 @@ export const createClient = async (clientData) => {
     return data;
 };
 
-export const fetchClientById = async (id) => {
-    const response = await fetch(`${API_URL}/${id}`, {
+/**
+ * Consulta el detalle de un cliente por su ID.
+ */
+export const fetchClientById = async (id_cliente) => {
+    const response = await fetch(`${API_URL}/${id_cliente}`, {
         method: 'GET',
         headers: getAuthHeaders(),
     });
 
     if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to fetch client data.");
+        throw new Error(errorData.message || "Failed to fetch client detail.");
     }
     return response.json();
 };
 
-
 /**
- * Actualiza la información de un cliente.
+ * Actualiza un cliente existente.
  */
-export const updateClient = async (id, clientData) => {
-    const response = await fetch(`${API_URL}/${id}`, {
+export const updateClient = async (id_cliente, clientData) => {
+    const response = await fetch(`${API_URL}/${id_cliente}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify(clientData),
     });
 
-    const data = await response.json();
     if (!response.ok) {
-        throw new Error(data.message || "Failed to update client.");
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to update client.");
     }
-    return data;
+    return response.json();
 };
 
 
@@ -87,6 +93,38 @@ export const disableClient = async (id) => {
     const data = await response.json();
     if (!response.ok) {
         throw new Error(data.message || "Failed to disable client.");
+    }
+    return data;
+};
+
+/**
+ * Obtiene todas las categorías de clientes.
+ */
+export const fetchClientCategories = async () => {
+    // Asume que tienes un endpoint para categorías (ej. /api/clients/categories)
+    const response = await fetch(`${API_URL}/categories`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+        throw new Error("Failed to fetch client categories.");
+    }
+    return response.json();
+};
+
+/**
+ * Rehabilita (marcar como activo) a un cliente por ID.
+ */
+export const reactivateClient = async (id_cliente) => {
+    const response = await fetch(`${API_URL}/${id_cliente}/reactivate`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.message || "Failed to reactivate client.");
     }
     return data;
 };

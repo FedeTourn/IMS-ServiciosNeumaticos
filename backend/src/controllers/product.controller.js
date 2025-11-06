@@ -37,10 +37,31 @@ const TRANSITION_RULES = {
 
 
 // --- CONSULTAR PRODUCTOS (Listado) ---
-exports.getAllProducts = async (req, res) => {
+/* exports.getAllProducts = async (req, res) => {
     // Nota: Aquí se implementaría la lógica de filtrado y ordenamiento [cite: 88]
     try {
         const products = await Product.findAll();
+        res.status(200).json(products);
+    } catch (error) {
+        console.error("Error retrieving product list:", error);
+        res.status(500).json({ message: "Error retrieving product list." });
+    }
+}; */
+
+// --- CONSULTAR PRODUCTOS (Listado) ---
+exports.getAllProducts = async (req, res) => {
+    // Extrae los parámetros de ordenamiento y filtro del query string (ej: /api/products?orderBy=cliente&sortOrder=DESC)
+    const { orderBy, sortOrder, searchField, searchTerm } = req.query; 
+    
+    const options = {
+        orderBy: orderBy,
+        sortOrder: sortOrder,
+        searchField: searchField,
+        searchTerm: searchTerm
+    };
+
+    try {
+        const products = await Product.findAll(options); // Pasa las opciones al modelo
         res.status(200).json(products);
     } catch (error) {
         console.error("Error retrieving product list:", error);

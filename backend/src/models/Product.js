@@ -1,10 +1,10 @@
 const db = require('../config/db.config'); 
 
-/**
+/* *
  * Consulta todos los productos con sus datos relacionados.
  * @returns {Promise<Array>} Lista de objetos producto.
  */
-exports.findAll = async () => {
+/* exports.findAll = async () => {
     // Consulta JOIN para obtener el nombre en lugar de IDs
     const query = `
         SELECT 
@@ -28,6 +28,103 @@ exports.findAll = async () => {
         return rows;
     } catch (error) {
         console.error("Error fetching all products:", error);
+        throw error;
+    }
+}; */
+
+/**
+ * Consulta todos los productos con sus datos relacionados, permitiendo filtros y ordenamiento.
+ * @param {Object} options - { orderBy, sortOrder, searchField, searchTerm }
+ * @returns {Promise<Array>} Lista de objetos producto.
+ */
+exports.findAll = async (options = {}) => {
+    const { orderBy, sortOrder, searchField, searchTerm } = options;
+
+    let query = `
+        SELECT 
+            p.id_producto,
+            c.nombre AS cliente_nombre,
+            tp.nombre AS tipo_nombre,
+            mp.nombre AS modelo_nombre,
+            ep.nombre AS estado_nombre,
+            p.fecha_recepcion,
+            p.fecha_entrega,
+            p.id_orden_reparacion,
+            p.observaciones
+        FROM Producto p
+        JOIN Cliente c ON p.id_cliente = c.id_cliente
+        JOIN ModeloProducto mp ON p.modelo = mp.id_modelo
+        JOIN TipoProducto tp ON mp.tipo = tp.id_tipo
+        JOIN EstadoProducto ep ON p.estado = ep.id_estado
+    `;
+    let params = [];
+    let whereClauses = [];
+    
+    // --- Mapeo seguro de columnas para BÚSQUEDA ---
+    const searchColumns = {
+        // Columna Específica | Columna SQL
+        cliente: 'c.nombre',
+        tipo: 'tp.nombre',
+        modelo: 'mp.nombre',
+        estado: 'ep.nombre',
+        recepcion: 'p.fecha_recepcion', // Se puede buscar por fecha (parcialmente)
+        todos: [ // Búsqueda Global: Combina varios campos
+            'c.nombre', 
+            'tp.nombre', 
+            'mp.nombre', 
+            'ep.nombre'
+        ]
+    };
+
+    // --- LÓGICA DE FILTRADO ---
+    if (searchTerm && searchTerm.trim() !== '') {
+        const term = `%${searchTerm.trim()}%`;
+        
+        if (searchField && searchColumns[searchField]) {
+            let fieldsToSearch = [];
+
+            if (searchField === 'todos') {
+                // Búsqueda Global
+                fieldsToSearch = searchColumns.todos;
+            } else {
+                // Búsqueda por Campo Específico
+                fieldsToSearch = [searchColumns[searchField]];
+            }
+            
+            // Construye la cláusula WHERE (campo LIKE %query%)
+            const conditions = fieldsToSearch.map(field => `${field} LIKE ?`).join(' OR ');
+            whereClauses.push(`(${conditions})`);
+
+            // Añade el término de búsqueda tantas veces como campos se estén buscando
+            fieldsToSearch.forEach(() => params.push(term));
+        }
+    }
+    
+    if (whereClauses.length > 0) {
+        query += ` WHERE ${whereClauses.join(' AND ')}`;
+    }
+    
+    // --- LÓGICA DE ORDENAMIENTO ---
+    const allowedColumns = {
+        cliente: 'c.nombre',
+        tipo: 'tp.nombre',
+        modelo: 'mp.nombre',
+        estado: 'ep.nombre',
+        fecha_recepcion: 'p.fecha_recepcion'
+    };
+
+    if (orderBy && allowedColumns[orderBy]) {
+        const orderDirection = sortOrder === 'DESC' ? 'DESC' : 'ASC';
+        query += ` ORDER BY ${allowedColumns[orderBy]} ${orderDirection}`;
+    } else {
+        query += ` ORDER BY p.fecha_recepcion DESC`;
+    }
+
+    try {
+        const [rows] = await db.query(query, params);
+        return rows;
+    } catch (error) {
+        console.error("Error fetching all products with options:", error);
         throw error;
     }
 };
