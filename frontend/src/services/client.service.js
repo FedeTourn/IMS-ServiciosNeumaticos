@@ -1,4 +1,6 @@
-const API_URL = 'http://localhost:3001/api/clients'; 
+import {API_BASE_URL} from '../config'; // Importa la constante base
+
+const API_URL = `${API_BASE_URL}/clients`;
 
 // Función auxiliar para obtener el token de autenticación
 const getAuthHeaders = () => {

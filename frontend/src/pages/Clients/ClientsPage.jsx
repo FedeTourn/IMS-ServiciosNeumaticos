@@ -87,7 +87,6 @@ const ClientsPage = () => {
                     <th style={{ padding: '10px', border: '1px solid #ddd', cursor: 'pointer' }} onClick={() => handleSort('nombre')}>Nombre {getSortIndicator('nombre')}</th>
                     <th style={{ padding: '10px', border: '1px solid #ddd' }}>Dirección</th>
                     <th style={{ padding: '10px', border: '1px solid #ddd', cursor: 'pointer' }} onClick={() => handleSort('cuit')}>CUIT {getSortIndicator('cuit')}</th>
-                    <th style={{ padding: '10px', border: '1px solid #ddd', cursor: 'pointer' }} onClick={() => handleSort('email')}>Email {getSortIndicator('email')}</th>
                     <th style={{ padding: '10px', border: '1px solid #ddd', cursor: 'pointer' }} onClick={() => handleSort('categoria')}>Categoría {getSortIndicator('categoria')}</th>
                     {/* Nueva Columna de Teléfonos */}
                     <th style={{ padding: '10px', border: '1px solid #ddd' }}>Teléfonos</th>
@@ -100,7 +99,6 @@ const ClientsPage = () => {
                         <td style={{ padding: '10px', border: '1px solid #ddd' }}>{client.nombre}</td>
                         <td style={{ padding: '10px', border: '1px solid #ddd' }}>{client.direccion}</td>
                         <td style={{ padding: '10px', border: '1px solid #ddd' }}>{client.cuit}</td>
-                        <td style={{ padding: '10px', border: '1px solid #ddd' }}>{client.email}</td>
                         <td style={{ padding: '10px', border: '1px solid #ddd' }}>{client.nombre_categoria}</td>
                         {/* Columna de Teléfonos */}
                         <td style={{ padding: '10px', border: '1px solid #ddd', fontSize: '0.85em' }}>
@@ -126,7 +124,7 @@ const ClientsPage = () => {
 
             {/* --- SECCIÓN SUPERIOR DE ACCIONES (RECUADRO) --- */}
             <div style={{ border: '1px solid #ccc', padding: '15px', borderRadius: '8px', marginBottom: '20px', backgroundColor: '#fff' }}>
-                <h2 style={{ margin: '0 0 15px 0', fontSize: '1.2em' }}>Acciones</h2>
+                <h2 style={{ margin: '0 0 15px 0', fontSize: '1.2em', borderBottom: '1px solid #eee' }}>Acciones</h2>
                 
                 <div style={{ display: 'flex', gap: '15px', alignItems: 'center', justifyContent:'space-between' }}>
                     <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>

@@ -48,7 +48,7 @@ const LoginPage = () => {
                         type="text"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
-                        style={{ width: '100%', padding: '8px' }}
+                        style={{ width: '100%', padding: '8px', border: '1px solid #ccc' }}
                     />
                 </div>
                 <div style={{ marginBottom: '15px' }}>
@@ -57,7 +57,7 @@ const LoginPage = () => {
                         type="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        style={{ width: '100%', padding: '8px' }}
+                        style={{ width: '100%', padding: '8px', border: '1px solid #ccc' }}
                     />
                 </div>
                 {error && <p style={{ color: 'red' }}>{error}</p>}

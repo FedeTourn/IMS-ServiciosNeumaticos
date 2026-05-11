@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  # Base de Datos
+  mysql-taller:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_DATABASE: tallerdb
+      MYSQL_ROOT_PASSWORD: 1234
+    ports:
+      - "3306:3306"
+    volumes:
+      - ims_db_data:/var/lib/mysql
+
+  # Backend (API)
+  ims-backend:
+    build: ./backend
+    restart: always
+    ports:
+      - "3001:3001"
+    depends_on:
+      - mysql-taller
+    env_file: ./backend/.env
+
+  # Frontend (Web)
+  ims-frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - ims-backend
+
+volumes:
+  ims_db_data:
