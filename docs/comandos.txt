@@ -1,0 +1,23 @@
+1. Levantar la base de datos (Docker)
+
+Si el contenedor ya existe, no hace falta volver a crearlo, solo iniciarlo:
+    docker start mysql-taller
+
+Para verificar que realmente quedó arriba:
+    docker ps
+
+
+2. Levantar el backend (Node.js + Express)
+
+Entrar a la carpeta backend y correr:
+    cd backend
+    npm run dev
+
+
+3. Levantar el frontend (React + Tailwind)
+
+Entrar a la carpeta frontend y correr:
+    cd frontend
+    npm start
+
+Verificar en navegador: http://localhost:3000
