@@ -40,7 +40,7 @@ const ProductsPage = () => {
     });
 
     // Estado de carga específico para la tabla (sin recargar todo el componente)
-    const [isSearching, setIsSearching] = useState(false);
+     const [isSearching, setIsSearching] = useState(false);
 
     // --- 2. EFECTO DE CARGA DE DATOS (Basado en el estado de consulta) ---
     useEffect(() => {
@@ -87,15 +87,37 @@ const ProductsPage = () => {
         }));
     };
     
-    // 4. Activa la búsqueda al presionar ENTER o al hacer clic en un botón de búsqueda (Simulación)
+/*     // 4. Activa la búsqueda al presionar ENTER o al hacer clic en un botón de búsqueda (Simulación)
     const handleSearchSubmit = (e) => {
         // Por ahora, el useEffect se encarga de la recarga. 
         // Si quieres que el ENTER dispare solo la búsqueda, puedes descomentar y modificar
-        // if (e.key === 'Enter') { /* ... */ }
+        // if (e.key === 'Enter') { // Aca va la modificacion}
         // Para simular el efecto de un botón de búsqueda o ENTER:
         setIsSearching(true);
         // Aquí podrías añadir una pausa si el useEffect no se dispara inmediatamente.
         setTimeout(() => setIsSearching(false), 500); 
+    }; 
+    */
+
+    /**
+     * Maneja el envío de la búsqueda.
+     * Aplica el estado de carga y previene el comportamiento por defecto del formulario.
+     * @param {Event} e - Evento de teclado o clic.
+     */
+    const handleSearchSubmit = (e) => {
+       //Usamos 'e' para evitar que la página se recargue o procese teclas nativas
+        if (e.key === 'Enter' || e.type === 'click') {
+            e.preventDefault(); 
+        
+            setIsSearching(true);
+        
+            // Simulamos la búsqueda. 
+            // Nota de Mentor: Esto debe ser reemplazado por la llamada real a la API más adelante.
+            setTimeout(() => {
+                setIsSearching(false);
+                console.log("Búsqueda finalizada");
+            }, 500);
+        }
     };
 
 
@@ -172,6 +194,22 @@ const ProductsPage = () => {
                         onKeyDown={handleSearchSubmit} // Dispara la búsqueda al presionar Enter (simulado)
                         style={{ padding: '10px', border: '1px solid #ccc', borderRadius: '5px', minWidth: '250px' }}
                     />
+
+                    {/* Agregamos el botón para usar la variable 'isSearching' */}
+                    <button 
+                        onClick={handleSearchSubmit}
+                        disabled={isSearching}
+                        style={{ 
+                            padding: '10px 15px', 
+                            backgroundColor: isSearching ? '#ccc' : '#007bff', 
+                            color: 'white', 
+                            border: 'none', 
+                            borderRadius: '5px', 
+                            cursor: isSearching ? 'not-allowed' : 'pointer' 
+                        }}
+                    >
+                        {isSearching ? 'Buscando...' : 'Buscar'}
+                    </button>
 
                 </div>
                 

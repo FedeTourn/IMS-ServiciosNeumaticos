@@ -1,0 +1,8 @@
+{
+    "scripts": {
+        "lint": "concurrently \"npm run lint --prefix backend\" \"npm run lint --prefix frontend\""
+    },
+    "devDependencies": {
+        "concurrently": "^9.2.1"
+    }
+}

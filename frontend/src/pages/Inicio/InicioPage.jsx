@@ -1,5 +1,4 @@
 import React from 'react';
-import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 
@@ -55,7 +54,7 @@ const InicioPage = () => {
 };
 
 
-const InicioCard = ({ title, path, onClick }) => {
+const InicioCard = ({ title, onClick }) => {
     return (
         <button 
             onClick={onClick} 
