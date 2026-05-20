@@ -1,4 +1,4 @@
-const db = require('../config/db.config'); 
+const { pool:db } = require('../config/db.config'); 
 
 /* *
  * Consulta todos los productos con sus datos relacionados.
@@ -129,7 +129,10 @@ exports.findAll = async (options = {}) => {
     }
 };
 
-// Aquí se añadirán más funciones (findById, create, update, etc.) en pasos posteriores.
+/**
+ * Consulta todos los Tipos de Producto.
+ * @returns {Promise<Array>} Lista de Objetos TipoProducto.
+ */
 exports.findAllProductTypes = async () => {
     const query = `SELECT id_tipo, nombre FROM TipoProducto ORDER BY nombre ASC`;
     try {
@@ -143,6 +146,8 @@ exports.findAllProductTypes = async () => {
 
 /**
  * Consulta todos los Modelos de Producto (opcionalmente filtrados por tipo).
+ * @param {number} typeId - Tipo de producto.
+ * @returns {Promise<Array>} Lista de Objetos ModeloProducto.
  */
 exports.findAllProductModels = async (typeId = null) => {
     let query = `SELECT id_modelo, nombre, tipo FROM ModeloProducto`;
@@ -164,6 +169,8 @@ exports.findAllProductModels = async (typeId = null) => {
 
 /**
  * Crea un nuevo producto. (Alta de Producto/Recepción)
+ * @param {Object} productData - Objeto con la informacion del producto (modelo, fecha_recepcion, estado, id_cliente, observaciones).
+ * @returns {Promise<number>} Id del producto creado.
  */
 exports.create = async (productData) => {
     const query = `
@@ -187,7 +194,9 @@ exports.create = async (productData) => {
 };
 
 /**
- * Busca un producto por ID con todos sus datos relacionados (cliente, tipo, modelo, estado).
+ * Busca un producto por ID y muestra todos sus datos relacionados (cliente, tipo, modelo, estado).
+ * @param {number} id_producto - Identificador de producto.
+ * @returns {Promise<Object>} Objeto Producto encontrado.
  */
 exports.findById = async (id_producto) => {
     const query = `
@@ -217,6 +226,9 @@ exports.findById = async (id_producto) => {
 
 /**
  * Actualiza los atributos modificables de un producto (observaciones y estado).
+ * @param {number} id_producto - ID de Producto a modificar.
+ * @param {Object} updateData - Datos a modificar de producto (Observaciones y estado).
+ * @returns {Promise<number>} Cantidad de filas afectadas.
  */
 exports.update = async (id_producto, updateData) => {
     const query = `
@@ -242,6 +254,7 @@ exports.update = async (id_producto, updateData) => {
 
 /**
  * Consulta todos los Estados de Producto (necesario para el dropdown de modificación).
+ * @returns {Promise<Array>} Lista de objetos EstadoProducto.
  */
 exports.findAllProductStates = async () => {
     const query = `SELECT id_estado, nombre FROM EstadoProducto ORDER BY nombre ASC`;

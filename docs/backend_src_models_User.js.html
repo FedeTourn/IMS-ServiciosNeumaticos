@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: backend/src/models/User.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: backend/src/models/User.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * Modelo de datos para la entidad Usuario (User).
+ * Basado en una arquitectura de tres capas, este archivo representa el DAO (Data Access Object)
+ * encargado exclusivamente de la comunicación con la base de datos MySQL.
+ */
+// Importa el pool de conexiones de la base de datos
+const { pool:db } = require('../config/db.config'); 
+
+/**
+ * Busca un usuario por su nombre de usuario.
+ * @param {string} username - El nombre de usuario a buscar.
+ * @returns {Promise&lt;Object>} Un objeto con los datos del usuario y su rol o null.
+ */
+exports.findByUsername = async (username) => {
+    // Consulta SQL para obtener todos los datos del usuario, incluyendo el nombre del rol.
+    const sql = `
+        SELECT 
+            u.id_user, u.full_name, u.username, u.password_hash, u.is_active, r.name as role_name 
+        FROM User u
+        JOIN Role r ON u.id_role = r.id_role
+        WHERE u.username = ?
+    `;
+    
+    try {
+        const [rows] = await db.execute(sql, [username]);
+        // Si se encuentra una fila, devuelve el primer objeto (el usuario)
+        return rows.length > 0 ? rows[0] : null;
+    } catch (error) {
+        console.error(`[Model:User] Error en findByUsername: ${error.message}`);
+        throw error;
+    }
+};
+
+/**
+ * Registra un nuevo usuario en la base de datos.
+ * @param {Object} userData - Datos del usuario (full_name, username, password_hash, id_role).
+ * @returns {Promise&lt;number>} El ID del usuario recién creado.
+ */
+exports.create = async (userData) => {
+    const { full_name, username, password_hash, id_role } = userData;
+    const sql = `
+        INSERT INTO User (full_name, username, password_hash, id_role)
+        VALUES (?, ?, ?, ?)
+    `;
+    
+    try {
+        const [result] = await db.execute(sql, [
+            userData.full_name,
+            userData.username,
+            userData.password_hash,
+            userData.id_role
+        ]);
+        
+        return result.insertId;
+    } catch (error) {
+        console.error(`[Model:User] Error en create: ${error.message}`);
+        throw error;
+    }
+};
+
+/**
+ * Consulta todos los usuarios activos, incluyendo el nombre del rol.
+ * @param {boolean} onlyActive - Si es true, filtra solo usuarios habilitados.
+ * @returns {Promise&lt;Array>}
+ */
+exports.findAll = async (onlyActive) => {
+    const sql = `
+        SELECT 
+            u.id_user, u.full_name, u.username, u.is_active, r.name AS role_name
+        FROM User u
+        JOIN Role r ON u.id_role = r.id_role
+    `;
+    if (onlyActive) {
+        sql.concat= `WHERE u.is_active = TRUE`;
+    }
+
+    sql.concat= `ORDER BY u.full_name ASC`;
+
+    try {
+        const [rows] = await db.execute(sql);
+        return rows;
+    } catch (error) {
+        console.error(`[Model:User] Error en findAll: ${error.message}`);
+        throw error;
+    }
+};
+
+/**
+ * Consulta un usuario por ID.
+ */
+exports.findById = async (id_user) => {
+    const sql = `
+        SELECT 
+            u.id_user, u.full_name, u.username, u.id_role, u.is_active, r.name AS role_name
+        FROM User u
+        JOIN Role r ON u.id_role = r.id_role
+        WHERE u.id_user = ?
+    `;
+    try {
+        const [rows] = await db.execute(sql, [id_user]);
+        return rows[0] || null;
+    } catch (error) {
+        console.error(`[Model:User] Error en findById: ${error.message}`);
+        throw error;
+    }
+};
+
+/**
+ * Actualiza los datos de un usuario existente.
+ * Permite modificar nombre, rol, estado, y opcionalmente, la contraseña.
+ * @param {number} id_user 
+ * @param {Object} updateData 
+ * @returns {Promise&lt;number>} Cantidad de filas afectadas.
+ */
+exports.update = async (id_user, updateData) => {
+    // Construye la consulta dinámicamente
+    let fields = [];
+    let values = [];
+    for (const [key, value] of Object.entries(updateData)){
+        if(value !== undefined) {
+            fields.push(`${key} = ?`);
+            values.push(value);
+        }
+    }
+    /* if (updateData.full_name) { fields.push("full_name = ?"); values.push(updateData.full_name); }
+    if (updateData.id_role) { fields.push("id_role = ?"); values.push(updateData.id_role); }
+    if (updateData.is_active !== undefined) { fields.push("is_active = ?"); values.push(updateData.is_active); }
+    if (updateData.password_hash) { fields.push("password_hash = ?"); values.push(updateData.password_hash); } */
+    
+    if (fields.length === 0) return 0; // No hay nada que actualizar
+
+    const sql = `
+        UPDATE User SET 
+            ${fields.join(', ')},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id_user = ?
+    `;
+    values.push(id_user);
+
+    try {
+        const [result] = await db.execute(sql, values);
+        return result.affectedRows;
+    } catch (error) {
+        console.error(`[Model:User] Error en update: ${error.message}`);
+        throw error;
+    }
+};</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#API_BASE_URL">API_BASE_URL</a></li><li><a href="global.html#create">create</a></li><li><a href="global.html#createClient">createClient</a></li><li><a href="global.html#createPhone">createPhone</a></li><li><a href="global.html#deletePhone">deletePhone</a></li><li><a href="global.html#disableClient">disableClient</a></li><li><a href="global.html#express">express</a></li><li><a href="global.html#fetchAllRoles">fetchAllRoles</a></li><li><a href="global.html#fetchAllUsers">fetchAllUsers</a></li><li><a href="global.html#fetchClientById">fetchClientById</a></li><li><a href="global.html#fetchClientCategories">fetchClientCategories</a></li><li><a href="global.html#fetchClients">fetchClients</a></li><li><a href="global.html#fetchProductById">fetchProductById</a></li><li><a href="global.html#fetchProductModels">fetchProductModels</a></li><li><a href="global.html#fetchProductStates">fetchProductStates</a></li><li><a href="global.html#fetchProductTypes">fetchProductTypes</a></li><li><a href="global.html#fetchProducts">fetchProducts</a></li><li><a href="global.html#fetchUserById">fetchUserById</a></li><li><a href="global.html#findAll">findAll</a></li><li><a href="global.html#findAllPhonesByClient">findAllPhonesByClient</a></li><li><a href="global.html#findAllProductModels">findAllProductModels</a></li><li><a href="global.html#findAllProductStates">findAllProductStates</a></li><li><a href="global.html#findById">findById</a></li><li><a href="global.html#findByUsername">findByUsername</a></li><li><a href="global.html#getCurrentUser">getCurrentUser</a></li><li><a href="global.html#login">login</a></li><li><a href="global.html#logout">logout</a></li><li><a href="global.html#mysql">mysql</a></li><li><a href="global.html#reactivateClient">reactivateClient</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#registerProductReception">registerProductReception</a></li><li><a href="global.html#toTitleCase">toTitleCase</a></li><li><a href="global.html#toUpperCase">toUpperCase</a></li><li><a href="global.html#update">update</a></li><li><a href="global.html#updateClient">updateClient</a></li><li><a href="global.html#updateProduct">updateProduct</a></li><li><a href="global.html#updateStatus">updateStatus</a></li><li><a href="global.html#updateUserData">updateUserData</a></li><li><a href="global.html#verifyConnection">verifyConnection</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Sun May 17 2026 23:18:48 GMT-0300 (hora estándar de Argentina)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

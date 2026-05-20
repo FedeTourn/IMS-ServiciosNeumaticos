@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: backend/src/models/Client.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: backend/src/models/Client.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>const { pool:db } = require('../config/db.config'); 
+
+/**
+ * Busca todos los clientes con su categoría.
+ * @returns {Promise&lt;Array>} Lista de objetos cliente.
+ */
+/* exports.findAll = async () => {
+    const query = `
+        SELECT 
+            c.id_cliente, c.nombre, c.direccion, c.cuit, c.email, cat.nombre_categoria
+        FROM Cliente c
+        JOIN CategoriaCliente cat ON c.categoria = cat.id_categoria
+        ORDER BY c.nombre ASC
+    `;
+    try {
+        const [rows] = await db.query(query);
+        return rows;
+    } catch (error) {
+        console.error("Error fetching all clients:", error);
+        throw error;
+    }
+}; */
+
+/**
+ * Registra un nuevo cliente. (Crear Cliente)
+ * Requisito: Validar unicidad por CUIT, Apellido y Nombre, o Email. 
+ * Nota: Solo validamos CUIT y Email por ser identificadores técnicos.
+ */
+exports.create = async (clientData) => {
+    // Implementación simple de INSERT. La validación de unicidad compleja se hace en el controlador.
+    const query = `
+        INSERT INTO Cliente (nombre, direccion, cuit, email, categoria)
+        VALUES (?, ?, ?, ?, ?)
+    `;
+    try {
+        const [result] = await db.query(query, [
+            clientData.nombre,
+            clientData.direccion,
+            clientData.cuit,
+            clientData.email,
+            clientData.categoria || 1 // Asume categoría por defecto si no se especifica.
+        ]);
+        return result.insertId;
+    } catch (error) {
+        console.error("Error creating client:", error);
+        throw error;
+    }
+};
+
+/**
+ * Actualiza la información principal de un cliente.
+ * Solo actualiza los campos permitidos: direccion, email, categoria.
+ */
+exports.update = async (id_cliente, clientData) => {
+    const query = `
+        UPDATE Cliente 
+        SET direccion = ?, email = ?, categoria = ?
+        WHERE id_cliente = ?
+    `;
+    try {
+        const [result] = await db.query(query, [
+            clientData.direccion,
+            clientData.email,
+            clientData.categoria,
+            id_cliente
+        ]);
+        return result.affectedRows;
+    } catch (error) {
+        console.error("Error updating client:", error);
+        throw error;
+    }
+};
+
+/**
+ * Consulta un cliente por ID, con sus datos de categoría.
+ */
+exports.findById = async (id_cliente) => {
+    const query = `
+        SELECT 
+            c.id_cliente, 
+            c.nombre, 
+            c.direccion, 
+            c.cuit, 
+            c.email, 
+            c.categoria AS id_categoria,
+            c.is_active,
+            cat.nombre_categoria
+        FROM Cliente c
+        JOIN CategoriaCliente cat ON c.categoria = cat.id_categoria
+        WHERE c.id_cliente = ?
+    `;
+    try {
+        const [rows] = await db.query(query, [id_cliente]);
+        return rows[0] || null;
+    } catch (error) {
+        console.error("Error fetching client by ID:", error);
+        throw error;
+    }
+};
+
+/**
+ * Consulta todos los teléfonos asociados a un cliente.
+ * Se modifica para devolver un objeto limpio, no una cadena.
+ */
+exports.findAllPhonesByClient = async (id_cliente) => {
+    const query = `
+        SELECT telefono, Descripcion
+        FROM TelefonoCliente
+        WHERE id_cliente = ?
+    `;
+    try {
+        const [rows] = await db.query(query, [id_cliente]);
+        // Devuelve el array de objetos directamente para el frontend de edición
+        return rows.map(r => ({
+            numero: r.telefono,
+            descripcion: r.Descripcion || ''
+        }));
+    } catch (error) {
+        console.error("Error fetching client phones for edit:", error);
+        throw error;
+    }
+};
+
+/**
+ * Consulta todos los clientes, permitiendo filtros y ordenamiento, e incluyendo teléfonos.
+ * @param {Object} options - { orderBy, sortOrder, searchField, searchTerm }
+ * @returns {Promise&lt;Array>} Lista de objetos cliente.
+ */
+exports.findAll = async (options = {}) => {
+    const { orderBy, sortOrder, searchField, searchTerm } = options;
+
+    let query = `
+        SELECT 
+            c.id_cliente, 
+            c.nombre, 
+            c.direccion, 
+            c.cuit, 
+            c.email, 
+            cat.nombre_categoria
+        FROM Cliente c
+        JOIN CategoriaCliente cat ON c.categoria = cat.id_categoria
+    `;
+    let params = [];
+    let whereClauses = [];
+    
+    // --- Mapeo seguro de columnas para BÚSQUEDA ---
+    const searchColumns = {
+        // Columna Específica | Columna SQL
+        todos: ['c.nombre', 'c.cuit', 'c.email'], // Búsqueda Global
+        nombre: 'c.nombre',
+        cuit: 'c.cuit',
+        email: 'c.email',
+    };
+
+    // --- LÓGICA DE FILTRADO ---
+    if (searchTerm &amp;&amp; searchTerm.trim() !== '') {
+        const term = `%${searchTerm.trim()}%`;
+        const field = searchField in searchColumns ? searchField : 'todos';
+
+        let fieldsToSearch = [];
+
+        if (field === 'todos') {
+            fieldsToSearch = searchColumns.todos;
+        } else {
+            fieldsToSearch = [searchColumns[field]];
+        }
+        
+        const conditions = fieldsToSearch.map(f => `${f} LIKE ?`).join(' OR ');
+        whereClauses.push(`(${conditions})`);
+        
+        // Añade el término tantas veces como campos se estén buscando
+        fieldsToSearch.forEach(() => params.push(term));
+    }
+    
+    if (whereClauses.length > 0) {
+        query += ` WHERE ${whereClauses.join(' AND ')}`;
+    }
+    
+    // --- LÓGICA DE ORDENAMIENTO ---
+    const allowedColumns = {
+        nombre: 'c.nombre',
+        cuit: 'c.cuit',
+        email: 'c.email',
+        categoria: 'cat.nombre_categoria'
+    };
+
+    if (orderBy &amp;&amp; allowedColumns[orderBy]) {
+        const orderDirection = sortOrder === 'DESC' ? 'DESC' : 'ASC';
+        query += ` ORDER BY ${allowedColumns[orderBy]} ${orderDirection}`;
+    } else {
+        query += ` ORDER BY c.nombre ASC`; // Orden por defecto
+    }
+    
+    try {
+        const [rows] = await db.query(query, params);
+        
+        // 🚨 POST-PROCESAMIENTO: Obtener teléfonos para cada cliente (lento, pero necesario por ahora)
+        const clientsWithPhones = await Promise.all(rows.map(async (client) => {
+            const phones = await exports.findAllPhonesByClient(client.id_cliente);
+            return { ...client, telefonos: phones };
+        }));
+
+        return clientsWithPhones;
+    } catch (error) {
+        console.error("Error fetching all clients with options:", error);
+        throw error;
+    }
+};
+
+/**
+ * Registra un número de teléfono asociado a un cliente.
+ */
+exports.createPhone = async (id_cliente, telefono, descripcion) => {
+    // La tabla es TelefonoCliente
+    const query = `
+        INSERT INTO TelefonoCliente (telefono, id_cliente, Descripcion)
+        VALUES (?, ?, ?)
+    `;
+    try {
+        const [result] = await db.query(query, [
+            telefono,
+            id_cliente,
+            descripcion || null // Permite null si la descripción está vacía
+        ]);
+        return result.insertId;
+    } catch (error) {
+        console.error("Error creating phone for client:", error);
+        throw error;
+    }
+};
+
+/**
+ * Elimina un teléfono específico de un cliente.
+ */
+exports.deletePhone = async (id_cliente, telefono) => {
+    const query = `
+        DELETE FROM TelefonoCliente
+        WHERE id_cliente = ? AND telefono = ?
+    `;
+    try {
+        const [result] = await db.query(query, [id_cliente, telefono]);
+        return result.affectedRows;
+    } catch (error) {
+        console.error("Error deleting client phone:", error);
+        throw error;
+    }
+};
+
+/**
+ * Reactiva un cliente marcando is_active = TRUE.
+ */
+/* exports.reactivateClient = async (id_cliente) => {
+    const query = `
+        UPDATE Cliente 
+        SET is_active = TRUE, updated_at = CURRENT_TIMESTAMP
+        WHERE id_cliente = ?
+    `;
+    try {
+        const [result] = await db.query(query, [id_cliente]);
+        return result.affectedRows;
+    } catch (error) {
+        console.error("Error reactivating client:", error);
+        throw error;
+    }
+}; */
+
+/**
+ * Cambia el estado de activación de un cliente (Soft Delete).
+ * @param {number} id_cliente - ID del cliente a modificar.
+ * @param {boolean} status - Nuevo estado (true para activo, false para inactivo).
+ * @returns {Promise&lt;number>} Cantidad de filas afectadas.
+ */
+exports.updateStatus = async (id_cliente, status) => {
+    const sql = `
+        UPDATE Cliente 
+        SET is_active = ?, updated_at = CURRENT_TIMESTAMP 
+        WHERE id_cliente = ?
+    `;
+    try {
+        const [result] = await db.execute(sql, [status ? 1 : 0, id_cliente]);
+        return result.affectedRows;
+    } catch (error) {
+        console.error(`[Model:Client] Error en updateStatus: ${error.message}`);
+        throw error;
+    }
+};</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#API_BASE_URL">API_BASE_URL</a></li><li><a href="global.html#create">create</a></li><li><a href="global.html#createClient">createClient</a></li><li><a href="global.html#createPhone">createPhone</a></li><li><a href="global.html#deletePhone">deletePhone</a></li><li><a href="global.html#disableClient">disableClient</a></li><li><a href="global.html#express">express</a></li><li><a href="global.html#fetchAllRoles">fetchAllRoles</a></li><li><a href="global.html#fetchAllUsers">fetchAllUsers</a></li><li><a href="global.html#fetchClientById">fetchClientById</a></li><li><a href="global.html#fetchClientCategories">fetchClientCategories</a></li><li><a href="global.html#fetchClients">fetchClients</a></li><li><a href="global.html#fetchProductById">fetchProductById</a></li><li><a href="global.html#fetchProductModels">fetchProductModels</a></li><li><a href="global.html#fetchProductStates">fetchProductStates</a></li><li><a href="global.html#fetchProductTypes">fetchProductTypes</a></li><li><a href="global.html#fetchProducts">fetchProducts</a></li><li><a href="global.html#fetchUserById">fetchUserById</a></li><li><a href="global.html#findAll">findAll</a></li><li><a href="global.html#findAllPhonesByClient">findAllPhonesByClient</a></li><li><a href="global.html#findAllProductModels">findAllProductModels</a></li><li><a href="global.html#findAllProductStates">findAllProductStates</a></li><li><a href="global.html#findById">findById</a></li><li><a href="global.html#findByUsername">findByUsername</a></li><li><a href="global.html#getCurrentUser">getCurrentUser</a></li><li><a href="global.html#login">login</a></li><li><a href="global.html#logout">logout</a></li><li><a href="global.html#mysql">mysql</a></li><li><a href="global.html#reactivateClient">reactivateClient</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#registerProductReception">registerProductReception</a></li><li><a href="global.html#toTitleCase">toTitleCase</a></li><li><a href="global.html#toUpperCase">toUpperCase</a></li><li><a href="global.html#update">update</a></li><li><a href="global.html#updateClient">updateClient</a></li><li><a href="global.html#updateProduct">updateProduct</a></li><li><a href="global.html#updateStatus">updateStatus</a></li><li><a href="global.html#updateUserData">updateUserData</a></li><li><a href="global.html#verifyConnection">verifyConnection</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Sun May 17 2026 23:18:48 GMT-0300 (hora estándar de Argentina)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

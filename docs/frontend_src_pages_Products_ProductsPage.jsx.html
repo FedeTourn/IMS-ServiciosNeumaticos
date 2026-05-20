@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: frontend/src/pages/Products/ProductsPage.jsx</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: frontend/src/pages/Products/ProductsPage.jsx</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>// frontend/src/pages/Products/ProductsPage.jsx (Modificación Completa)
+
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { fetchProducts } from '../../services/product.service';
+
+// Componente para las secciones y botones
+const ConfigSection = ({ title, children }) => (
+    &lt;div style={{ border: '1px solid #ccc', padding: '20px', borderRadius: '8px', marginBottom: '30px', backgroundColor: '#fff' }}>
+        &lt;h2 style={{ borderBottom: '1px solid #eee', paddingBottom: '1px', marginBottom: '15px' }}>{title}&lt;/h2>
+        &lt;div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
+            {children}
+        &lt;/div>
+    &lt;/div>
+);
+
+// Opciones disponibles para el dropdown de búsqueda
+const SEARCH_FIELDS = [
+    { value: 'todos', label: 'Todos los campos' },
+    { value: 'cliente', label: 'Cliente' },
+    { value: 'modelo', label: 'Modelo' },
+    { value: 'estado', label: 'Estado' },
+    { value: 'recepcion', label: 'Fecha de Recepción' },
+];
+
+const ProductsPage = () => {
+    const navigate = useNavigate();
+    
+    // --- ESTADO DE LA CONSULTA ---
+    const [products, setProducts] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    // Estado de la consulta
+    const [query, setQuery] = useState({ 
+        orderBy: 'fecha_recepcion', 
+        sortOrder: 'DESC',
+        searchField: 'todos', // Campo seleccionado para buscar
+        searchTerm: ''        // Término ingresado en el campo de texto
+    });
+
+    // Estado de carga específico para la tabla (sin recargar todo el componente)
+     const [isSearching, setIsSearching] = useState(false);
+
+    // --- 2. EFECTO DE CARGA DE DATOS (Basado en el estado de consulta) ---
+    useEffect(() => {
+        const loadProducts = async () => {
+            setIsLoading(true);
+            try {
+                // Envía todos los parámetros de query
+                const data = await fetchProducts(query); 
+                setProducts(data);
+                setIsLoading(false);
+            } catch (err) {
+                setError(err.message);
+                setIsLoading(false);
+            }
+        };
+        loadProducts();
+    }, [query]); // Recarga cada vez que cambia query (orden, filtro, búsqueda)
+
+
+    // --- MANEJADORES DE CAMBIO ---
+    
+    // 1. Maneja el clic en los encabezados de la tabla (Ordenamiento)
+    const handleSort = (column) => {
+        setQuery(prevQuery => ({
+            ...prevQuery,
+            orderBy: column,
+            sortOrder: prevQuery.orderBy === column &amp;&amp; prevQuery.sortOrder === 'ASC' ? 'DESC' : 'ASC'
+        }));
+    };
+    
+    // 2. Maneja el cambio en el campo de búsqueda de texto
+    const handleSearchTermChange = (e) => {
+        setQuery(prevQuery => ({
+            ...prevQuery,
+            searchTerm: e.target.value
+        }));
+    };
+
+    // 3. Maneja el cambio en el dropdown de campo de búsqueda
+    const handleSearchFieldChange = (e) => {
+        setQuery(prevQuery => ({
+            ...prevQuery,
+            searchField: e.target.value
+        }));
+    };
+    
+/*     // 4. Activa la búsqueda al presionar ENTER o al hacer clic en un botón de búsqueda (Simulación)
+    const handleSearchSubmit = (e) => {
+        // Por ahora, el useEffect se encarga de la recarga. 
+        // Si quieres que el ENTER dispare solo la búsqueda, puedes descomentar y modificar
+        // if (e.key === 'Enter') { // Aca va la modificacion}
+        // Para simular el efecto de un botón de búsqueda o ENTER:
+        setIsSearching(true);
+        // Aquí podrías añadir una pausa si el useEffect no se dispara inmediatamente.
+        setTimeout(() => setIsSearching(false), 500); 
+    }; 
+    */
+
+    /**
+     * Maneja el envío de la búsqueda.
+     * Aplica el estado de carga y previene el comportamiento por defecto del formulario.
+     * @param {Event} e - Evento de teclado o clic.
+     */
+    const handleSearchSubmit = (e) => {
+       //Usamos 'e' para evitar que la página se recargue o procese teclas nativas
+        if (e.key === 'Enter' || e.type === 'click') {
+            e.preventDefault(); 
+        
+            setIsSearching(true);
+        
+            // Simulamos la búsqueda. 
+            // Nota de Mentor: Esto debe ser reemplazado por la llamada real a la API más adelante.
+            setTimeout(() => {
+                setIsSearching(false);
+                console.log("Búsqueda finalizada");
+            }, 500);
+        }
+    };
+
+
+    // Renderiza el indicador de dirección de ordenamiento
+    const getSortIndicator = (column) => {
+        if (query.orderBy !== column) return '';
+        return query.sortOrder === 'ASC' ? ' ▲' : ' ▼';
+    };
+
+
+    // --- RENDERIZADO DE LA TABLA ---
+    const renderProductList = () => (
+        &lt;table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '20px' }}>
+            &lt;thead>
+                &lt;tr style={{ backgroundColor: '#ccc' }}>
+                    
+                    {/* Columnas Modificadas para Ordenamiento */}
+                    &lt;th style={{ padding: '10px', border: '1px solid #ddd', cursor: 'pointer' }} onClick={() => handleSort('tipo')}>Tipo {getSortIndicator('tipo')}&lt;/th>
+                    &lt;th style={{ padding: '10px', border: '1px solid #ddd', cursor: 'pointer' }} onClick={() => handleSort('modelo')}>Modelo {getSortIndicator('modelo')}&lt;/th>
+                    &lt;th style={{ padding: '10px', border: '1px solid #ddd', cursor: 'pointer' }} onClick={() => handleSort('cliente')}>Cliente {getSortIndicator('cliente')}&lt;/th>
+                    &lt;th style={{ padding: '10px', border: '1px solid #ddd', cursor: 'pointer' }} onClick={() => handleSort('fecha_recepcion')}>Recepción {getSortIndicator('fecha_recepcion')}&lt;/th>
+                    &lt;th style={{ padding: '10px', border: '1px solid #ddd', cursor: 'pointer' }} onClick={() => handleSort('estado')}>Estado {getSortIndicator('estado')}&lt;/th>
+                    
+                    &lt;th style={{ padding: '10px', border: '1px solid #ddd' }}>Acciones&lt;/th>
+                &lt;/tr>
+            &lt;/thead>
+            &lt;tbody>
+                {products.map((p) => (
+                    &lt;tr key={p.id_producto}>
+                        {/* Se muestran Tipo y Modelo en columnas separadas */}
+                        &lt;td style={{ padding: '10px', border: '1px solid #ddd' }}>{p.tipo_nombre}&lt;/td>
+                        &lt;td style={{ padding: '10px', border: '1px solid #ddd' }}>{p.modelo_nombre}&lt;/td>
+                        
+                        &lt;td style={{ padding: '10px', border: '1px solid #ddd' }}>{p.cliente_nombre}&lt;/td>
+                        &lt;td style={{ padding: '10px', border: '1px solid #ddd' }}>{new Date(p.fecha_recepcion).toLocaleDateString()}&lt;/td>
+                        &lt;td style={{ padding: '10px', border: '1px solid #ddd' }}>{p.estado_nombre}&lt;/td>
+                        
+                        &lt;td style={{ padding: '10px', border: '1px solid #ddd' }}>
+                            &lt;button onClick={() => navigate(`/producto/${p.id_producto}`)}>Ver Detalle&lt;/button>
+                        &lt;/td>
+                    &lt;/tr>
+                ))}
+            &lt;/tbody>
+        &lt;/table>
+    );
+
+    return (
+        &lt;div style={{ padding: '20px' }}>
+            
+            {/* --- SECCIÓN SUPERIOR --- */}
+
+            {/* Título de la página */}
+            &lt;h1 style={{ margin: 0 }}>🛠️ Trazabilidad de Productos&lt;/h1>
+
+            &lt;ConfigSection title="Acciones">
+                &lt;div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                    {/* Dropdown de Columna */}
+                    &lt;select
+                        value={query.searchField}
+                        onChange={handleSearchFieldChange}
+                        style={{ padding: '10px', border: '1px solid #ccc', borderRadius: '5px' }}
+                    >
+                        {SEARCH_FIELDS.map(field => (
+                            &lt;option key={field.value} value={field.value}>{field.label}&lt;/option>
+                        ))}
+                    &lt;/select>
+
+                    {/* Campo de Texto (Ahora Habilitado) */}
+                    &lt;input 
+                        type="text" 
+                        placeholder={`Buscar por ${SEARCH_FIELDS.find(f => f.value === query.searchField)?.label}...`} 
+                        value={query.searchTerm}
+                        onChange={handleSearchTermChange}
+                        onKeyDown={handleSearchSubmit} // Dispara la búsqueda al presionar Enter (simulado)
+                        style={{ padding: '10px', border: '1px solid #ccc', borderRadius: '5px', minWidth: '250px' }}
+                    />
+
+                    {/* Agregamos el botón para usar la variable 'isSearching' */}
+                    &lt;button 
+                        onClick={handleSearchSubmit}
+                        disabled={isSearching}
+                        style={{ 
+                            padding: '10px 15px', 
+                            backgroundColor: isSearching ? '#ccc' : '#007bff', 
+                            color: 'white', 
+                            border: 'none', 
+                            borderRadius: '5px', 
+                            cursor: isSearching ? 'not-allowed' : 'pointer' 
+                        }}
+                    >
+                        {isSearching ? 'Buscando...' : 'Buscar'}
+                    &lt;/button>
+
+                &lt;/div>
+                
+                
+                {/* Botón de Alta */}
+                &lt;button 
+                    onClick={() => navigate('/registrar-recepcion')} 
+                    style={{ padding: '10px 20px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}
+                >
+                    ➕ Registrar Recepción
+                &lt;/button>
+                
+            &lt;/ConfigSection>
+            
+            {/* --- CONTENIDO PRINCIPAL --- */}
+            {isLoading &amp;&amp; &lt;p>Cargando productos...&lt;/p>}
+            {error &amp;&amp; &lt;p style={{ color: 'red' }}>Error: {error}&lt;/p>}
+            
+            {!isLoading &amp;&amp; !error &amp;&amp; products.length > 0 &amp;&amp; renderProductList()}
+            {!isLoading &amp;&amp; !error &amp;&amp; products.length === 0 &amp;&amp; &lt;p>No se encontraron productos registrados.&lt;/p>}
+        &lt;/div>
+    );
+};
+
+export default ProductsPage;</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#API_BASE_URL">API_BASE_URL</a></li><li><a href="global.html#create">create</a></li><li><a href="global.html#createClient">createClient</a></li><li><a href="global.html#createPhone">createPhone</a></li><li><a href="global.html#deletePhone">deletePhone</a></li><li><a href="global.html#disableClient">disableClient</a></li><li><a href="global.html#express">express</a></li><li><a href="global.html#fetchAllRoles">fetchAllRoles</a></li><li><a href="global.html#fetchAllUsers">fetchAllUsers</a></li><li><a href="global.html#fetchClientById">fetchClientById</a></li><li><a href="global.html#fetchClientCategories">fetchClientCategories</a></li><li><a href="global.html#fetchClients">fetchClients</a></li><li><a href="global.html#fetchProductById">fetchProductById</a></li><li><a href="global.html#fetchProductModels">fetchProductModels</a></li><li><a href="global.html#fetchProductStates">fetchProductStates</a></li><li><a href="global.html#fetchProductTypes">fetchProductTypes</a></li><li><a href="global.html#fetchProducts">fetchProducts</a></li><li><a href="global.html#fetchUserById">fetchUserById</a></li><li><a href="global.html#findAll">findAll</a></li><li><a href="global.html#findAllPhonesByClient">findAllPhonesByClient</a></li><li><a href="global.html#findAllProductModels">findAllProductModels</a></li><li><a href="global.html#findAllProductStates">findAllProductStates</a></li><li><a href="global.html#findById">findById</a></li><li><a href="global.html#findByUsername">findByUsername</a></li><li><a href="global.html#getCurrentUser">getCurrentUser</a></li><li><a href="global.html#login">login</a></li><li><a href="global.html#logout">logout</a></li><li><a href="global.html#mysql">mysql</a></li><li><a href="global.html#reactivateClient">reactivateClient</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#registerProductReception">registerProductReception</a></li><li><a href="global.html#toTitleCase">toTitleCase</a></li><li><a href="global.html#toUpperCase">toUpperCase</a></li><li><a href="global.html#update">update</a></li><li><a href="global.html#updateClient">updateClient</a></li><li><a href="global.html#updateProduct">updateProduct</a></li><li><a href="global.html#updateStatus">updateStatus</a></li><li><a href="global.html#updateUserData">updateUserData</a></li><li><a href="global.html#verifyConnection">verifyConnection</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Sun May 17 2026 23:18:48 GMT-0300 (hora estándar de Argentina)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

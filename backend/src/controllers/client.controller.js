@@ -1,6 +1,5 @@
 const Client = require('../models/Client');
 const formatter = require('../utils/data.formater');
-const db = require('../config/db.config');
 const ClientCategory = require('../models/ClientCategory');
 
 // --- 1. CONSULTAR CLIENTES (Listado Flexible) ---
@@ -182,22 +181,37 @@ exports.updateClient = async (req, res) => {
 
 // --- 4. DESHABILITAR CLIENTE (Simulación de Baja) ---
 exports.disableClient = async (req, res) => {
-    const { id_cliente } = req.params;
+    const id_cliente = req.params.id;
 
-    // Lógica para marcar el cliente como inactivo (is_active = 0)
-    const disableQuery = `UPDATE Cliente SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id_cliente = ?`;
-    
     try {
-        const [result] = await db.query(disableQuery, [id_cliente]);
+        const affectedRows = await Client.updateStatus(id_cliente, false);
         
-        if (result.affectedRows === 0) {
+        if (affectedRows === 0) {
+            return res.status(404).json({ message: "Cliente no encontrado." });
+        }
+
+        res.status(200).json({ message: "Cliente deshabilitado exitosamente." });
+    } catch (error) {
+        console.error("Error disabling client:", error);
+        res.status(500).json({ message: "Error al procesar la baja del cliente." });
+    }
+};
+
+// --- REHABILITAR CLIENTE (Marcar como Activo) ---
+exports.reactivateClient = async (req, res) => {
+    const id_cliente = req.params.id;
+
+    try {
+        const affectedRows = await Client.updateStatus(id_cliente);
+
+        if (affectedRows === 0) {
             return res.status(404).json({ message: "Client not found." });
         }
 
-        res.status(200).json({ message: "Client successfully disabled." });
+        res.status(200).json({ message: "Client successfully reactivated." });
     } catch (error) {
-        console.error("Error disabling client:", error);
-        res.status(500).json({ message: "Error processing client disable." });
+        console.error("Error reactivating client:", error);
+        res.status(500).json({ message: "Error processing client reactivation." });
     }
 };
 
@@ -230,23 +244,5 @@ exports.getAllClientCategories = async (req, res) => {
     } catch (error) {
         console.error("Error retrieving client categories list:", error);
         res.status(500).json({ message: "Error retrieving client categories list." });
-    }
-};
-
-// --- REHABILITAR CLIENTE (Marcar como Activo) ---
-exports.reactivateClient = async (req, res) => {
-    const id_cliente = req.params.id;
-
-    try {
-        const affectedRows = await Client.reactivateClient(id_cliente);
-
-        if (affectedRows === 0) {
-            return res.status(404).json({ message: "Client not found." });
-        }
-
-        res.status(200).json({ message: "Client successfully reactivated." });
-    } catch (error) {
-        console.error("Error reactivating client:", error);
-        res.status(500).json({ message: "Error processing client reactivation." });
     }
 };

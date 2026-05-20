@@ -1,13 +1,14 @@
-const db = require('../config/db.config'); 
+const { pool:db } = require('../config/db.config'); 
 
 /**
  * Consulta todos los roles (Administrador, Operario, etc.).
+ * @returns {Promise<Array>} Lista de objetos Rol.
  */
 exports.findAll = async () => {
     const query = `
-        SELECT id_role, name
-        FROM Role
-        ORDER BY name ASC
+        SELECT id_rol, nombre_rol
+        FROM Rol
+        ORDER BY nombre_rol ASC
     `;
     try {
         const [rows] = await db.query(query);
@@ -20,10 +21,12 @@ exports.findAll = async () => {
 
 /**
  * Crea un nuevo rol.
+ * @param {Object} roleData - Informacion del Rol.
+ * @returns {Promise<number>} Id de Rol agregado.
  */
 exports.create = async (roleData) => {
     const query = `
-        INSERT INTO Role (name)
+        INSERT INTO Rol (nombre_rol)
         VALUES (?)
     `;
     try {

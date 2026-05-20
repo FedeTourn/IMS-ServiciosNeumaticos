@@ -2,7 +2,7 @@ const Product = require('../models/Product');
 
 // --- FUNCIONES AUXILIARES ---
 
-// Mapeo de IDs de estado de tu DB (Verificar que coincidan)
+// Mapeo de IDs de estado de DB (Verificar que coincidan)
 const STATE_IDS = {
     RECIBIDO: 1,
     EN_REPARACION: 2,

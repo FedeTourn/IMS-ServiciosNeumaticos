@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: frontend/src/services/product.service.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: frontend/src/services/product.service.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import {API_BASE_URL} from '../config'; // Importa la constante base
+
+const API_URL = `${API_BASE_URL}/products`;
+
+const getAuthHeaders = () => {
+    const token = localStorage.getItem('user_token');
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}` 
+    };
+};
+
+/**
+ * Consulta la lista de todos los productos (Válvulas).
+ */
+/* export const fetchProducts = async () => {
+    const response = await fetch(API_URL, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to fetch products.");
+    }
+    return response.json();
+}; */
+
+/**
+ * Consulta la lista de todos los productos, con opciones de filtro/ordenamiento.
+ */
+export const fetchProducts = async (params = {}) => {
+    // Construye el query string a partir de los parámetros
+    const queryParams = new URLSearchParams(params).toString();
+    const url = `${API_URL}${queryParams ? '?' + queryParams : ''}`;
+    
+    const response = await fetch(url, { // Usa la URL con parámetros
+        method: 'GET',
+        headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to fetch products.");
+    }
+    return response.json();
+};
+
+/**
+ * Consulta la lista de tipos de producto.
+ */
+export const fetchProductTypes = async () => {
+    const response = await fetch(`${API_URL}/types`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+        throw new Error("Failed to fetch product types.");
+    }
+    return response.json();
+};
+
+/**
+ * Consulta la lista de modelos de producto (opcionalmente filtrados por typeId).
+ */
+export const fetchProductModels = async (typeId = null) => {
+    const url = typeId ? `${API_URL}/models?typeId=${typeId}` : `${API_URL}/models`;
+    const response = await fetch(url, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+        throw new Error("Failed to fetch product models.");
+    }
+    return response.json();
+};
+
+/**
+ * Registra la recepción de un producto.
+ */
+export const registerProductReception = async (productData) => {
+    const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(productData),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.message || "Failed to register product reception.");
+    }
+    return data;
+};
+
+/**
+ * Obtiene los datos de un solo producto por su ID.
+ */
+export const fetchProductById = async (id) => {
+    const response = await fetch(`${API_URL}/${id}`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to fetch product data.");
+    }
+    return response.json();
+};
+
+/**
+ * Actualiza la información y el estado de un producto.
+ */
+export const updateProduct = async (id, productData) => {
+    const response = await fetch(`${API_URL}/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(productData),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.message || "Failed to update product.");
+    }
+    return data;
+};
+
+/**
+ * Consulta la lista de estados de producto.
+ */
+export const fetchProductStates = async () => {
+    const response = await fetch(`${API_URL}/states`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+        throw new Error("Failed to fetch product states.");
+    }
+    return response.json();
+};</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#API_BASE_URL">API_BASE_URL</a></li><li><a href="global.html#create">create</a></li><li><a href="global.html#createClient">createClient</a></li><li><a href="global.html#createPhone">createPhone</a></li><li><a href="global.html#deletePhone">deletePhone</a></li><li><a href="global.html#disableClient">disableClient</a></li><li><a href="global.html#express">express</a></li><li><a href="global.html#fetchAllRoles">fetchAllRoles</a></li><li><a href="global.html#fetchAllUsers">fetchAllUsers</a></li><li><a href="global.html#fetchClientById">fetchClientById</a></li><li><a href="global.html#fetchClientCategories">fetchClientCategories</a></li><li><a href="global.html#fetchClients">fetchClients</a></li><li><a href="global.html#fetchProductById">fetchProductById</a></li><li><a href="global.html#fetchProductModels">fetchProductModels</a></li><li><a href="global.html#fetchProductStates">fetchProductStates</a></li><li><a href="global.html#fetchProductTypes">fetchProductTypes</a></li><li><a href="global.html#fetchProducts">fetchProducts</a></li><li><a href="global.html#fetchUserById">fetchUserById</a></li><li><a href="global.html#findAll">findAll</a></li><li><a href="global.html#findAllPhonesByClient">findAllPhonesByClient</a></li><li><a href="global.html#findAllProductModels">findAllProductModels</a></li><li><a href="global.html#findAllProductStates">findAllProductStates</a></li><li><a href="global.html#findById">findById</a></li><li><a href="global.html#findByUsername">findByUsername</a></li><li><a href="global.html#getCurrentUser">getCurrentUser</a></li><li><a href="global.html#login">login</a></li><li><a href="global.html#logout">logout</a></li><li><a href="global.html#mysql">mysql</a></li><li><a href="global.html#reactivateClient">reactivateClient</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#registerProductReception">registerProductReception</a></li><li><a href="global.html#toTitleCase">toTitleCase</a></li><li><a href="global.html#toUpperCase">toUpperCase</a></li><li><a href="global.html#update">update</a></li><li><a href="global.html#updateClient">updateClient</a></li><li><a href="global.html#updateProduct">updateProduct</a></li><li><a href="global.html#updateStatus">updateStatus</a></li><li><a href="global.html#updateUserData">updateUserData</a></li><li><a href="global.html#verifyConnection">verifyConnection</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Sun May 17 2026 23:18:48 GMT-0300 (hora estándar de Argentina)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

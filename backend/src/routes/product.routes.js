@@ -10,9 +10,6 @@ const productController = require('../controllers/product.controller');
 // GET /api/products - Consultar Productos (Válvulas)
 router.get('/', productController.getAllProducts);
 
-// GET /api/products - Consultar Productos
-router.get('/', productController.getAllProducts);
-
 // GET /api/products/types - Consultar Tipos
 router.get('/types', productController.getProductTypes);
 
