@@ -7,7 +7,7 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "lint": "eslint src/**/*.js",
-    "test": "NODE_ENV=test jest --detectOpenHandles"
+    "test": "cross-env NODE_ENV=test jest --detectOpenHandles"
   },
   "keywords": [],
   "author": "",
