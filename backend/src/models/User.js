@@ -129,21 +129,31 @@ exports.findById = async (id_user) => {
  * @returns {Promise<number>} Cantidad de filas afectadas.
  */
 exports.update = async (id_user, updateData) => {
-    // Construye la consulta dinámicamente
+    // 1. Diccionario de Mapeo Seguro (Whitelist): JS Key -> DB Column
+    const columnMap = {
+        full_name: 'nombre_completo',
+        id_role: 'id_rol',
+        is_active: 'activo',
+        password_hash: 'hash_contrasena'
+    };
+
+    
     let fields = [];
     let values = [];
+
+    // 2. Construcción Dinámica y Segura
     for (const [key, value] of Object.entries(updateData)){
-        if(value !== undefined) {
-            fields.push(`${key} = ?`);
+        // Aca uso la lista blanca
+        if(value !== undefined && columnMap[key]) {
+            fields.push(`${columnMap[key]} = ?`);
             values.push(value);
         }
     }
-    /* if (updateData.full_name) { fields.push("full_name = ?"); values.push(updateData.full_name); }
-    if (updateData.id_role) { fields.push("id_role = ?"); values.push(updateData.id_role); }
-    if (updateData.is_active !== undefined) { fields.push("is_active = ?"); values.push(updateData.is_active); }
-    if (updateData.password_hash) { fields.push("password_hash = ?"); values.push(updateData.password_hash); } */
     
     if (fields.length === 0) return 0; // No hay nada que actualizar
+    
+    // Añadimos el ID al final del array de valores para la cláusula WHERE
+    values.push(id_user);
 
     const sql = `
         UPDATE Usuario SET 
@@ -151,7 +161,6 @@ exports.update = async (id_user, updateData) => {
             fecha_modificacion = CURRENT_TIMESTAMP
         WHERE id_usuario = ?
     `;
-    values.push(id_user);
 
     try {
         const [result] = await db.execute(sql, values);

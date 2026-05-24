@@ -33,7 +33,9 @@ exports.create = async (roleData) => {
         const [result] = await db.query(query, [roleData.name]);
         return result.insertId;
     } catch (error) {
-        console.error("Error creating new role:", error);
+        if (error.code === 'ER_DUP_ENTRY') {
+                throw new Error('DUPLICATE_ROLE_NAME'); // Error genérico de dominio
+        }
         throw error;
     }
 };
