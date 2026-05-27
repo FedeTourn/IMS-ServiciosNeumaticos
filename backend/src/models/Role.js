@@ -6,7 +6,7 @@ const { pool:db } = require('../config/db.config');
  */
 exports.findAll = async () => {
     const query = `
-        SELECT id_rol, nombre_rol
+        SELECT id_rol as id_role, nombre_rol as name
         FROM Rol
         ORDER BY nombre_rol ASC
     `;

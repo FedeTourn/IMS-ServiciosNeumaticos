@@ -51,3 +51,27 @@ describe('Unit Test: ProductService.updateProductState', () => {
         expect(Product.update).toHaveBeenCalledWith(100, { observaciones: 'Iniciando', estado: 2 });
     });
 });
+
+describe('ProductService - Lógica Compleja', () => {
+    
+    // Prueba de Regla de Negocio: Transición Prohibida
+    it('debería lanzar error 403 al intentar una transición prohibida', async () => {
+        // Simulamos producto en estado 4 (ENTREGADO) que no tiene transiciones permitidas
+        Product.findById.mockResolvedValue({ id_producto: 1, estado: 4, estado_nombre: 'Entregado' });
+
+        await expect(ProductService.updateProductState(1, 2, 'Cualquier observacion'))
+            .rejects
+            .toMatchObject({ status: 403 });
+    });
+
+    // Prueba de Lógica: Listado con filtros
+    it('debería pasar los filtros correctamente al modelo', async () => {
+        const mockFilters = { orderBy: 'fecha_recepcion', sortOrder: 'DESC' };
+        Product.findAll.mockResolvedValue([{ id_producto: 1 }]);
+
+        const result = await ProductService.getAllProducts(mockFilters);
+
+        expect(Product.findAll).toHaveBeenCalledWith(mockFilters);
+        expect(result).toHaveLength(1);
+    });
+});

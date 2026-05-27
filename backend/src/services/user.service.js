@@ -45,7 +45,7 @@ class UserService {
     static async getAllUsers(){
         const users = await User.findAll();
 
-        return {users};
+        return users;
     };
 
     /**
@@ -60,7 +60,7 @@ class UserService {
 
         delete user.password_hash;
 
-        return {user};
+        return user;
     };
 
 
@@ -93,7 +93,7 @@ class UserService {
      */
     static async getAllRoles(){
         const roles = await Role.findAll();
-        return {roles};
+        return roles;
     };
 
     /**

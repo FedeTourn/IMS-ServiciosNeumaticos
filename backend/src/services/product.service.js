@@ -36,6 +36,51 @@ const TRANSITION_RULES = {
 };
 
 class ProductService {
+
+    static async getAllProducts(options){
+        const products = await Product.findAll(options); // Pasa las opciones al modelo
+        return products;
+    };
+
+    static async getProductTypes(){
+        const types = await Product.findAllProductTypes();
+        return types
+    };
+
+    
+    static async getProductModels(typeId){
+        const models = await Product.findAllProductModels(typeId);
+        return models
+    };
+
+    static async createProduct(id_cliente, modelo, observaciones, fecha_recepcion, fecha_entrega_pactada){
+        
+        if (!id_cliente || !modelo || !fecha_recepcion) {
+            throw { status: 400, message: "Client ID, Model, and Reception Date are required." };
+        }
+
+        const newProductId = await Product.create({ 
+            id_cliente, 
+            modelo, 
+            observaciones,
+            fecha_recepcion,
+            // Nota: El estado 'Recibida' (ID 1) se establece en el modelo.
+            // La fecha_entrega_pactada se puede almacenar en otra tabla de Órdenes/Comprobantes después.
+        });
+
+        return { message: "Product received and registered successfully.", id_producto: newProductId };
+    };
+
+    static async getProductById(id_producto){
+        const product = await Product.findById(id_producto);
+
+        if (!product) {
+            throw { status: 404, message: "Product not found." };
+        }
+
+        return product;
+    };
+
     /**
      * Valida y ejecuta la actualización de estado de un producto.
      * @param {number|string} id_producto - ID del producto a modificar.
@@ -73,6 +118,11 @@ class ProductService {
         }
 
         return { message: "Product updated successfully." };
+    };
+
+    static async getProductStates(){
+        const states = await Product.findAllProductStates();
+        return states;
     }
 }
 

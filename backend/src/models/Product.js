@@ -1,12 +1,75 @@
 const { pool:db } = require('../config/db.config'); 
 
-/* *
- * Consulta todos los productos con sus datos relacionados.
- * @returns {Promise<Array>} Lista de objetos producto.
+// ---------------------------------------------------------
+// CONSTANTES DE CONFIGURACIÓN Y MAPEOS SEGUROS
+// ---------------------------------------------------------
+const ALLOWED_ORDER_BY = {
+    cliente: 'c.nombre',
+    tipo: 'tp.nombre',
+    modelo: 'mp.nombre',
+    estado: 'ep.nombre',
+    fecha_recepcion: 'p.fecha_recepcion'
+};
+
+const SEARCH_COLUMNS = {
+    cliente: 'c.nombre',
+    tipo: 'tp.nombre',
+    modelo: 'mp.nombre',
+    estado: 'ep.nombre',
+    recepcion: 'p.fecha_recepcion',
+    todos: ['c.nombre', 'tp.nombre', 'mp.nombre', 'ep.nombre']
+};
+
+// ---------------------------------------------------------
+// FUNCIONES AUXILIARES (PRIVADAS AL MÓDULO)
+// ---------------------------------------------------------
+
+/**
+ * Construye dinámicamente la cláusula WHERE y los parámetros para evitar inyección SQL.
+ * @param {string} searchField - Campo sobre el cual buscar.
+ * @param {string} searchTerm - Texto ingresado por el usuario.
+ * @returns {Object} { condition: string, params: Array }
  */
-/* exports.findAll = async () => {
-    // Consulta JOIN para obtener el nombre en lugar de IDs
-    const query = `
+const _buildSearchClause = (searchField, searchTerm) => {
+    if (!searchTerm || searchTerm.trim() === '') {
+        return { condition: '', params: [] };
+    }
+
+    const term = `%${searchTerm.trim()}%`;
+    const isGlobalSearch = searchField === 'todos' || !SEARCH_COLUMNS[searchField];
+    const fieldsToSearch = isGlobalSearch ? SEARCH_COLUMNS.todos : [SEARCH_COLUMNS[searchField]];
+
+    const sqlConditions = fieldsToSearch.map(field => `${field} LIKE ?`).join(' OR ');
+    const params = Array(fieldsToSearch.length).fill(term);
+
+    return { condition: `WHERE (${sqlConditions})`, params };
+};
+
+/**
+ * Sanitiza y construye la cláusula ORDER BY.
+ * @param {string} orderBy - Criterio de ordenamiento enviado por el cliente.
+ * @param {string} sortOrder - Dirección del ordenamiento (ASC/DESC).
+ * @returns {string} Cláusula ORDER BY validada.
+ */
+const _buildOrderClause = (orderBy, sortOrder) => {
+    const column = ALLOWED_ORDER_BY[orderBy] || ALLOWED_ORDER_BY.fecha_recepcion;
+    const direction = sortOrder?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+    return `ORDER BY ${column} ${direction}`;
+};
+
+// ---------------------------------------------------------
+// EXPORTACIONES DEL MODELO (CAPA DE DATOS)
+// ---------------------------------------------------------
+
+/**
+ * Consulta los productos con sus datos relacionados, permitiendo filtrado y ordenamiento dinámico.
+ * @param {Object} options - Parámetros de consulta { orderBy, sortOrder, searchField, searchTerm }.
+ * @returns {Promise<Array>} Lista de objetos de la entidad Producto.
+ */
+exports.findAll = async (options = {}) => {
+    const { orderBy, sortOrder, searchField, searchTerm } = options;
+
+    const baseQuery = `
         SELECT 
             p.id_producto,
             c.nombre AS cliente_nombre,
@@ -15,29 +78,40 @@ const { pool:db } = require('../config/db.config');
             ep.nombre AS estado_nombre,
             p.fecha_recepcion,
             p.fecha_entrega,
-            p.id_orden_reparacion
+            p.id_orden_reparacion,
+            p.observaciones
         FROM Producto p
         JOIN Cliente c ON p.id_cliente = c.id_cliente
         JOIN ModeloProducto mp ON p.modelo = mp.id_modelo
         JOIN TipoProducto tp ON mp.tipo = tp.id_tipo
         JOIN EstadoProducto ep ON p.estado = ep.id_estado
-        ORDER BY p.fecha_recepcion DESC
     `;
+
+    const { condition: whereClause, params } = _buildSearchClause(searchField, searchTerm);
+    const orderClause = _buildOrderClause(orderBy, sortOrder);
+
+    // Ensamblaje final de la consulta
+    const query = `${baseQuery} ${whereClause} ${orderClause}`;
+
     try {
-        const [rows] = await db.query(query);
+        const [rows] = await db.query(query, params);
         return rows;
     } catch (error) {
-        console.error("Error fetching all products:", error);
-        throw error;
+        console.error("Error en ProductoModel.findAll:", error);
+        throw new Error("Error en la capa de datos al consultar los productos.");
     }
-}; */
+};
 
 /**
  * Consulta todos los productos con sus datos relacionados, permitiendo filtros y ordenamiento.
  * @param {Object} options - { orderBy, sortOrder, searchField, searchTerm }
  * @returns {Promise<Array>} Lista de objetos producto.
  */
-exports.findAll = async (options = {}) => {
+/* exports.findAll = async (options) => {
+    // 1. Sanitización de filtros (Crucial para evitar SQL Injection)
+    const orderBy = ALLOWED_ORDER_BY.includes(options.orderBy) ? options.orderBy : 'fecha_recepcion';
+    const sortOrder = ALLOWED_SORT_ORDER.includes(options.sortOrder?.toUpperCase()) ? options.sortOrder : 'DESC';
+
     const { orderBy, sortOrder, searchField, searchTerm } = options;
 
     let query = `
@@ -57,6 +131,8 @@ exports.findAll = async (options = {}) => {
         JOIN TipoProducto tp ON mp.tipo = tp.id_tipo
         JOIN EstadoProducto ep ON p.estado = ep.id_estado
     `;
+
+    
     let params = [];
     let whereClauses = [];
     
@@ -127,7 +203,7 @@ exports.findAll = async (options = {}) => {
         console.error("Error fetching all products with options:", error);
         throw error;
     }
-};
+}; */
 
 /**
  * Consulta todos los Tipos de Producto.
@@ -266,3 +342,35 @@ exports.findAllProductStates = async () => {
         throw error;
     }
 };
+
+/* *
+ * Consulta todos los productos con sus datos relacionados.
+ * @returns {Promise<Array>} Lista de objetos producto.
+ */
+/* exports.findAll = async () => {
+    // Consulta JOIN para obtener el nombre en lugar de IDs
+    const query = `
+        SELECT 
+            p.id_producto,
+            c.nombre AS cliente_nombre,
+            tp.nombre AS tipo_nombre,
+            mp.nombre AS modelo_nombre,
+            ep.nombre AS estado_nombre,
+            p.fecha_recepcion,
+            p.fecha_entrega,
+            p.id_orden_reparacion
+        FROM Producto p
+        JOIN Cliente c ON p.id_cliente = c.id_cliente
+        JOIN ModeloProducto mp ON p.modelo = mp.id_modelo
+        JOIN TipoProducto tp ON mp.tipo = tp.id_tipo
+        JOIN EstadoProducto ep ON p.estado = ep.id_estado
+        ORDER BY p.fecha_recepcion DESC
+    `;
+    try {
+        const [rows] = await db.query(query);
+        return rows;
+    } catch (error) {
+        console.error("Error fetching all products:", error);
+        throw error;
+    }
+}; */

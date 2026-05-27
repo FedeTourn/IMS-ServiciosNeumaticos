@@ -1,5 +1,42 @@
 const { pool:db } = require('../config/db.config'); 
 
+
+// --- CONSTANTES GLOBALES DEL MÓDULO ---
+const ALLOWED_ORDER_BY = {
+    nombre: 'c.nombre',
+    cuit: 'c.cuit',
+    email: 'c.email',
+    categoria: 'cat.nombre_categoria'
+};
+
+const SEARCH_COLUMNS = {
+    nombre: 'c.nombre',
+    cuit: 'c.cuit',
+    email: 'c.email',
+    todos: ['c.nombre', 'c.cuit', 'c.email']
+};
+
+
+// --- FUNCIONES AUXILIARES PRIVADAS ---
+const _buildSearchClause = (searchField, searchTerm) => {
+    if (!searchTerm || searchTerm.trim() === '') return { condition: '', params: [] };
+
+    const term = `%${searchTerm.trim()}%`;
+    const fieldsToSearch = SEARCH_COLUMNS[searchField] || SEARCH_COLUMNS.todos;
+    const isArray = Array.isArray(fieldsToSearch);
+    
+    const conditions = (isArray ? fieldsToSearch : [fieldsToSearch]).map(f => `${f} LIKE ?`).join(' OR ');
+    const params = Array(isArray ? fieldsToSearch.length : 1).fill(term);
+
+    return { condition: `WHERE (${conditions})`, params };
+};
+
+const _buildOrderClause = (orderBy, sortOrder) => {
+    const column = ALLOWED_ORDER_BY[orderBy] || ALLOWED_ORDER_BY.nombre;
+    const direction = sortOrder?.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
+    return `ORDER BY ${column} ${direction}`;
+};
+
 /**
  * Busca todos los clientes con su categoría.
  * @returns {Promise<Array>} Lista de objetos cliente.
@@ -29,7 +66,6 @@ const { pool:db } = require('../config/db.config');
  * @returns {Promise<number>} El ID del cliente recién creado.
  */
 exports.create = async (clientData) => {
-    // Implementación simple de INSERT. La validación de unicidad compleja se hace en el controlador.
     const query = `
         INSERT INTO Cliente (nombre, direccion, cuit, email, categoria)
         VALUES (?, ?, ?, ?, ?)
@@ -44,6 +80,9 @@ exports.create = async (clientData) => {
         ]);
         return result.insertId;
     } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            throw new Error('DUPLICATE_CLIENT_ENTRY');
+        }
         console.error("Error creating client:", error);
         throw error;
     }
@@ -71,6 +110,9 @@ exports.update = async (id_cliente, clientData) => {
         ]);
         return result.affectedRows;
     } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            throw new Error('DUPLICATE_EMAIL_ENTRY');
+        }
         console.error("Error updating client:", error);
         throw error;
     }
@@ -137,7 +179,7 @@ exports.findAllPhonesByClient = async (id_cliente) => {
 exports.findAll = async (options = {}) => {
     const { orderBy, sortOrder, searchField, searchTerm } = options;
 
-    let query = `
+    const baseQuery = `
         SELECT 
             c.id_cliente, 
             c.nombre, 
@@ -148,7 +190,46 @@ exports.findAll = async (options = {}) => {
         FROM Cliente c
         JOIN CategoriaCliente cat ON c.categoria = cat.id_categoria
     `;
-    let params = [];
+
+    const { condition, params} = _buildSearchClause(searchField, searchTerm);
+    const orderClause = _buildOrderClause(orderBy, sortOrder);
+    const query = `${baseQuery} ${condition} ${orderClause}`;
+
+    try {
+        const [clients] = await db.query(query, params);
+        if(clients.length === 0) return [];
+
+        //Buscar clientes y extraert telefonos en la misma consulta
+        const clientIds = clients.map(c => c.id_cliente);
+        const [phones] = await db.query(
+            `SELECT id_cliente, telefono, Descripcion FROM TelefonoCliente WHERE id_cliente IN (?)`, 
+            [clientIds]
+        );
+
+        // Agrupamiento
+        const clientsMap = clients.reduce((acc, client) => {
+            acc[client.id_cliente] = { ...client, telefonos: []};
+            return acc;
+        }, {});
+
+        phones.forEach(phone => {
+            if (clientsMap[phone.id_cliente]){
+                clientsMap[phone.id_cliente].telefonos.push({
+                    numero: phone.telefono,
+                    descripcion: phone.descripcion || ''
+                });
+            }
+        });
+
+        // Retornar los valores mapeados conservando el orden del query original
+        return clients.map(c => clientsMap[c.id_cliente]);
+
+    } catch (error) {
+        console.error("Error fetching all clients with options:", error);
+        throw error;
+    }
+
+    /* let params = [];
     let whereClauses = [];
     
     // --- Mapeo seguro de columnas para BÚSQUEDA ---
@@ -212,7 +293,7 @@ exports.findAll = async (options = {}) => {
     } catch (error) {
         console.error("Error fetching all clients with options:", error);
         throw error;
-    }
+    } */
 };
 
 /**
