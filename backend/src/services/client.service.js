@@ -1,6 +1,7 @@
 const Client = require('../models/Client');
 const ClientCategory = require('../models/ClientCategory');
 const formatter = require('../utils/data.formater');
+const { isValidCUIT, isValidEmail} = require('../utils/validation');
 
 
 class ClientService {
@@ -16,6 +17,15 @@ class ClientService {
         // 1. VALIDACIÓN BÁSICA DE CAMPOS OBLIGATORIOS
         if (!apellido || !nombre || !cuit || !provincia || !ciudad || !categoria) {
             throw { status: 400, message: "Apellido, Nombre, CUIT, Provincia, Ciudad y Categoría son campos obligatorios." };
+        }
+
+        //1.1 VALIDACION DE SEGURIDAD PARA CUIT Y EMAIL
+        if (!isValidCUIT(clientDTO.cuit)) {
+            throw { status: 400, message: "CUIT inválido según formato de verificación." };
+        }
+        
+        if (!isValidEmail(clientDTO.email)) {
+            throw { status: 400, message: "Formato de email inválido." };
         }
 
         // 2. NORMALIZACIÓN Y ESTANDARIZACIÓN A MAYÚSCULAS
