@@ -1,4 +1,41 @@
-const db = require('../config/db.config'); 
+const { pool:db } = require('../config/db.config'); 
+
+
+// --- CONSTANTES GLOBALES DEL MÓDULO ---
+const ALLOWED_ORDER_BY = {
+    nombre: 'c.nombre',
+    cuit: 'c.cuit',
+    email: 'c.email',
+    categoria: 'cat.nombre_categoria'
+};
+
+const SEARCH_COLUMNS = {
+    nombre: 'c.nombre',
+    cuit: 'c.cuit',
+    email: 'c.email',
+    todos: ['c.nombre', 'c.cuit', 'c.email']
+};
+
+
+// --- FUNCIONES AUXILIARES PRIVADAS ---
+const _buildSearchClause = (searchField, searchTerm) => {
+    if (!searchTerm || searchTerm.trim() === '') return { condition: '', params: [] };
+
+    const term = `%${searchTerm.trim()}%`;
+    const fieldsToSearch = SEARCH_COLUMNS[searchField] || SEARCH_COLUMNS.todos;
+    const isArray = Array.isArray(fieldsToSearch);
+    
+    const conditions = (isArray ? fieldsToSearch : [fieldsToSearch]).map(f => `${f} LIKE ?`).join(' OR ');
+    const params = Array(isArray ? fieldsToSearch.length : 1).fill(term);
+
+    return { condition: `WHERE (${conditions})`, params };
+};
+
+const _buildOrderClause = (orderBy, sortOrder) => {
+    const column = ALLOWED_ORDER_BY[orderBy] || ALLOWED_ORDER_BY.nombre;
+    const direction = sortOrder?.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
+    return `ORDER BY ${column} ${direction}`;
+};
 
 /**
  * Busca todos los clientes con su categoría.
@@ -25,9 +62,10 @@ const db = require('../config/db.config');
  * Registra un nuevo cliente. (Crear Cliente)
  * Requisito: Validar unicidad por CUIT, Apellido y Nombre, o Email. 
  * Nota: Solo validamos CUIT y Email por ser identificadores técnicos.
+ * @param {Object} clientData - Datos del cliente (nombre, direccion, cuit, email, categoria).
+ * @returns {Promise<number>} El ID del cliente recién creado.
  */
 exports.create = async (clientData) => {
-    // Implementación simple de INSERT. La validación de unicidad compleja se hace en el controlador.
     const query = `
         INSERT INTO Cliente (nombre, direccion, cuit, email, categoria)
         VALUES (?, ?, ?, ?, ?)
@@ -42,6 +80,9 @@ exports.create = async (clientData) => {
         ]);
         return result.insertId;
     } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            throw new Error('DUPLICATE_CLIENT_ENTRY');
+        }
         console.error("Error creating client:", error);
         throw error;
     }
@@ -50,6 +91,9 @@ exports.create = async (clientData) => {
 /**
  * Actualiza la información principal de un cliente.
  * Solo actualiza los campos permitidos: direccion, email, categoria.
+ * @param {number} id_cliente - ID del cliente a modificar.
+ * @param {Object} clientData - Datos nuevos del cliente (Direccion, Email, Categoria).
+ * @returns {Promise<number>} Cantidad de filas afectadas.
  */
 exports.update = async (id_cliente, clientData) => {
     const query = `
@@ -66,6 +110,9 @@ exports.update = async (id_cliente, clientData) => {
         ]);
         return result.affectedRows;
     } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            throw new Error('DUPLICATE_EMAIL_ENTRY');
+        }
         console.error("Error updating client:", error);
         throw error;
     }
@@ -73,6 +120,8 @@ exports.update = async (id_cliente, clientData) => {
 
 /**
  * Consulta un cliente por ID, con sus datos de categoría.
+ * @param {number} id_cliente - ID del cliente a consultado.
+ * @returns {Promise<Object>} Objeto cliente o null. 
  */
 exports.findById = async (id_cliente) => {
     const query = `
@@ -83,7 +132,7 @@ exports.findById = async (id_cliente) => {
             c.cuit, 
             c.email, 
             c.categoria AS id_categoria,
-            c.is_active,
+            c.activo AS is_active,
             cat.nombre_categoria
         FROM Cliente c
         JOIN CategoriaCliente cat ON c.categoria = cat.id_categoria
@@ -101,6 +150,7 @@ exports.findById = async (id_cliente) => {
 /**
  * Consulta todos los teléfonos asociados a un cliente.
  * Se modifica para devolver un objeto limpio, no una cadena.
+ * @param {number} id_cliente - Cliente del que se quiere saber los telefonos.
  */
 exports.findAllPhonesByClient = async (id_cliente) => {
     const query = `
@@ -123,13 +173,13 @@ exports.findAllPhonesByClient = async (id_cliente) => {
 
 /**
  * Consulta todos los clientes, permitiendo filtros y ordenamiento, e incluyendo teléfonos.
- * @param {Object} options - { orderBy, sortOrder, searchField, searchTerm }
+ * @param {Object} options - { orderBy, sortOrder, searchField, searchTerm }.
  * @returns {Promise<Array>} Lista de objetos cliente.
  */
 exports.findAll = async (options = {}) => {
     const { orderBy, sortOrder, searchField, searchTerm } = options;
 
-    let query = `
+    const baseQuery = `
         SELECT 
             c.id_cliente, 
             c.nombre, 
@@ -140,7 +190,46 @@ exports.findAll = async (options = {}) => {
         FROM Cliente c
         JOIN CategoriaCliente cat ON c.categoria = cat.id_categoria
     `;
-    let params = [];
+
+    const { condition, params} = _buildSearchClause(searchField, searchTerm);
+    const orderClause = _buildOrderClause(orderBy, sortOrder);
+    const query = `${baseQuery} ${condition} ${orderClause}`;
+
+    try {
+        const [clients] = await db.query(query, params);
+        if(clients.length === 0) return [];
+
+        //Buscar clientes y extraert telefonos en la misma consulta
+        const clientIds = clients.map(c => c.id_cliente);
+        const [phones] = await db.query(
+            `SELECT id_cliente, telefono, Descripcion FROM TelefonoCliente WHERE id_cliente IN (?)`, 
+            [clientIds]
+        );
+
+        // Agrupamiento
+        const clientsMap = clients.reduce((acc, client) => {
+            acc[client.id_cliente] = { ...client, telefonos: []};
+            return acc;
+        }, {});
+
+        phones.forEach(phone => {
+            if (clientsMap[phone.id_cliente]){
+                clientsMap[phone.id_cliente].telefonos.push({
+                    numero: phone.telefono,
+                    descripcion: phone.descripcion || ''
+                });
+            }
+        });
+
+        // Retornar los valores mapeados conservando el orden del query original
+        return clients.map(c => clientsMap[c.id_cliente]);
+
+    } catch (error) {
+        console.error("Error fetching all clients with options:", error);
+        throw error;
+    }
+
+    /* let params = [];
     let whereClauses = [];
     
     // --- Mapeo seguro de columnas para BÚSQUEDA ---
@@ -204,11 +293,15 @@ exports.findAll = async (options = {}) => {
     } catch (error) {
         console.error("Error fetching all clients with options:", error);
         throw error;
-    }
+    } */
 };
 
 /**
- * Registra un número de teléfono asociado a un cliente.
+ * Registra un nuevo número de teléfono asociado a un cliente.
+ * @param {number} id_cliente - Cliente al que se le asocian los telefonos.
+ * @param {number} telefono - Numero de telefono.
+ * @param {String} descripcion - Descripcion del numero de telefono.
+ * @returns {Promise<number>} El ID del cliente modificado.
  */
 exports.createPhone = async (id_cliente, telefono, descripcion) => {
     // La tabla es TelefonoCliente
@@ -231,6 +324,9 @@ exports.createPhone = async (id_cliente, telefono, descripcion) => {
 
 /**
  * Elimina un teléfono específico de un cliente.
+ * @param {number} id_cliente - Cliente a modificar.
+ * @param {number} telefono - Telefono a eliminar.
+ * @returns {Promise<number>} Cantidad de filas afectadas.
  */
 exports.deletePhone = async (id_cliente, telefono) => {
     const query = `
@@ -249,7 +345,7 @@ exports.deletePhone = async (id_cliente, telefono) => {
 /**
  * Reactiva un cliente marcando is_active = TRUE.
  */
-exports.reactivateClient = async (id_cliente) => {
+/* exports.reactivateClient = async (id_cliente) => {
     const query = `
         UPDATE Cliente 
         SET is_active = TRUE, updated_at = CURRENT_TIMESTAMP
@@ -260,6 +356,27 @@ exports.reactivateClient = async (id_cliente) => {
         return result.affectedRows;
     } catch (error) {
         console.error("Error reactivating client:", error);
+        throw error;
+    }
+}; */
+
+/**
+ * Cambia el estado de activación de un cliente (Soft Delete).
+ * @param {number} id_cliente - ID del cliente a modificar.
+ * @param {boolean} status - Nuevo estado (true para activo, false para inactivo).
+ * @returns {Promise<number>} Cantidad de filas afectadas.
+ */
+exports.updateStatus = async (id_cliente, status) => {
+    const sql = `
+        UPDATE Cliente 
+        SET activo = ?, ultima_modificacion = CURRENT_TIMESTAMP 
+        WHERE id_cliente = ?
+    `;
+    try {
+        const [result] = await db.execute(sql, [status ? 1 : 0, id_cliente]);
+        return result.affectedRows;
+    } catch (error) {
+        console.error(`[Model:Client] Error en updateStatus: ${error.message}`);
         throw error;
     }
 };

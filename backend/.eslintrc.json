@@ -1,0 +1,13 @@
+{
+  "env": {
+    "node": true,
+    "es2021": true
+  },
+  "extends": ["eslint:recommended", "plugin:prettier/recommended"],
+  "rules": {
+    "no-console": "warn",
+    "consistent-return": "error",
+    "curly": "error",
+    "camelcase": "off" 
+  }
+}

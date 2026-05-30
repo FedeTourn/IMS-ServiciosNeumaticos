@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 const LoginPage = () => {
     // 1. LLAMA AL HOOK useAuth UNA SOLA VEZ AL INICIO
     // Desestructura todas las funciones y valores que necesites.
-    const { signIn, signOut, isAuthenticated, user } = useAuth(); // <-- HOOKS EN EL NIVEL SUPERIOR
+    const { signIn, isAuthenticated } = useAuth(); // <-- HOOKS EN EL NIVEL SUPERIOR
     const navigate = useNavigate();
     
     const [username, setUsername] = useState('');

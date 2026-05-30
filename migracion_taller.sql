@@ -53,8 +53,8 @@ CREATE TABLE `Cliente` (
   `cuit` varchar(100) DEFAULT NULL,
   `email` varchar(100) DEFAULT NULL,
   `categoria` int NOT NULL,
-  `is_active` tinyint(1) NOT NULL DEFAULT '1',
-  `updated_at` timestamp NULL DEFAULT NULL,
+  `activo` tinyint(1) NOT NULL DEFAULT '1',
+  `ultima_modificacion` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id_cliente`),
   UNIQUE KEY `cuit` (`cuit`),
   KEY `categoria` (`categoria`),
@@ -223,28 +223,28 @@ INSERT INTO `Producto` VALUES (1,1,'2025-11-01 17:17:19','2025-11-01 17:17:19',N
 UNLOCK TABLES;
 
 --
--- Table structure for table `Role`
+-- Table structure for table `Rol`
 --
 
-DROP TABLE IF EXISTS `Role`;
+DROP TABLE IF EXISTS `Rol`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `Role` (
-  `id_role` int NOT NULL AUTO_INCREMENT,
-  `name` varchar(50) NOT NULL,
-  PRIMARY KEY (`id_role`),
-  UNIQUE KEY `name` (`name`)
+CREATE TABLE `Rol` (
+  `id_rol` int NOT NULL AUTO_INCREMENT,
+  `nombre_rol` varchar(50) NOT NULL,
+  PRIMARY KEY (`id_rol`),
+  UNIQUE KEY `nombre_rol` (`nombre_rol`)
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `Role`
+-- Dumping data for table `Rol`
 --
 
-LOCK TABLES `Role` WRITE;
-/*!40000 ALTER TABLE `Role` DISABLE KEYS */;
-INSERT INTO `Role` VALUES (1,'Administrador'),(3,'Administrativo'),(4,'Operario'),(2,'Tecnico');
-/*!40000 ALTER TABLE `Role` ENABLE KEYS */;
+LOCK TABLES `Rol` WRITE;
+/*!40000 ALTER TABLE `Rol` DISABLE KEYS */;
+INSERT INTO `Rol` VALUES (1,'Administrador'),(3,'Administrativo'),(4,'Operario'),(2,'Tecnico');
+/*!40000 ALTER TABLE `Rol` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -300,35 +300,35 @@ INSERT INTO `TipoProducto` VALUES (2,'DISTRIBUIDORA'),(1,'FRENO MANO'),(3,'PEDAL
 UNLOCK TABLES;
 
 --
--- Table structure for table `User`
+-- Table structure for table `Usuario`
 --
 
-DROP TABLE IF EXISTS `User`;
+DROP TABLE IF EXISTS `Usuario`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `User` (
-  `id_user` int NOT NULL AUTO_INCREMENT,
-  `full_name` varchar(100) NOT NULL,
-  `username` varchar(50) NOT NULL,
-  `password_hash` varchar(255) NOT NULL,
-  `id_role` int NOT NULL,
-  `is_active` tinyint(1) NOT NULL DEFAULT '1',
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id_user`),
-  UNIQUE KEY `username` (`username`),
-  KEY `id_role` (`id_role`),
-  CONSTRAINT `User_ibfk_1` FOREIGN KEY (`id_role`) REFERENCES `Role` (`id_role`)
+CREATE TABLE `Usuario` (
+  `id_usuario` int NOT NULL AUTO_INCREMENT,
+  `nombre_completo` varchar(100) NOT NULL,
+  `nombre_usuario` varchar(50) NOT NULL,
+  `hash_contrasena` varchar(255) NOT NULL,
+  `id_rol` int NOT NULL,
+  `activo` tinyint(1) NOT NULL DEFAULT '1',
+  `fecha_creacion` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `fecha_modificacion` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id_usuario`),
+  UNIQUE KEY `nombre_usuario` (`nombre_usuario`),
+  KEY `id_rol` (`id_rol`),
+  CONSTRAINT `Usuario_ibfk_1` FOREIGN KEY (`id_rol`) REFERENCES `Rol` (`id_rol`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `User`
+-- Dumping data for table `Usuario`
 --
 
-LOCK TABLES `User` WRITE;
-/*!40000 ALTER TABLE `User` DISABLE KEYS */;
-INSERT INTO `User` VALUES (1,'Federico Tourn','admin','$2b$10$JTeMPpxA9Q5iYp5zqBshfeudz8smvpbCF5Ebak9W5vGm7qrjT2pSG',1,1,'2025-10-21 21:22:12','2025-10-21 21:22:12'),(2,'Maria Laura Pacini','lau','$2b$10$uCYX8q7kTl/.GZZx/qnLj.F1oz6Gcxz5H.91ZEiI07ys5WP4xsvIC',3,1,'2025-11-05 22:58:16','2025-11-05 22:58:16');
+LOCK TABLES `Usuario` WRITE;
+/*!40000 ALTER TABLE `Usuario` DISABLE KEYS */;
+INSERT INTO `Usuario` VALUES (1,'Federico Tourn','admin','$2b$10$JTeMPpxA9Q5iYp5zqBshfeudz8smvpbCF5Ebak9W5vGm7qrjT2pSG',1,1,'2025-10-21 21:22:12','2025-10-21 21:22:12'),(2,'Maria Laura Pacini','lau','$2b$10$uCYX8q7kTl/.GZZx/qnLj.F1oz6Gcxz5H.91ZEiI07ys5WP4xsvIC',3,1,'2025-11-05 22:58:16','2025-11-05 22:58:16');
 /*!40000 ALTER TABLE `User` ENABLE KEYS */;
 UNLOCK TABLES;
 

@@ -1,27 +1,37 @@
+/**
+ * Modelo de datos para la entidad Usuario (User).
+ * Basado en una arquitectura de tres capas, este archivo representa el DAO (Data Access Object)
+ * encargado exclusivamente de la comunicación con la base de datos MySQL.
+ */
 // Importa el pool de conexiones de la base de datos
-const db = require('../config/db.config'); 
+const { pool:db } = require('../config/db.config'); 
 
 /**
  * Busca un usuario por su nombre de usuario.
  * @param {string} username - El nombre de usuario a buscar.
- * @returns {Promise<Object>} Un objeto con los datos del usuario o null.
+ * @returns {Promise<Object>} Un objeto con los datos del usuario y su rol o null.
  */
 exports.findByUsername = async (username) => {
     // Consulta SQL para obtener todos los datos del usuario, incluyendo el nombre del rol.
-    const query = `
+    const sql = `
         SELECT 
-            u.id_user, u.full_name, u.username, u.password_hash, u.is_active, r.name as role_name 
-        FROM User u
-        JOIN Role r ON u.id_role = r.id_role
-        WHERE u.username = ?
+            u.id_usuario AS id_user
+            , u.nombre_completo AS full_name
+            , u.nombre_usuario AS username
+            , u.hash_contrasena AS password_hash
+            , u.activo AS is_active
+            , r.nombre_rol AS role_name 
+        FROM Usuario u
+        JOIN Rol r ON u.id_rol = r.id_rol
+        WHERE u.nombre_usuario = ?
     `;
     
     try {
-        const [rows] = await db.query(query, [username]);
+        const [rows] = await db.execute(sql, [username]);
         // Si se encuentra una fila, devuelve el primer objeto (el usuario)
-        return rows[0] || null;
+        return rows.length > 0 ? rows[0] : null;
     } catch (error) {
-        console.error("Error finding user by username:", error);
+        console.error(`[Model:User] Error en findByUsername: ${error.message}`);
         throw error;
     }
 };
@@ -32,14 +42,14 @@ exports.findByUsername = async (username) => {
  * @returns {Promise<number>} El ID del usuario recién creado.
  */
 exports.create = async (userData) => {
-    // Requerimiento: El sistema debe registrar nuevos usuarios [cite: 54]
-    const query = `
-        INSERT INTO User (full_name, username, password_hash, id_role)
+    const { full_name, username, password_hash, id_role } = userData;
+    const sql = `
+        INSERT INTO Usuario (nombre_completo, nombre_usuario, hash_contrasena, id_rol)
         VALUES (?, ?, ?, ?)
     `;
     
     try {
-        const [result] = await db.query(query, [
+        const [result] = await db.execute(sql, [
             userData.full_name,
             userData.username,
             userData.password_hash,
@@ -48,49 +58,65 @@ exports.create = async (userData) => {
         
         return result.insertId;
     } catch (error) {
-        console.error("Error creating new user:", error);
+        console.error(`[Model:User] Error en create: ${error.message}`);
         throw error;
     }
 };
 
 /**
  * Consulta todos los usuarios activos, incluyendo el nombre del rol.
- * Necesario para la página de Consulta de Usuarios.
+ * @param {boolean} onlyActive - Si es true, filtra solo usuarios habilitados.
+ * @returns {Promise<Array>}
  */
-exports.findAll = async () => {
-    const query = `
+exports.findAll = async (onlyActive) => {
+    const sql = `
         SELECT 
-            u.id_user, u.full_name, u.username, u.is_active, r.name AS role_name
-        FROM User u
-        JOIN Role r ON u.id_role = r.id_role
-        WHERE u.is_active = TRUE -- Asume que solo se listan los activos
-        ORDER BY u.full_name ASC
+            u.id_usuario AS id_user
+            , u.nombre_completo AS full_name
+            , u.nombre_usuario AS username
+            , u.activo AS is_active
+            , r.nombre_rol AS role_name
+        FROM Usuario u
+        JOIN Rol r ON u.id_rol = r.id_rol
     `;
+    if (onlyActive) {
+        sql.concat= `WHERE u.activo = TRUE`;
+    }
+
+    sql.concat= `ORDER BY u.nombre_completo ASC`;
+
     try {
-        const [rows] = await db.query(query);
+        const [rows] = await db.execute(sql);
         return rows;
     } catch (error) {
-        console.error("Error fetching all users:", error);
+        console.error(`[Model:User] Error en findAll: ${error.message}`);
         throw error;
     }
 };
 
 /**
  * Consulta un usuario por ID.
+ * @param {number} id_user 
+ * @returns {Promise<Object>} Objeto Usuario.
  */
 exports.findById = async (id_user) => {
-    const query = `
+    const sql = `
         SELECT 
-            u.id_user, u.full_name, u.username, u.id_role, u.is_active, r.name AS role_name
-        FROM User u
-        JOIN Role r ON u.id_role = r.id_role
-        WHERE u.id_user = ?
+            u.id_usuario AS id_user
+            , u.nombre_completo AS full_name
+            , u.nombre_usuario AS username
+            , u.id_rol AS id_role
+            , u.activo AS is_active
+            , r.nombre_rol AS role_name
+        FROM Usuario u
+        JOIN Rol r ON u.id_rol = r.id_rol
+        WHERE u.id_usuario = ?
     `;
     try {
-        const [rows] = await db.query(query, [id_user]);
+        const [rows] = await db.execute(sql, [id_user]);
         return rows[0] || null;
     } catch (error) {
-        console.error("Error fetching user by ID:", error);
+        console.error(`[Model:User] Error en findById: ${error.message}`);
         throw error;
     }
 };
@@ -98,32 +124,49 @@ exports.findById = async (id_user) => {
 /**
  * Actualiza los datos de un usuario existente.
  * Permite modificar nombre, rol, estado, y opcionalmente, la contraseña.
+ * @param {number} id_user 
+ * @param {Object} updateData 
+ * @returns {Promise<number>} Cantidad de filas afectadas.
  */
 exports.update = async (id_user, updateData) => {
-    // Construye la consulta dinámicamente
-    let updates = [];
+    // 1. Diccionario de Mapeo Seguro (Whitelist): JS Key -> DB Column
+    const columnMap = {
+        full_name: 'nombre_completo',
+        id_role: 'id_rol',
+        is_active: 'activo',
+        password_hash: 'hash_contrasena'
+    };
+
+    
+    let fields = [];
     let values = [];
 
-    if (updateData.full_name) { updates.push("full_name = ?"); values.push(updateData.full_name); }
-    if (updateData.id_role) { updates.push("id_role = ?"); values.push(updateData.id_role); }
-    if (updateData.is_active !== undefined) { updates.push("is_active = ?"); values.push(updateData.is_active); }
-    if (updateData.password_hash) { updates.push("password_hash = ?"); values.push(updateData.password_hash); }
+    // 2. Construcción Dinámica y Segura
+    for (const [key, value] of Object.entries(updateData)){
+        // Aca uso la lista blanca
+        if(value !== undefined && columnMap[key]) {
+            fields.push(`${columnMap[key]} = ?`);
+            values.push(value);
+        }
+    }
     
-    if (updates.length === 0) return 0; // No hay nada que actualizar
-
-    const query = `
-        UPDATE User SET 
-            ${updates.join(', ')},
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id_user = ?
-    `;
+    if (fields.length === 0) return 0; // No hay nada que actualizar
+    
+    // Añadimos el ID al final del array de valores para la cláusula WHERE
     values.push(id_user);
 
+    const sql = `
+        UPDATE Usuario SET 
+            ${fields.join(', ')},
+            fecha_modificacion = CURRENT_TIMESTAMP
+        WHERE id_usuario = ?
+    `;
+
     try {
-        const [result] = await db.query(query, values);
+        const [result] = await db.execute(sql, values);
         return result.affectedRows;
     } catch (error) {
-        console.error("Error updating user:", error);
+        console.error(`[Model:User] Error en update: ${error.message}`);
         throw error;
     }
 };

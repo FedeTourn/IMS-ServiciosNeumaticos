@@ -1,0 +1,10 @@
+{
+    "scripts": {
+        "lint": "concurrently \"npm run lint --prefix backend\" \"npm run lint --prefix frontend\"",
+        "gen-docs": "jsdoc -r backend/src frontend/src -d docs"
+    },
+    "devDependencies": {
+        "concurrently": "^9.2.1",
+        "jsdoc": "^4.0.5"
+    }
+}
