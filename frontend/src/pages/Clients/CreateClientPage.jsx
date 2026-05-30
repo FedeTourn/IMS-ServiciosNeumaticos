@@ -1,12 +1,15 @@
 // src/pages/Clients/CreateClientPage.jsx (Modificación Completa)
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createClient, fetchClientCategories } from '../../services/client.service';
 import { useNavigate } from 'react-router-dom';
+import { isValidCUIT, isValidEmail } from '../../utils/validation';
 
 const CreateClientPage = () => {
     const navigate = useNavigate();
     const [categories, setCategories] = useState([]);
+    const cuitRef = useRef(null);
+    const emailRef = useRef(null);
     
     // Estado inicial con todos los nuevos campos
     const [formData, setFormData] = useState({
@@ -89,6 +92,26 @@ const CreateClientPage = () => {
                 numero: p.numero.trim(),
                 descripcion: p.descripcion.trim() // La descripción puede ser vacía
             }));
+        
+        // 3. Validar cuit
+        if (!isValidCUIT(formData.cuit)) {
+            setMessage('❌ El CUIT ingresado no es válido.');
+            setIsError(true);
+            setIsSaving(false);
+            cuitRef.current.focus();
+            cuitRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+        
+        // 4. Validar email
+        if (!isValidEmail(formData.email)) {
+            setMessage('❌ El formato del email es incorrecto.');
+            setIsError(true);
+            setIsSaving(false);
+            emailRef.current.focus();
+            emailRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
 
         try {
             // Envía todos los datos, el backend se encarga de la normalización
@@ -149,7 +172,7 @@ const CreateClientPage = () => {
                         {/* CUIT */}
                         <div style={{ flex: '1 1 45%' }}>
                             <label htmlFor="cuit" style={labelStyle}>CUIT *</label>
-                            <input type="text" id="cuit" name="cuit" value={formData.cuit} onChange={handleChange} required style={inputStyle} />
+                            <input type="text" id="cuit" name="cuit" ref={cuitRef} value={formData.cuit} onChange={handleChange} required style={inputStyle} />
                         </div>
                     </div>
                 </div>
@@ -193,7 +216,7 @@ const CreateClientPage = () => {
                         {/* Email */}
                         <div style={{ flex: '1 1 45%' }}>
                             <label htmlFor="email" style={labelStyle}>Email (Opcional)</label>
-                            <input type="email" id="email" name="email" value={formData.email} onChange={handleChange} style={inputStyle} />
+                            <input type="email" id="email" name="email" ref={emailRef} value={formData.email} onChange={handleChange} style={inputStyle} />
                         </div>
 
                         {/* Categoría */}
