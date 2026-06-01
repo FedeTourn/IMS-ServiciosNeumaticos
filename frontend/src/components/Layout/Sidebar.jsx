@@ -3,14 +3,14 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
 const menuItems = [
-    { name: 'Inicio', path: '/Inicio', icon: '🏠' },
-    { name: 'Productos a Reparar', path: '/productos-reparar', icon: '🛠️' },
-    { name: 'Registrar Recepción', path: '/registrar-recepcion', icon: '📦' },
-    { name: 'Crear Orden', path: '/crear-orden', icon: '📝' },
-    { name: 'Consultar Stock', path: '/consultar-stock', icon: '🛒' },
-    { name: 'Estados de Cuenta', path: '/estados-cuenta', icon: '💰' },
-    { name: 'Clientes', path: '/clientes', icon: '👥' },
-    { name: 'Configuración', path: '/configuracion', icon: '⚙️' },
+    { name: 'Inicio', path: '/Inicio' },
+    { name: 'Productos a Reparar', path: '/productos-reparar' },
+    { name: 'Registrar Recepción', path: '/registrar-recepcion' },
+    { name: 'Crear Orden', path: '/crear-orden' },
+    { name: 'Consultar Stock', path: '/consultar-stock' },
+    { name: 'Estados de Cuenta', path: '/estados-cuenta' },
+    { name: 'Clientes', path: '/clientes' },
+    { name: 'Configuración', path: '/configuracion' },
 ];
 
 const Sidebar = ({ isCollapsed, onToggle }) => {

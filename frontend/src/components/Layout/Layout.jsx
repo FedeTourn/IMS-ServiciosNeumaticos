@@ -58,7 +58,7 @@ const Layout = ({ children }) => {
 
                 {/* Footer simple opcional */}
                 <footer className="mt-auto py-4 px-6 text-center text-xs text-gray-400">
-                    © 2025 Servicios Neumáticos - Sistema de Gestión Interna
+                    © 2026 Servicios Neumáticos - Sistema de Gestión Interna
                 </footer>
             </div>
         </div>
