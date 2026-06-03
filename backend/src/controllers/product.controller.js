@@ -62,8 +62,9 @@ exports.getProductTypes = async (req, res) => {
  * Consultar los modelos de productos.
  */
 exports.getProductModels = async (req, res) => {
+    const { type_id } = req.query;  // Obtener el ID del tipo de producto del query string (ej: ?typeId=1)
     try {
-        const result = await this.getProductModels(req.query); // Obtener el ID del tipo de producto del query string (ej: ?typeId=1)
+        const result = await ProductService.getProductModels(type_id);
         res.status(200).json(result);
     } catch (error) {
         // Manejo de errores controlados por la lógica de negocio
@@ -99,7 +100,7 @@ exports.createProduct = async (req, res) => {
  */
 exports.getProductById = async (req, res) => {
     try {
-        const result = await ProductService.getProductById(req.params);
+        const result = await ProductService.getProductById(req.params.id_producto);
         res.status(200).json(result);
 
     } catch (error) {

@@ -1,87 +1,143 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
-// Componente para las secciones y botones
-const ConfigSection = ({ title, children }) => (
-    <div style={{ border: '1px solid #ccc', padding: '20px', borderRadius: '8px', marginBottom: '30px', backgroundColor: '#fff' }}>
-        <h2 style={{ borderBottom: '1px solid #eee', paddingBottom: '10px', marginBottom: '15px' }}>{title}</h2>
-        <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+/**
+ * Página Principal de Configuración.
+ * Organiza los ajustes del sistema por dominios de negocio.
+ */
+const ConfigurationPage = () => {
+    const navigate = useNavigate();
+
+    return (
+        <div className="space-y-8 animate-fade-in pb-10">
+            {/* Cabecera */}
+            <div>
+                <h1 className="text-2xl font-bold text-gray-800">⚙️ Configuración del Sistema</h1>
+                <p className="text-gray-500 text-sm mt-1">Gestione los parámetros globales, usuarios y catálogos maestros del taller.</p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                
+                {/* --- SECCIÓN 1: SEGURIDAD Y ACCESO --- */}
+                <ConfigSection title="Seguridad y Usuarios" icon="👤">
+                    <ConfigButton 
+                        label="Consultar Usuarios" 
+                        icon="🔍"
+                        onClick={() => navigate('/configuracion/usuarios')}
+                        variant="info"
+                    />
+                    <ConfigButton 
+                        label="Dar de Alta Usuario" 
+                        icon="➕"
+                        onClick={() => navigate('/configuracion/alta-usuario')}
+                        variant="success"
+                    />
+                    <ConfigButton 
+                        label="Consultar Roles" 
+                        icon="🛡️"
+                        onClick={() => navigate('/configuracion/roles')}
+                    />
+                    <ConfigButton 
+                        label="Agregar Rol" 
+                        icon="🔑"
+                        onClick={() => navigate('/configuracion/alta-rol')}
+                    />
+                </ConfigSection>
+
+                {/* --- SECCIÓN 2: CATÁLOGO DE PRODUCTOS (Válvulas) --- */}
+                <ConfigSection title="Parámetros de Válvulas" icon="🛠️">
+                    <ConfigButton 
+                        label="Tipos de Producto" 
+                        icon="📋"
+                        onClick={() => console.log('Pendiente: Tipos')}
+                        variant="warning"
+                    />
+                    <ConfigButton 
+                        label="Modelos de Producto" 
+                        icon="📐"
+                        onClick={() => console.log('Pendiente: Modelos')}
+                        variant="warning"
+                    />
+                    <ConfigButton 
+                        label="Diccionario de Estados" 
+                        icon="🚦"
+                        onClick={() => console.log('Pendiente: Estados')}
+                        variant="warning"
+                    />
+                </ConfigSection>
+
+                {/* --- SECCIÓN 3: CONFIGURACIÓN COMERCIAL --- */}
+                <ConfigSection title="Gestión Comercial y Precios" icon="💰">
+                    <ConfigButton 
+                        label="Listas de Precios por Categoría" 
+                        icon="🏷️"
+                        onClick={() => console.log('Pendiente: Precios')}
+                        variant="pending"
+                    />
+                    <ConfigButton 
+                        label="Categorías de Cliente" 
+                        icon="🏢"
+                        onClick={() => console.log('Pendiente: Categorías Cliente')}
+                        variant="pending"
+                    />
+                    <ConfigButton 
+                        label="Gestionar Proveedores" 
+                        icon="🚚"
+                        onClick={() => console.log('Pendiente: Proveedores')}
+                        variant="pending"
+                    />
+                </ConfigSection>
+
+                {/* --- SECCIÓN 4: AUDITORÍA Y SISTEMA --- */}
+                <ConfigSection title="Sistema" icon="💻">
+                    <div className="p-4 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                        <p className="text-xs text-gray-400 italic text-center">
+                            Configuraciones avanzadas de logs y copias de seguridad próximamente.
+                        </p>
+                    </div>
+                </ConfigSection>
+
+            </div>
+        </div>
+    );
+};
+
+/**
+ * Contenedor para grupos de configuraciones.
+ */
+const ConfigSection = ({ title, icon, children }) => (
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col overflow-hidden">
+        <div className="bg-slate-50 px-6 py-4 border-b border-gray-100">
+            <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                <span>{icon}</span> {title}
+            </h2>
+        </div>
+        <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
             {children}
         </div>
     </div>
 );
 
-// Componente del Botón de Configuración
-const ConfigButton = ({ label, onClick, color = '#007bff' }) => (
-    <button
-        onClick={onClick}
-        style={{
-            padding: '12px 20px',
-            backgroundColor: color,
-            color: 'white',
-            border: 'none',
-            borderRadius: '5px',
-            cursor: 'pointer',
-            transition: 'opacity 0.2s',
-            fontSize: '1em'
-        }}
-    >
-        {label}
-    </button>
-);
-
-
-const ConfigurationPage = () => {
-    const navigate = useNavigate();
+/**
+ * Botón estilizado para el panel de configuración.
+ */
+const ConfigButton = ({ label, onClick, icon, variant = 'primary' }) => {
+    const variants = {
+        primary: 'bg-white text-slate-700 border-gray-200 hover:border-slate-400 hover:bg-slate-50',
+        success: 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100',
+        info: 'bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100',
+        warning: 'bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-100',
+        pending: 'bg-gray-50 text-gray-400 border-gray-200 border-dashed hover:bg-white hover:text-gray-600'
+    };
 
     return (
-        <div style={{ padding: '20px' }}>
-            <h1>⚙️ Configuración del Sistema</h1>
-            <p>Panel de administración y ajustes de la aplicación.</p>
-
-            {/* --- SECCIÓN ADMINISTRAR USUARIOS --- */}
-            <ConfigSection title="👤 Administrar Usuarios">
-                {/* Botón 1: Consulta de Usuarios (que lleva a la tabla) */}
-                <ConfigButton 
-                    label="Consultar Usuarios" 
-                    onClick={() => navigate('/configuracion/usuarios')}
-                    color="#17a2b8"
-                />
-                
-                {/* Botón 2: Alta de Usuarios (que usa el endpoint register) */}
-                <ConfigButton 
-                    label="Dar de Alta Usuario" 
-                    onClick={() => navigate('/configuracion/alta-usuario')}
-                    color="#28a745"
-                />
-
-                {/* Botón 3: Consultar Roles */}
-                 <ConfigButton 
-                    label="Consultar Roles" 
-                    onClick={() => navigate('/configuracion/roles')}
-                    color="#007bff"
-                />
-
-                {/* Botón 4: Agregar Rol */}
-                 <ConfigButton 
-                    label="Agregar Rol" 
-                    onClick={() => navigate('/configuracion/alta-rol')}
-                    color="#007bff"
-                />
-            </ConfigSection>
-
-            {/* --- SECCIÓN CONFIGURACIÓN DE PRODUCTOS (Botones No Funcionales) --- */}
-            <ConfigSection title="🛠️ Administrar Configuración de Productos">
-                <ConfigButton label="Gestionar Tipos de Producto" onClick={() => console.log('Pendiente: Gestionar Tipos')} color="#ffc107" />
-                <ConfigButton label="Gestionar Modelos de Producto" onClick={() => console.log('Pendiente: Gestionar Modelos')} color="#ffc107" />
-                <ConfigButton label="Gestionar Estados de Producto" onClick={() => console.log('Pendiente: Gestionar Estados')} color="#ffc107" />
-            </ConfigSection>
-
-            {/* --- SECCIÓN ADMINISTRAR OTROS (Botones No Funcionales) --- */}
-            <ConfigSection title="... Administrar Otros">
-                <ConfigButton label="Gestionar Proveedores" onClick={() => console.log('Pendiente: Gestionar Proveedores')} color="#6c757d" />
-            </ConfigSection>
-        </div>
+        <button
+            onClick={onClick}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl border font-medium text-sm transition-all duration-200 group active:scale-95 ${variants[variant]}`}
+        >
+            <span className="text-base group-hover:scale-110 transition-transform">{icon}</span>
+            <span className="truncate">{label}</span>
+        </button>
     );
 };
 

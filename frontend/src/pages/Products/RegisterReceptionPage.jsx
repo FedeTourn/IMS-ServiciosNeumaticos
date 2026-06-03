@@ -1,30 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchClients } from '../../services/client.service'; // Necesitamos la lista de clientes
+import { fetchClients } from '../../services/client.service';
 import { fetchProductTypes, fetchProductModels, registerProductReception } from '../../services/product.service';
 
 const RegisterReceptionPage = () => {
     const navigate = useNavigate();
     
-    // Listas de datos de referencia
     const [clients, setClients] = useState([]);
     const [productTypes, setProductTypes] = useState([]);
     const [productModels, setProductModels] = useState([]);
     
-    // Estado del formulario
     const [formData, setFormData] = useState({
         id_cliente: '',
-        tipo_seleccionado: '', // Usado solo para filtrar modelos
+        tipo_seleccionado: '', 
         modelo: '',
         observaciones: '',
-        fecha_recepcion: new Date().toISOString().substring(0, 10), // Fecha de hoy
+        fecha_recepcion: new Date().toISOString().substring(0, 10),
     });
 
     const [message, setMessage] = useState('');
     const [isError, setIsError] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
 
-    // --- Carga de Datos Iniciales (Clientes y Tipos) ---
     useEffect(() => {
         const loadInitialData = async () => {
             try {
@@ -32,12 +30,10 @@ const RegisterReceptionPage = () => {
                     fetchClients(),
                     fetchProductTypes(),
                 ]);
-                
-                // Filtra clientes activos si es necesario. Por ahora, cargamos todos.
                 setClients(clientData);
                 setProductTypes(typeData);
             } catch (err) {
-                setMessage(`Error al cargar datos iniciales: ${err.message}`);
+                setMessage(`Error al cargar datos: ${err.message}`);
                 setIsError(true);
             } finally {
                 setIsLoading(false);
@@ -46,14 +42,12 @@ const RegisterReceptionPage = () => {
         loadInitialData();
     }, []);
 
-    // --- Efecto para cargar Modelos al seleccionar un Tipo ---
     useEffect(() => {
         const loadModels = async () => {
             if (formData.tipo_seleccionado) {
                 try {
                     const models = await fetchProductModels(formData.tipo_seleccionado);
                     setProductModels(models);
-                    // Resetear el modelo si el tipo cambia
                     setFormData(prev => ({ ...prev, modelo: '' })); 
                 } catch (err) {
                     setMessage(`Error al cargar modelos: ${err.message}`);
@@ -66,139 +60,170 @@ const RegisterReceptionPage = () => {
         loadModels();
     }, [formData.tipo_seleccionado]);
 
-
-    // Maneja el cambio de estado en los inputs
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
         setMessage('');
     };
 
-    // Maneja el envío del formulario
     const handleSubmit = async (e) => {
         e.preventDefault();
         setMessage('');
         setIsError(false);
-        setIsLoading(true);
+        setIsSaving(true);
 
-        // Validación de campos requeridos
         if (!formData.id_cliente || !formData.modelo) {
-            setMessage('El Cliente, el Tipo y el Modelo son obligatorios.');
+            setMessage('El Cliente y el Modelo son campos obligatorios.');
             setIsError(true);
-            setIsLoading(false);
+            setIsSaving(false);
             return;
         }
 
         try {
-            // Datos a enviar al backend
-            const productToSend = {
+            await registerProductReception({
                 id_cliente: formData.id_cliente,
                 modelo: formData.modelo,
                 observaciones: formData.observaciones,
                 fecha_recepcion: formData.fecha_recepcion,
-                // Nota: fecha_entrega_pactada y Comprobante de Recepción se agregarían en un paso posterior.
-            };
-            
-            await registerProductReception(productToSend);
+            });
 
-            setMessage(`✅ Producto registrado y marcado como 'Recibida'.`);
-            
-            // Opcional: Redirigir o limpiar
-            setTimeout(() => {
-                 navigate('/productos-reparar'); // Volver al listado
-            }, 2000);
-
+            setMessage(`✅ Recepción registrada exitosamente.`);
+            setTimeout(() => navigate('/productos-reparar'), 1500);
         } catch (err) {
-            setMessage(`❌ Error al registrar recepción: ${err.message}`);
+            setMessage(`❌ Error: ${err.message}`);
             setIsError(true);
         } finally {
-            setIsLoading(false);
+            setIsSaving(false);
         }
     };
 
-    const inputStyle = { width: '100%', padding: '10px', margin: '5px 0 15px 0', border: '1px solid #ccc', borderRadius: '4px', boxSizing: 'border-box' };
-    const labelStyle = { display: 'block', marginBottom: '5px', fontWeight: 'bold' };
-
-    if (isLoading) {
-        return <div style={{padding: '20px', textAlign: 'center'}}>Cargando formulario...</div>;
-    }
+    if (isLoading) return <div className="p-10 text-center animate-pulse text-gray-400">Cargando protocolo de recepción...</div>;
 
     return (
-        <div style={{ padding: '20px', backgroundColor: 'white', borderRadius: '8px', maxWidth: '800px', margin: '0 auto' }}>
-            <h1>📦 Registrar Recepción de Producto</h1>
-            <p>Registre aquí la entrada de una válvula o componente para reparación.</p>
-            
-            <form onSubmit={handleSubmit}>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px' }}>
-                    
-                    {/* Cliente */}
-                    <div style={{ flex: '1 1 45%' }}>
-                        <label htmlFor="id_cliente" style={labelStyle}>Cliente *</label>
-                        <select id="id_cliente" name="id_cliente" value={formData.id_cliente} onChange={handleChange} required style={inputStyle}>
-                            <option value="">Seleccione Cliente</option>
-                            {clients.map(client => (
-                                <option key={client.id_cliente} value={client.id_cliente}>
-                                    {client.nombre} ({client.cuit})
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Fecha de Recepción */}
-                    <div style={{ flex: '1 1 45%' }}>
-                        <label htmlFor="fecha_recepcion" style={labelStyle}>Fecha de Recepción *</label>
-                        <input type="date" id="fecha_recepcion" name="fecha_recepcion" value={formData.fecha_recepcion} onChange={handleChange} required style={inputStyle} />
-                    </div>
-
-                    {/* Tipo de Producto (Solo para filtrar) */}
-                    <div style={{ flex: '1 1 45%' }}>
-                        <label htmlFor="tipo_seleccionado" style={labelStyle}>Tipo de Producto</label>
-                        <select id="tipo_seleccionado" name="tipo_seleccionado" value={formData.tipo_seleccionado} onChange={handleChange} style={inputStyle}>
-                            <option value="">Seleccione Tipo</option>
-                            {productTypes.map(type => (
-                                <option key={type.id_tipo} value={type.id_tipo}>
-                                    {type.nombre}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Modelo de Producto */}
-                    <div style={{ flex: '1 1 45%' }}>
-                        <label htmlFor="modelo" style={labelStyle}>Modelo de Producto *</label>
-                        <select id="modelo" name="modelo" value={formData.modelo} onChange={handleChange} required style={inputStyle} disabled={!formData.tipo_seleccionado}>
-                            <option value="">{formData.tipo_seleccionado ? 'Seleccione Modelo' : 'Seleccione Tipo primero'}</option>
-                            {productModels.map(model => (
-                                <option key={model.id_modelo} value={model.id_modelo}>
-                                    {model.nombre}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Observaciones */}
-                    <div style={{ flex: '1 1 100%' }}>
-                        <label htmlFor="observaciones" style={labelStyle}>Observaciones</label>
-                        <textarea id="observaciones" name="observaciones" value={formData.observaciones} onChange={handleChange} style={{ ...inputStyle, minHeight: '80px' }}></textarea>
-                    </div>
-                    
+        <div className="max-w-3xl mx-auto pb-10 animate-fade-in">
+            <div className="bg-white shadow-xl rounded-2xl overflow-hidden border border-gray-100">
+                
+                {/* Header Dinámico */}
+                <div className="bg-slate-800 p-6 text-white text-center sm:text-left">
+                    <h1 className="text-xl font-bold uppercase tracking-tight">📦 Registro de Recepción</h1>
+                    <p className="text-slate-400 text-xs mt-1 uppercase font-mono">Módulo de Seguimiento de Productos</p>
                 </div>
 
-                <div style={{ marginTop: '30px', display: 'flex', gap: '15px', alignItems: 'center' }}>
-                    <button type="submit" disabled={isLoading} style={{ padding: '10px 20px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', opacity: isLoading ? 0.6 : 1 }}>
-                        {isLoading ? 'Registrando...' : 'Registrar Producto'}
-                    </button>
-                    <button type="button" onClick={() => navigate('/productos-reparar')} style={{ padding: '10px 20px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
-                        Cancelar
-                    </button>
-                </div>
-            </form>
+                <form onSubmit={handleSubmit} className="p-8 space-y-6">
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Selector de Cliente */}
+                        <div className="md:col-span-2">
+                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Cliente Solicitante *</label>
+                            <select 
+                                name="id_cliente" 
+                                value={formData.id_cliente} 
+                                onChange={handleChange} 
+                                required
+                                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-medium text-gray-700"
+                            >
+                                <option value="">Seleccione el cliente responsable...</option>
+                                {clients.map(client => (
+                                    <option key={client.id_cliente} value={client.id_cliente}>
+                                        {client.nombre} ({client.cuit})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
 
-            {message && (
-                <p style={{ marginTop: '20px', padding: '10px', backgroundColor: isError ? '#f8d7da' : '#d4edda', color: isError ? '#721c24' : '#155724', border: `1px solid ${isError ? '#f5c6cb' : '#c3e6cb'}`, borderRadius: '4px' }}>
-                    {message}
+                        {/* Fecha */}
+                        <div className="md:col-span-2">
+                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Fecha de Ingreso al Taller</label>
+                            <input 
+                                type="date" 
+                                name="fecha_recepcion" 
+                                value={formData.fecha_recepcion} 
+                                onChange={handleChange} 
+                                required 
+                                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-mono"
+                            />
+                        </div>
+
+                        {/* Selector de Tipo (Filtro) */}
+                        <div>
+                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Tipo de Componente</label>
+                            <select 
+                                name="tipo_seleccionado" 
+                                value={formData.tipo_seleccionado} 
+                                onChange={handleChange}
+                                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                            >
+                                <option value="">Filtrar por tipo...</option>
+                                {productTypes.map(type => (
+                                    <option key={type.id_tipo} value={type.id_tipo}>{type.nombre}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Selector de Modelo */}
+                        <div>
+                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Modelo Específico *</label>
+                            <select 
+                                name="modelo" 
+                                value={formData.modelo} 
+                                onChange={handleChange} 
+                                required 
+                                disabled={!formData.tipo_seleccionado}
+                                className={`w-full p-3 border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-medium
+                                    ${!formData.tipo_seleccionado ? 'bg-gray-100 cursor-not-allowed border-gray-200' : 'bg-gray-50 border-gray-200 text-gray-700'}`}
+                            >
+                                <option value="">{formData.tipo_seleccionado ? 'Seleccione el modelo...' : '← Seleccione tipo primero'}</option>
+                                {productModels.map(model => (
+                                    <option key={model.id_modelo} value={model.id_modelo}>{model.nombre}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Observaciones */}
+                        <div className="md:col-span-2">
+                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Estado Visual / Observaciones Iniciales</label>
+                            <textarea 
+                                name="observaciones" 
+                                value={formData.observaciones} 
+                                onChange={handleChange} 
+                                placeholder="Describa daños visibles, piezas faltantes o requerimientos del cliente..."
+                                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all min-h-[120px] text-sm"
+                            ></textarea>
+                        </div>
+                    </div>
+
+                    {/* Botonera */}
+                    <div className="pt-6 border-t border-gray-100 flex flex-col sm:flex-row gap-4 items-center">
+                        <button 
+                            type="submit" 
+                            disabled={isSaving}
+                            className={`w-full sm:w-auto px-10 py-3 rounded-xl font-black text-xs uppercase tracking-widest text-white shadow-lg transition-all
+                                ${isSaving ? 'bg-gray-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 active:scale-95 shadow-emerald-200'}`}
+                        >
+                            {isSaving ? 'Registrando...' : 'Finalizar Recepción'}
+                        </button>
+                        <button 
+                            type="button" 
+                            onClick={() => navigate('/productos-reparar')}
+                            className="text-[10px] font-bold text-gray-400 hover:text-gray-600 uppercase tracking-widest transition-colors"
+                        >
+                            Cancelar
+                        </button>
+
+                        {message && (
+                            <div className={`flex-1 p-3 rounded-xl text-xs font-bold text-center animate-fade-in 
+                                ${isError ? 'bg-red-50 text-red-700 border border-red-100' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'}`}>
+                                {message}
+                            </div>
+                        )}
+                    </div>
+                </form>
+            </div>
+            <div className="mt-6 p-4 bg-blue-50 border border-blue-100 rounded-xl">
+                <p className="text-[10px] text-blue-600 leading-relaxed uppercase font-bold text-center">
+                    Aviso: En la próxima actualización podrá adjuntar fotografías del componente y generar el comprobante de recepción en PDF.
                 </p>
-            )}
+            </div>
         </div>
     );
 };
