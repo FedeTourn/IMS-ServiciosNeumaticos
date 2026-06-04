@@ -1,26 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchProductById, updateProduct, fetchProductStates } from '../../services/product.service';
+import StatusBadge from '../../components/common/StatusBadge';
 
-
-// Mapeo de IDs de estado del Frontend (Debe coincidir con el Backend)
-const FRONTEND_STATE_IDS = {
-    RECIBIDO: 1,
-    EN_REPARACION: 2,
-    REPARADO: 3,
-    ENTREGADO: 4,
-    NO_REPARABLE: 5,
-    LIBRE: 6
-};
-
-// Reglas de Transición (Copiadas del Backend para filtrado en UI)
-const FRONTEND_TRANSITION_RULES = {
-    [FRONTEND_STATE_IDS.RECIBIDO]: [2, 3, 4, 5, 6], 
-    [FRONTEND_STATE_IDS.EN_REPARACION]: [3, 4, 5, 6], 
-    [FRONTEND_STATE_IDS.REPARADO]: [4, 6],
-    [FRONTEND_STATE_IDS.ENTREGADO]: [], 
-    [FRONTEND_STATE_IDS.NO_REPARABLE]: [4, 6],
-    [FRONTEND_STATE_IDS.LIBRE]: [2, 3, 4, 5]
+// Reglas de Transición
+const TRANSITION_RULES = {
+    1: [2, 3, 4, 5, 6], // Recibido -> [En Reparación, Reparado, Entregado, No Reparable, Libre]
+    2: [3, 4, 5, 6],    // En Reparación -> [...]
+    3: [4, 6],          // Reparado -> [Entregado, Libre]
+    4: [],              // Entregado -> []
+    5: [4, 6],          // No Reparable -> [Entregado, Libre]
+    6: [2, 3, 4, 5]     // Libre -> [...]
 };
 
 const UpdateProductPage = () => {
@@ -29,17 +19,13 @@ const UpdateProductPage = () => {
     
     const [productStates, setProductStates] = useState([]);
     const [originalData, setOriginalData] = useState({});
-    const [formData, setFormData] = useState({
-        observaciones: '',
-        estado: '',
-    });
+    const [formData, setFormData] = useState({ observaciones: '', estado: '' });
     
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [message, setMessage] = useState('');
     const [isError, setIsError] = useState(false);
 
-    // --- Carga de Datos Iniciales (Producto y Estados) ---
     useEffect(() => {
         const loadData = async () => {
             try {
@@ -47,17 +33,14 @@ const UpdateProductPage = () => {
                     fetchProductById(id_producto),
                     fetchProductStates(),
                 ]);
-                
-                // Guardar datos originales y configurar formulario
                 setOriginalData(productData);
                 setFormData({
                     observaciones: productData.observaciones || '',
-                    estado: productData.estado.toString(), // ID de estado
+                    estado: productData.estado.toString(),
                 });
                 setProductStates(statesData);
-
             } catch (err) {
-                setMessage(`❌ Error al cargar los datos: ${err.message}`);
+                setMessage(`Error: ${err.message}`);
                 setIsError(true);
             } finally {
                 setIsLoading(false);
@@ -66,147 +49,122 @@ const UpdateProductPage = () => {
         loadData();
     }, [id_producto]);
 
-    // --- Función de Renderizado ---
     const getFilteredStates = () => {
-        const currentStateId = originalData.estado; // El ID de estado actual que trajimos del backend
-        const allowedIds = FRONTEND_TRANSITION_RULES[currentStateId];
-        
-        // Si no hay reglas definidas (ej. Entregado) o si es el estado actual, solo muestra el estado actual.
-        if (!allowedIds || currentStateId === FRONTEND_STATE_IDS.ENTREGADA) {
-            return productStates.filter(s => s.id_estado === currentStateId);
-        }
-
-        // Siempre permite seleccionar el estado actual para guardar solo observaciones
-        // Filtra los estados que están en la lista de permitidos, más el estado actual.
-        return productStates.filter(s => 
-            allowedIds.includes(s.id_estado) || s.id_estado === currentStateId
-        );
+        const current = parseInt(originalData.estado);
+        const allowed = TRANSITION_RULES[current] || [];
+        return productStates.filter(s => allowed.includes(s.id_estado) || s.id_estado === current);
     };
 
-    // Maneja el cambio de estado en los inputs
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
         setMessage('');
     };
 
-    // Maneja el envío del formulario de actualización
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setMessage('');
-        setIsError(false);
         setIsSaving(true);
-
-        const dataToSend = {
-            observaciones: formData.observaciones,
-            estado: formData.estado 
-        };
-
         try {
-            await updateProduct(id_producto, dataToSend);
-            setMessage('✅ Producto actualizado exitosamente.');
+            await updateProduct(id_producto, { 
+                observaciones: formData.observaciones, 
+                estado: formData.estado 
+            });
+            setMessage('✅ Cambios aplicados correctamente.');
             setIsError(false);
-            
         } catch (err) {
-            setMessage(`❌ Error al actualizar producto: ${err.message}`);
+            setMessage(`❌ Error al actualizar: ${err.message}`);
             setIsError(true);
         } finally {
             setIsSaving(false);
         }
     };
 
-    const infoStyle = { padding: '10px', backgroundColor: '#f9f9f9', border: '1px solid #eee', borderRadius: '4px', marginBottom: '10px' };
-    const labelStyle = { display: 'block', marginBottom: '5px', fontWeight: 'bold' };
-    const inputStyle = { width: '100%', padding: '10px', margin: '5px 0 15px 0', border: '1px solid #ccc', borderRadius: '4px', boxSizing: 'border-box' };
+    if (isLoading) return <div className="p-10 text-center text-gray-400 animate-pulse">Cargando detalles...</div>;
 
-
-    if (isLoading) {
-        return <div style={{padding: '20px', textAlign: 'center'}}>Cargando datos del producto...</div>;
-    }
-
-    // Encuentra el nombre del estado actual
-    const currentStatus = productStates.find(s => s.id_estado.toString() === formData.estado);
-
+    const currentStatus = productStates.find(s => s.id_estado.toString() === originalData.estado.toString());
+    //const selectedStatus = productStates.find(s => s.id_estado.toString() === formData.estado);
     return (
-        <div style={{ padding: '20px', backgroundColor: 'white', borderRadius: '8px', maxWidth: '1000px', margin: '0 auto' }}>
-            <h1>🔍 Detalle y Seguimiento: Producto ID {originalData.id_producto}</h1>
-            
-            <h2 style={{ color: '#007bff' }}>{originalData.tipo_nombre} - {originalData.modelo_nombre}</h2>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', marginTop: '20px' }}>
-                {/* Columna de Información Fija (Detalle) */}
-                <div>
-                    <h2>Información de Trazabilidad</h2>
-                    
-                    <div style={infoStyle}>
-                        <strong style={{ color: '#6c757d' }}>Cliente:</strong> {originalData.cliente_nombre} (ID: {originalData.id_cliente})
-                    </div>
-                    
-                    <div style={infoStyle}>
-                        <strong style={{ color: '#6c757d' }}>Fecha Recepción:</strong> {new Date(originalData.fecha_recepcion).toLocaleDateString()}
-                    </div>
-                    
-                    <div style={infoStyle}>
-                        <strong style={{ color: '#6c757d' }}>Última Modificación (Reparación):</strong> {originalData.fecha_reparacion ? new Date(originalData.fecha_reparacion).toLocaleString() : 'N/A'}
-                    </div>
-
-                    <div style={infoStyle}>
-                        <strong style={{ color: '#6c757d' }}>ID Orden Reparación:</strong> {originalData.id_orden_reparacion || 'Pendiente'}
-                    </div>
-
-                    {/* Más secciones: Historial de Estados, Repuestos utilizados, etc. */}
+        <div className="max-w-4xl mx-auto pb-10 animate-fade-in">
+            <div className="bg-white shadow-xl rounded-2xl overflow-hidden border border-gray-100">
+                
+                {/* Header */}
+                <div className="bg-slate-800 p-6">
+                    <h1 className="text-xl font-bold text-white uppercase tracking-tight">Seguimiento de Producto #{id_producto}</h1>
+                    <p className="text-slate-400 text-sm mt-1 font-mono">{originalData.tipo_nombre} - {originalData.modelo_nombre}</p>
                 </div>
 
-                {/* Columna de Modificación (Formulario) */}
-                <div>
-                    <h2>Modificación y Estado</h2>
-                    <form onSubmit={handleSubmit}>
+                <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {/* Trazabilidad */}
+                    <div className="space-y-6">
+                        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest border-b pb-2">Datos de Trazabilidad</h2>
+                        <DetailRow label="Cliente" value={originalData.cliente_nombre} />
+                        <DetailRow label="Recepción" value={new Date(originalData.fecha_recepcion).toLocaleDateString()} />
+                        <DetailRow label="Última Reparación" value={originalData.fecha_reparacion ? new Date(originalData.fecha_reparacion).toLocaleString() : 'N/A'} />
+                        <DetailRow label="ID Orden" value={originalData.id_orden_reparacion || 'Pendiente'} />
+                    </div>
+
+                    {/* Modificación */}
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest border-b pb-2">Control de Estado</h2>
                         
-                        {/* Estado Actual */}
-                        <div style={infoStyle}>
-                             <strong style={{ color: currentStatus?.id_estado <= 2 ? 'orange' : currentStatus?.id_estado === 3 ? 'green' : 'red' }}>
-                                ESTADO ACTUAL: {currentStatus?.nombre}
-                             </strong>
+                        <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">Estado Actual</label>
+                            <StatusBadge status={currentStatus?.nombre} />
                         </div>
 
-                        {/* Cambio de Estado */}
-                        <div>
-                            <label htmlFor="estado" style={labelStyle}>Cambiar Estado *</label>
-                            <select id="estado" name="estado" value={formData.estado} onChange={handleChange} required style={inputStyle}>
-                                {getFilteredStates().map(state => ( // <-- APLICACIÓN DEL FILTRO
-                                    <option key={state.id_estado} value={state.id_estado}>
-                                        {state.nombre}
-                                    </option>
+                        <div className="space-y-1">
+                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Cambiar Estado</label>
+                            <select 
+                                name="estado" value={formData.estado} onChange={handleChange} required
+                                className="w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-medium text-sm"
+                            >
+                                {getFilteredStates().map(s => (
+                                    <option key={s.id_estado} value={s.id_estado}>
+                                    {s.nombre} {parseInt(formData.estado) === s.id_estado ? '(Seleccionado)' : ''}</option>
                                 ))}
                             </select>
                         </div>
-                        
-                        {/* Observaciones */}
-                        <div style={{ marginTop: '10px' }}>
-                            <label htmlFor="observaciones" style={labelStyle}>Observaciones del Técnico/Administrativo</label>
-                            <textarea id="observaciones" name="observaciones" value={formData.observaciones} onChange={handleChange} style={{ ...inputStyle, minHeight: '100px' }}></textarea>
+
+                        <div className="space-y-1">
+                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Observaciones</label>
+                            <textarea 
+                                name="observaciones" value={formData.observaciones} onChange={handleChange}
+                                className="w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all min-h-[100px] text-sm"
+                            />
                         </div>
 
-                        <div style={{ marginTop: '20px', display: 'flex', gap: '15px' }}>
-                            <button type="submit" disabled={isSaving} style={{ padding: '10px 20px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', opacity: isSaving ? 0.6 : 1 }}>
-                                {isSaving ? 'Guardando...' : 'Guardar Modificaciones'}
+                        <div className="pt-4 flex gap-4">
+                            <button 
+                                type="submit" disabled={isSaving}
+                                className={`flex-1 py-3 rounded-xl font-black text-xs uppercase tracking-widest text-white shadow-lg transition-all ${isSaving ? 'bg-gray-400' : 'bg-emerald-600 hover:bg-emerald-700 active:scale-95'}`}
+                            >
+                                {isSaving ? 'Guardando...' : 'Guardar Cambios'}
                             </button>
-                            <button type="button" onClick={() => navigate('/productos-reparar')} style={{ padding: '10px 20px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
-                                Volver al Listado
+                            <button 
+                                type="button" onClick={() => navigate('/productos-reparar')}
+                                className="px-6 py-3 rounded-xl font-bold text-gray-400 hover:text-gray-600 uppercase text-xs tracking-widest"
+                            >
+                                Volver
                             </button>
                         </div>
                     </form>
                 </div>
+                
+                {message && (
+                    <div className={`mx-8 mb-8 p-4 rounded-xl text-center text-xs font-bold ${isError ? 'bg-red-50 text-red-700 border border-red-100' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'}`}>
+                        {message}
+                    </div>
+                )}
             </div>
-
-            {message && (
-                <p style={{ marginTop: '20px', padding: '10px', backgroundColor: isError ? '#f8d7da' : '#d4edda', color: isError ? '#721c24' : '#155724', border: `1px solid ${isError ? '#f5c6cb' : '#c3e6cb'}`, borderRadius: '4px' }}>
-                    {message}
-                </p>
-            )}
         </div>
-        
     );
 };
+
+const DetailRow = ({ label, value }) => (
+    <div className="flex flex-col">
+        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{label}</span>
+        <span className="text-sm font-medium text-gray-800">{value}</span>
+    </div>
+);
 
 export default UpdateProductPage;

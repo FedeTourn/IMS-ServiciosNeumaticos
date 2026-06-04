@@ -3,69 +3,63 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 
+/**
+ * Componente de estructura principal del sistema.
+ * Gestiona la disposición del Sidebar y el contenido dinámico.
+ */
 const Layout = ({ children }) => {
     const { signOut } = useAuth();
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const location = useLocation();
 
-    const sidebarWidth = isCollapsed ? 70 : 250;
+    // Lógica para formatear el título de la página basado en la URL
+    const pageTitle = location.pathname === '/Inicio' 
+        ? 'PANEL DE INICIO' 
+        : location.pathname.split('/').pop().replace(/(-)/g, ' ').replace(/([A-Z])/g, ' $1').trim().toUpperCase();
 
-    const mainContentStyle = {
-        marginLeft: `${sidebarWidth}px`, // Empuja el contenido principal
-        width: `calc(100% - ${sidebarWidth}px)`,
-        // padding: '20px',
-        transition: 'margin-left 0.3s, width 0.3s',
-        minHeight: '100vh',
-        backgroundColor: '#f4f4f4',
-    };
-    
-    // Función para manejar el cierre de sesión y la navegación
     const handleSignOut = () => {
         signOut();
-        // El PrivateRoute de App.js se encargará de la redirección
     };
 
-    const location = useLocation();
-    
-    // Obtiene el nombre de la ruta para hacerlo más informativo
-    const pathname = location.pathname.split('/').pop().replace(/([A-Z])/g, ' $1').trim().toUpperCase();
-
     return (
-        <div style={{ display: 'flex' }}>
+        <div className="flex min-h-screen bg-gray-100">
             {/* Componente Sidebar */}
             <Sidebar 
                 isCollapsed={isCollapsed} 
                 onToggle={() => setIsCollapsed(!isCollapsed)} 
             />
 
-            {/* Contenido Principal */}
-            <div style={mainContentStyle}>
+            {/* Contenedor de Contenido Principal */}
+            <div className="flex-1 flex flex-col transition-all duration-300">
                 
-                <header style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    padding: '10px 20px', 
-                    marginBottom: '20px',
-                    borderBottom: '1px solid #ccc',
-                    backgroundColor: 'white'
-                }}>
-                    <h1 style={{ color: '#000000', margin: 0, fontWeight: 'bold'}}> {pathname} </h1>
+                {/* Header Global */}
+                <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 sticky top-0 z-10 shadow-sm">
+                    <h1 className="text-xl font-bold text-gray-800 tracking-tight">
+                        {pageTitle}
+                    </h1>
 
-                    <button onClick={handleSignOut} style={{ 
-                        padding: '8px 15px', 
-                        backgroundColor: '#dc3545', 
-                        color: 'white', 
-                        border: 'none', 
-                        cursor: 'pointer',
-                        borderRadius: '4px'
-                    }}>
-                        Cerrar Sesión
-                    </button>
+                    <div className="flex items-center gap-4">
+                        <button 
+                            onClick={handleSignOut}
+                            className="bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm font-semibold border border-red-100 hover:bg-red-600 hover:text-white transition-colors duration-200"
+                        >
+                            Cerrar Sesión
+                        </button>
+                    </div>
                 </header>
                 
-                {/* Contenido de la página (DashboardPage, ConstructionPage, etc.) */}
-                <main style={{ padding: '0 20px' }}> {/* Padding horizontal para el contenido de la página */}
-                    {children}
+                {/* Área de Visualización de Páginas */}
+                <main className="p-6 overflow-y-auto">
+                    {/* Contenedor interno para limitar el ancho máximo en pantallas ultra-wide si se desea */}
+                    <div className="max-w-7xl mx-auto">
+                        {children}
+                    </div>
                 </main>
+
+                {/* Footer simple opcional */}
+                <footer className="mt-auto py-4 px-6 text-center text-xs text-gray-400">
+                    © 2026 Servicios Neumáticos - Sistema de Gestión Interna
+                </footer>
             </div>
         </div>
     );

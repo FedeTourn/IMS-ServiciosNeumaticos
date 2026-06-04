@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchUserById, fetchAllRoles, updateUserData } from '../../services/auth.service';
 
+/**
+ * Página de actualización de perfiles de usuario.
+ * Permite gestionar roles, estados de cuenta y actualización de credenciales.
+ */
 const UpdateUserPage = () => {
     const { id_user } = useParams();
     const navigate = useNavigate();
@@ -12,7 +16,7 @@ const UpdateUserPage = () => {
         username: '',
         id_role: '',
         is_active: true,
-        password: '', // Opcional: solo si se desea cambiar
+        password: '',
     });
     
     const [isLoading, setIsLoading] = useState(true);
@@ -20,7 +24,6 @@ const UpdateUserPage = () => {
     const [message, setMessage] = useState('');
     const [isError, setIsError] = useState(false);
 
-    // --- Carga de Datos Iniciales (Usuario y Roles) ---
     useEffect(() => {
         const loadData = async () => {
             try {
@@ -30,18 +33,15 @@ const UpdateUserPage = () => {
                 ]);
                 
                 setRoles(rolesData);
-                
-                // Configurar formulario con datos existentes
-                setFormData(prev => ({
-                    ...prev,
+                setFormData({
                     full_name: userData.full_name || '',
                     username: userData.username || '',
-                    id_role: userData.id_role.toString() || '', // Asegurar que sea string para el select
+                    id_role: userData.id_role.toString() || '',
                     is_active: userData.is_active,
-                }));
-
+                    password: '',
+                });
             } catch (err) {
-                setMessage(`❌ Error al cargar los datos del usuario: ${err.message}`);
+                setMessage(`Error al cargar los datos: ${err.message}`);
                 setIsError(true);
             } finally {
                 setIsLoading(false);
@@ -50,7 +50,6 @@ const UpdateUserPage = () => {
         loadData();
     }, [id_user]);
 
-    // Maneja el cambio de estado en los inputs
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
         setFormData(prev => ({ 
@@ -60,7 +59,6 @@ const UpdateUserPage = () => {
         setMessage('');
     };
 
-    // Maneja el envío del formulario de actualización
     const handleSubmit = async (e) => {
         e.preventDefault();
         setMessage('');
@@ -73,92 +71,117 @@ const UpdateUserPage = () => {
             is_active: formData.is_active,
         };
         
-        // Incluir contraseña solo si se ha ingresado algo
-        if (formData.password) {
-            dataToSend.password = formData.password;
-        }
+        if (formData.password) dataToSend.password = formData.password;
 
         try {
             await updateUserData(id_user, dataToSend);
-            setMessage('✅ Usuario actualizado exitosamente. ');
-            setIsError(false);
-            // Limpiar campo de contraseña después de guardar
+            setMessage('Datos actualizados correctamente.');
             setFormData(prev => ({ ...prev, password: '' })); 
-            
         } catch (err) {
-            setMessage(`❌ Error al actualizar usuario: ${err.message}`);
+            setMessage(`Error al actualizar: ${err.message}`);
             setIsError(true);
         } finally {
             setIsSaving(false);
         }
     };
 
-    const inputStyle = { width: '100%', padding: '10px', margin: '5px 0 15px 0', border: '1px solid #ccc', borderRadius: '4px', boxSizing: 'border-box' };
-    const labelStyle = { display: 'block', marginBottom: '5px', fontWeight: 'bold' };
-
-    if (isLoading) {
-        return <div style={{padding: '20px', textAlign: 'center'}}>Cargando datos del usuario...</div>;
-    }
+    if (isLoading) return <div className="p-10 text-center text-gray-500 animate-pulse font-medium">Cargando perfil de usuario...</div>;
 
     return (
-        <div style={{ padding: '20px', backgroundColor: 'white', borderRadius: '8px', maxWidth: '600px', margin: '0 auto' }}>
-            <h1>✍️ Modificar Usuario ID {id_user}</h1>
-            <p>Ajuste el nombre, el rol y el estado del usuario. Deje el campo de contraseña vacío para no modificarla.</p>
-            
-            <form onSubmit={handleSubmit}>
+        <div className="max-w-2xl mx-auto pb-10 animate-fade-in">
+            <div className="bg-white shadow-xl rounded-2xl overflow-hidden border border-gray-100">
                 
-                {/* Nombre Completo */}
-                <div>
-                    <label htmlFor="full_name" style={labelStyle}>Nombre Completo *</label>
-                    <input type="text" id="full_name" name="full_name" value={formData.full_name} onChange={handleChange} required style={inputStyle} />
+                {/* Cabecera Informativa */}
+                <div className="bg-slate-800 p-6 flex justify-between items-center">
+                    <div>
+                        <h1 className="text-xl font-bold text-white uppercase tracking-tight">Editar Perfil de Usuario</h1>
+                        <p className="text-slate-400 text-xs mt-1 font-mono uppercase">ID de Sistema: {id_user}</p>
+                    </div>
+                    <div className={`px-3 py-1 rounded-full text-[10px] font-black border ${formData.is_active ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+                        {formData.is_active ? 'CUENTA ACTIVA' : 'CUENTA SUSPENDIDA'}
+                    </div>
                 </div>
 
-                {/* Nombre de Usuario (Solo Lectura) */}
-                <div>
-                    <label htmlFor="username" style={labelStyle}>Nombre de Usuario (Login)</label>
-                    <input type="text" id="username" name="username" value={formData.username} style={inputStyle} readOnly disabled />
-                </div>
+                <form onSubmit={handleSubmit} className="p-8 space-y-6">
+                    
+                    {/* Grupo: Identificación */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Nombre Completo</label>
+                            <input 
+                                type="text" name="full_name" value={formData.full_name} onChange={handleChange} required 
+                                className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-sm font-medium"
+                            />
+                        </div>
+                        <div className="space-y-1 opacity-60">
+                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Nombre de Usuario (Login)</label>
+                            <input 
+                                type="text" value={formData.username} disabled 
+                                className="w-full p-2.5 bg-gray-100 border border-gray-200 rounded-lg cursor-not-allowed text-sm font-mono"
+                            />
+                        </div>
+                    </div>
 
-                {/* Rol */}
-                <div>
-                    <label htmlFor="id_role" style={labelStyle}>Rol *</label>
-                    <select id="id_role" name="id_role" value={formData.id_role} onChange={handleChange} required style={inputStyle}>
-                        <option value="">Seleccione Rol</option>
-                        {roles.map(role => (
-                            <option key={role.id_role} value={role.id_role}>
-                                {role.name}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-                
-                {/* Contraseña */}
-                <div>
-                    <label htmlFor="password" style={labelStyle}>Contraseña (Dejar vacío para no cambiar)</label>
-                    <input type="password" id="password" name="password" value={formData.password} onChange={handleChange} style={inputStyle} placeholder="********" />
-                </div>
+                    {/* Grupo: Atribución de Rol */}
+                    <div className="space-y-1 border-t border-gray-50 pt-4">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Nivel de Acceso (Rol)</label>
+                        <select 
+                            name="id_role" value={formData.id_role} onChange={handleChange} required
+                            className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-sm font-medium"
+                        >
+                            <option value="">Seleccionar nivel...</option>
+                            {roles.map(role => (
+                                <option key={role.id_role} value={role.id_role}>{role.name}</option>
+                            ))}
+                        </select>
+                    </div>
 
-                {/* Activo/Inactivo */}
-                <div style={{ margin: '15px 0' }}>
-                    <input type="checkbox" id="is_active" name="is_active" checked={formData.is_active} onChange={handleChange} style={{ marginRight: '10px' }} />
-                    <label htmlFor="is_active" style={{ ...labelStyle, display: 'inline' }}>Usuario Activo</label>
-                </div>
-                
-                <div style={{ marginTop: '30px', display: 'flex', gap: '15px', alignItems: 'center' }}>
-                    <button type="submit" disabled={isSaving} style={{ padding: '10px 20px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', opacity: isSaving ? 0.6 : 1 }}>
-                        {isSaving ? 'Guardando...' : 'Guardar Cambios'}
-                    </button>
-                    <button type="button" onClick={() => navigate('/configuracion/usuarios')} style={{ padding: '10px 20px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
-                        Volver al Listado
-                    </button>
-                </div>
-            </form>
+                    {/* Grupo: Seguridad */}
+                    <div className="bg-amber-50/50 p-5 rounded-xl border border-amber-100 space-y-3">
+                        <h3 className="text-xs font-bold text-amber-700 uppercase tracking-wider">Seguridad y Credenciales</h3>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Actualizar Contraseña</label>
+                            <input 
+                                type="password" name="password" value={formData.password} onChange={handleChange} placeholder="••••••••"
+                                className="w-full p-2.5 bg-white border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm"
+                            />
+                            <p className="text-[10px] text-amber-600 italic">Deje este campo vacío si no desea modificar la clave actual.</p>
+                        </div>
+                    </div>
 
-            {message && (
-                <p style={{ marginTop: '20px', padding: '10px', backgroundColor: isError ? '#f8d7da' : '#d4edda', color: isError ? '#721c24' : '#155724', border: `1px solid ${isError ? '#f5c6cb' : '#c3e6cb'}`, borderRadius: '4px' }}>
-                    {message}
-                </p>
-            )}
+                    {/* Checkbox de estado */}
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                        <input 
+                            type="checkbox" id="is_active" name="is_active" checked={formData.is_active} onChange={handleChange}
+                            className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
+                        />
+                        <label htmlFor="is_active" className="text-sm font-bold text-gray-700 select-none">Habilitar acceso del usuario al sistema</label>
+                    </div>
+
+                    {/* Acciones */}
+                    <div className="pt-4 flex flex-col md:flex-row items-center gap-4 border-t border-gray-100">
+                        <button 
+                            type="submit" disabled={isSaving}
+                            className={`w-full md:w-auto px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest text-white shadow-lg transition-all
+                                ${isSaving ? 'bg-gray-400' : 'bg-slate-800 hover:bg-black active:scale-95 shadow-slate-200'}`}
+                        >
+                            {isSaving ? 'Guardando...' : 'Aplicar Cambios'}
+                        </button>
+                        <button 
+                            type="button" onClick={() => navigate('/configuracion/usuarios')}
+                            className="text-xs font-bold text-gray-400 hover:text-gray-600 uppercase tracking-widest"
+                        >
+                            Cancelar
+                        </button>
+
+                        {message && (
+                            <div className={`flex-1 p-3 rounded-lg text-xs font-bold text-center animate-fade-in ${isError ? 'bg-red-50 text-red-700 border border-red-100' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'}`}>
+                                {message}
+                            </div>
+                        )}
+                    </div>
+                </form>
+            </div>
         </div>
     );
 };

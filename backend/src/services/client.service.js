@@ -114,7 +114,7 @@ class ClientService {
         // 2. NORMALIZACIÓN DE DIRECCIÓN
         const direccion_normalizada = [provincia, ciudad, calle, numero]
             .filter(Boolean)
-            .map(formatter.toUpperCase())
+            .map(formatter.toUpperCase)
             .join(', ');
 
         /* const direccion_parts = [

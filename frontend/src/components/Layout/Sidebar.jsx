@@ -1,107 +1,78 @@
-//import React, { useState } from 'react';
-//import React from 'react';
+import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
-// Define la estructura de tu menú
 const menuItems = [
-    { name: 'Inicio', path: '/Inicio', icon: '🏠' },
-    { name: 'Productos a Reparar', path: '/productos-reparar', icon: '🛠️' },
-    { name: 'Registrar Recepción', path: '/registrar-recepcion', icon: '📦' },
-    { name: 'Crear Orden', path: '/crear-orden', icon: '📝' },
-    { name: 'Consultar Stock', path: '/consultar-stock', icon: '🛒' },
-    { name: 'Estados de Cuenta', path: '/estados-cuenta', icon: '💰' },
-    { name: 'Clientes', path: '/clientes', icon: '👥' },
-    { name: 'Configuración', path: '/configuracion', icon: '⚙️' },
+    { name: 'Inicio', path: '/Inicio' },
+    { name: 'Productos a Reparar', path: '/productos-reparar' },
+    { name: 'Registrar Recepción', path: '/registrar-recepcion' },
+    { name: 'Crear Orden', path: '/crear-orden' },
+    { name: 'Consultar Stock', path: '/consultar-stock' },
+    { name: 'Estados de Cuenta', path: '/estados-cuenta' },
+    { name: 'Clientes', path: '/clientes' },
+    { name: 'Configuración', path: '/configuracion' },
 ];
 
 const Sidebar = ({ isCollapsed, onToggle }) => {
     const { user } = useAuth();
     const location = useLocation();
 
-    const baseStyle = {
-        width: isCollapsed ? '70px' : '250px',
-        backgroundColor: '#2c3e50',
-        color: 'white',
-        height: '100vh',
-        position: 'fixed',
-        transition: 'width 0.3s',
-        paddingTop: '20px',
-        overflowX: 'hidden',
-        zIndex: 1000
-    };
-
-    const logoStyle = {
-        padding: '10px 0',
-        textAlign: 'center',
-        fontSize: isCollapsed ? '1.5em' : '1.5em',
-        fontWeight: 'bold',
-        marginBottom: '20px',
-        borderBottom: '1px solid #34495e'
-    };
-
     return (
-        <div style={baseStyle}>
-            <div style={logoStyle}>
-                {isCollapsed ? 'SN' : 'Servicios Neumáticos'}
+        <aside 
+            className={`bg-slate-800 text-white h-screen sticky top-0 left-0 transition-all duration-300 ease-in-out z-50 flex flex-col
+                ${isCollapsed ? 'w-20' : 'w-64'}`}
+        >
+            {/* 1. Header: Altura Fija */}
+            <div className="h-16 flex items-center justify-center border-b border-slate-700 shrink-0">
+                <span className="text-xl font-bold whitespace-nowrap">
+                    {isCollapsed ? 'SN' : 'Servicios Neumáticos'}
+                </span>
             </div>
             
-            <div style={{ padding: '0 10px' }}>
-                {menuItems.map((item) => (
-                    <Link 
-                        key={item.path} 
-                        to={item.path}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            padding: isCollapsed ? '10px 0' : '10px 15px',
-                            margin: '8px 0',
-                            textDecoration: 'none',
-                            color: location.pathname === item.path ? '#1abc9c' : 'white', // Resalta la página activa
-                            backgroundColor: location.pathname === item.path ? '#34495e' : 'transparent',
-                            borderRadius: '4px',
-                            whiteSpace: 'nowrap',
-                            transition: 'background-color 0.2s',
-                        }}
-                        onMouseOver={e => e.currentTarget.style.backgroundColor = '#34495e'}
-                        onMouseOut={e => {
-                            if (location.pathname !== item.path) {
-                                e.currentTarget.style.backgroundColor = 'transparent';
-                            }
-                        }}
-                    >
-                        <span style={{ fontSize: '1.2em', minWidth: '40px', textAlign: 'center' }}>{item.icon}</span>
-                        {!isCollapsed && <span style={{ marginLeft: '10px' }}>{item.name}</span>}
-                    </Link>
-                ))}
-            </div>
+            {/* 2. Menú de Navegación: Área con scroll propio si el contenido excede */}
+            <nav className="flex-1 px-3 py-4 space-y-2 overflow-y-auto custom-scrollbar">
+                {menuItems.map((item) => {
+                    const isActive = location.pathname === item.path;
+                    return (
+                        <Link 
+                            key={item.path} 
+                            to={item.path}
+                            className={`flex items-center h-11 rounded-lg transition-colors group
+                                ${isActive 
+                                    ? 'bg-emerald-500 text-white' 
+                                    : 'text-slate-300 hover:bg-slate-700 hover:text-white'}`}
+                        >
+                            <span className={`flex items-center justify-center text-lg shrink-0
+                                ${isCollapsed ? 'w-full' : 'w-12'}`}>
+                                {item.icon}
+                            </span>
+                            {!isCollapsed && (
+                                <span className="ml-1 font-medium truncate">
+                                    {item.name}
+                                </span>
+                            )}
+                        </Link>
+                    );
+                })}
+            </nav>
 
-            <div style={{ 
-                position: 'absolute', 
-                bottom: '20px', 
-                width: '100%', 
-                textAlign: 'center',
-                padding: '0 10px',
-                fontSize: '0.9em'
-            }}>
-                 {!isCollapsed && (
-                    <p style={{ margin: '5px 0' }}>
-                        {user.username} ({user.role})
-                    </p>
+            {/* 3. Panel de Usuario y Toggle: Siempre al fondo (altura fija) */}
+            <div className="p-4 border-t border-slate-700 bg-slate-900/50 shrink-0">
+                {!isCollapsed && user && (
+                    <div className="px-2 mb-4 animate-fade-in">
+                        <p className="text-sm font-semibold truncate text-emerald-400">{user.username}</p>
+                        <p className="text-xs text-slate-400 capitalize">{user.role}</p>
+                    </div>
                 )}
-                <button onClick={onToggle} style={{ 
-                    padding: '8px', 
-                    width: '50px', 
-                    backgroundColor: '#1abc9c', 
-                    color: 'white', 
-                    border: 'none', 
-                    borderRadius: '4px', 
-                    cursor: 'pointer' 
-                }}>
+                <button 
+                    onClick={onToggle}
+                    className="w-full flex items-center justify-center py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg transition-colors shadow-md active:scale-95 text-white"
+                    title={isCollapsed ? 'Expandir' : 'Colapsar'}
+                >
                     {isCollapsed ? '▶️' : '◀️'}
                 </button>
             </div>
-        </div>
+        </aside>
     );
 };
 
