@@ -49,7 +49,7 @@ const ConfigurationPage = () => {
                     <ConfigButton 
                         label="Tipos de Producto" 
                         icon="📋"
-                        onClick={() => console.log('Pendiente: Tipos')}
+                        onClick={() => navigate('/configuracion/tipos')}
                         variant="warning"
                     />
                     <ConfigButton 

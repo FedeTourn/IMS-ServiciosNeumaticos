@@ -42,17 +42,6 @@ class ProductService {
         return products;
     };
 
-    static async getProductTypes(){
-        const types = await Product.findAllProductTypes();
-        return types
-    };
-
-    
-    static async getProductModels(typeId){
-        const models = await Product.findAllProductModels(typeId);
-        return models
-    };
-
     static async createProduct(id_cliente, modelo, observaciones, fecha_recepcion, fecha_entrega_pactada){
         
         if (!id_cliente || !modelo || !fecha_recepcion) {
@@ -124,6 +113,92 @@ class ProductService {
         const states = await Product.findAllProductStates();
         return states;
     }
+
+    // ---------------------------------------------------------
+    // MANEJO DE TIPOS DE PRODUCTO
+    // ---------------------------------------------------------
+
+    static async getProductTypes(){
+        const types = await Product.findAllProductTypes();
+        return types
+    };
+
+    /**
+     * Valida y crea un nuevo Tipo de Producto.
+     * @param {string} nombre - Nombre del nuevo tipo.
+     * @returns {Promise<number>} ID del tipo creado.
+     * @throws {Object} Error si el nombre es inválido o ya existe.
+     */
+    static async createType(nombre) {
+        // 1. Validación de formato
+        if (!nombre || nombre.trim() === '') {
+            throw { status: 400, message: "El nombre del tipo de producto no puede estar vacío." };
+        }
+
+        const nombreNormalizado = nombre.trim().toUpperCase();
+
+        // 2. Verificación de duplicidad
+        const allTypes = await Product.findAllProductTypes();
+        const exists = allTypes.find(t => t.nombre.toUpperCase() === nombreNormalizado);
+        
+        if (exists) {
+            throw { status: 409, message: "Ya existe un tipo de producto con ese nombre." };
+        }
+
+        return await Product.createType({ nombre: nombreNormalizado });
+    }
+
+    /**
+     * Obtiene un tipo de producto por su ID.
+     */
+    static async getProductTypeById(id_tipo) {
+        const type = await Product.findTypeById(id_tipo);
+        if (!type) {
+            throw { status: 404, message: "Tipo de producto no encontrado." };
+        }
+        return type;
+    }
+
+    /**
+     * Valida y actualiza un Tipo de Producto existente.
+     * @param {number} id_tipo - ID del tipo a modificar.
+     * @param {string} nombre - Nuevo nombre.
+     * @returns {Promise<number>} Cantidad de filas afectadas.
+     * @throws {Object} Error si el nombre es inválido o si el ID no existe.
+     */
+    static async updateType(id_tipo, nombre) {
+        // 1. Validación de formato
+        if (!nombre || nombre.trim() === '') {
+            throw { status: 400, message: "El nombre del tipo de producto no puede estar vacío." };
+        }
+
+        // 2. Verificación de existencia previa
+        const existingType = await Product.findTypeById(id_tipo);
+        if (!existingType) {
+            throw { status: 404, message: "Tipo de producto no encontrado." };
+        }
+
+        const nombreNormalizado = nombre.trim().toUpperCase();
+
+        // 3. Verificación de duplicidad (excluyendo el actual)
+        const allTypes = await Product.findAllProductTypes();
+        const isDuplicate = allTypes.find(t => t.nombre.toUpperCase() === nombreNormalizado && t.id_tipo !== parseInt(id_tipo));
+
+        if (isDuplicate) {
+            throw { status: 409, message: "Ya existe otro tipo de producto con ese nombre." };
+        }
+
+        return await Product.updateType(id_tipo, { nombre: nombreNormalizado });
+    }
+    
+    // ---------------------------------------------------------
+    // MANEJO DE MODELOS DE PRODUCTO
+    // ---------------------------------------------------------
+    
+    static async getProductModels(typeId){
+        const models = await Product.findAllProductModels(typeId);
+        return models
+    };
 }
 
 module.exports = ProductService;

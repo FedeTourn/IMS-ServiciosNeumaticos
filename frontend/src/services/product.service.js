@@ -47,35 +47,6 @@ export const fetchProducts = async (params = {}) => {
 };
 
 /**
- * Consulta la lista de tipos de producto.
- */
-export const fetchProductTypes = async () => {
-    const response = await fetch(`${API_URL}/types`, {
-        method: 'GET',
-        headers: getAuthHeaders(),
-    });
-    if (!response.ok) {
-        throw new Error("Failed to fetch product types.");
-    }
-    return response.json();
-};
-
-/**
- * Consulta la lista de modelos de producto (opcionalmente filtrados por typeId).
- */
-export const fetchProductModels = async (typeId = null) => {
-    const url = typeId ? `${API_URL}/models?typeId=${typeId}` : `${API_URL}/models`;
-    const response = await fetch(url, {
-        method: 'GET',
-        headers: getAuthHeaders(),
-    });
-    if (!response.ok) {
-        throw new Error("Failed to fetch product models.");
-    }
-    return response.json();
-};
-
-/**
  * Registra la recepción de un producto.
  */
 export const registerProductReception = async (productData) => {
@@ -134,6 +105,84 @@ export const fetchProductStates = async () => {
     });
     if (!response.ok) {
         throw new Error("Failed to fetch product states.");
+    }
+    return response.json();
+};
+
+// ============================
+// MANEJO DE TIPOS DE PRODUCTO
+// ============================
+
+/**
+ * Consulta la lista de tipos de producto.
+ */
+export const fetchProductTypes = async () => {
+    const response = await fetch(`${API_URL}/types`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+        throw new Error("Failed to fetch product types.");
+    }
+    return response.json();
+};
+
+/**
+ * Consulta un tipo de producto.
+ */
+export const fetchTypeById = async (id) => {
+    const response = await fetch(`${API_URL}/types/${id}`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+        throw new Error("Failed to fetch type data.");
+    }
+    return response.json();
+};
+
+/**
+ * Registra un tipo de producto.
+ */
+export const createProductType = async (typeData) => {
+    const response = await fetch(`${API_URL}/types`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(typeData),
+    });
+    if (!response.ok) {
+        throw new Error("Failed to create product type.");
+    }
+    return response.json();
+};
+
+/**
+ * Actualiza la información de un tipo de producto.
+ */
+export const updateProductType = async (id, typeData) => {
+    const response = await fetch(`${API_URL}/types/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(typeData),
+    });
+    if (!response.ok) {
+        throw new Error("Failed to update product type.");
+    }
+    return response.json();
+};
+
+
+/**
+ * Consulta la lista de modelos de producto (opcionalmente filtrados por typeId).
+ */
+export const fetchProductModels = async (typeId = null) => {
+    const url = typeId ? `${API_URL}/models?typeId=${typeId}` : `${API_URL}/models`;
+    const response = await fetch(url, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+        throw new Error("Failed to fetch product models.");
     }
     return response.json();
 };
