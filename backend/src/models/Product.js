@@ -271,38 +271,90 @@ exports.updateType = async (id_tipo, typeData) => {
     }
 };
 
-/**
- * Busca un Tipo de Producto por su ID único.
- */
-exports.findTypeById = async (id_tipo) => {
-    const query = `SELECT id_tipo, nombre FROM TipoProducto WHERE id_tipo = ?`;
-    const [rows] = await db.query(query, [id_tipo]);
-    return rows[0] || null;
-};
-
 // ---------------------------------------------------------
 // EXPORTACIONES DE MODELOS DE PRODUCTO
 // ---------------------------------------------------------
 
 /**
- * Consulta todos los Modelos de Producto (opcionalmente filtrados por tipo).
- * @param {number} typeId - Tipo de producto.
- * @returns {Promise<Array>} Lista de Objetos ModeloProducto.
+ * Consulta todos los modelos de producto con el nombre del tipo asociado.
+ * @param {number|null} typeId - Filtro opcional por ID de tipo.
+ * @returns {Promise<Array>} Lista de objetos ModeloProducto con el nombre del tipo.
  */
 exports.findAllProductModels = async (typeId = null) => {
-    let query = `SELECT id_modelo, nombre, tipo FROM ModeloProducto`;
+    let query = `
+        SELECT 
+            mp.id_modelo, 
+            mp.nombre, 
+            mp.tipo AS id_tipo,
+            tp.nombre AS tipo_nombre
+        FROM ModeloProducto mp
+        JOIN TipoProducto tp ON mp.tipo = tp.id_tipo
+    `;
     let params = [];
     if (typeId) {
-        query += ` WHERE tipo = ?`;
+        query += ` WHERE mp.tipo = ?`;
         params.push(typeId);
     }
-    query += ` ORDER BY nombre ASC`;
+    query += ` ORDER BY mp.nombre ASC`;
     
     try {
         const [rows] = await db.query(query, params);
         return rows;
     } catch (error) {
         console.error("Error fetching all product models:", error);
+        throw error;
+    }
+};
+
+/**
+ * Busca un Modelo de Producto por su ID único, incluyendo los datos de su Tipo.
+ * @param {number} id_modelo - Identificador del modelo.
+ * @returns {Promise<Object|null>} Objeto ModeloProducto enriquecido o null.
+ */
+exports.findModelById = async (id_modelo) => {
+    const query = `
+        SELECT 
+            mp.id_modelo, 
+            mp.nombre, 
+            mp.tipo AS id_tipo,
+            tp.nombre AS tipo_nombre
+        FROM ModeloProducto mp
+        JOIN TipoProducto tp ON mp.tipo = tp.id_tipo
+        WHERE mp.id_modelo = ?
+    `;
+    try {
+        const [rows] = await db.query(query, [id_modelo]);
+        return rows[0] || null;
+    } catch (error) {
+        console.error("Error en ProductModel.findModelById:", error);
+        throw new Error("Error en la capa de datos al consultar el modelo por ID.");
+    }
+};
+
+/**
+ * Registra un nuevo Modelo de Producto.
+ */
+exports.createModel = async (modelData) => {
+    const query = `INSERT INTO ModeloProducto (nombre, tipo) VALUES (?, ?)`;
+    try {
+        const [result] = await db.query(query, [modelData.nombre, modelData.tipo]);
+        return result.insertId;
+    } catch (error) {
+        console.error("Error en ProductModel.createModel:", error);
+        throw error;
+    }
+};
+
+/**
+ * Actualiza los datos de un modelo.
+ */
+exports.updateModel = async (id_modelo, modelData) => {
+    const query = `UPDATE ModeloProducto SET nombre = ?, tipo = ? WHERE id_modelo = ?`;
+    try {
+        const [result] = await db.query(query, [modelData.nombre, modelData.tipo, id_modelo]);
+        return result.affectedRows;
+    } catch (error) {
+        console.error("Error en ProductModel.updateModel:", error);
         throw error;
     }
 };

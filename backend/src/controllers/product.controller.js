@@ -187,19 +187,76 @@ exports.getProductTypeById = async (req, res) => {
 // ---------------------------------------------------------
 
 /**
- * Consultar los modelos de productos.
+ * Consultar los modelos de productos (con soporte para filtro por tipo).
  */
 exports.getProductModels = async (req, res) => {
-    const { type_id } = req.query;  // Obtener el ID del tipo de producto del query string (ej: ?typeId=1)
+    const { type_id } = req.query; // Obtener el ID del tipo de producto
     try {
         const result = await ProductService.getProductModels(type_id);
         res.status(200).json(result);
     } catch (error) {
-        // Manejo de errores controlados por la lógica de negocio
         if (error.status) {
             return res.status(error.status).json({ message: error.message });
         }
         console.error("Error retrieving product models:", error);
         res.status(500).json({ message: "Error retrieving product models list." });
+    }
+};
+
+/**
+ * Consultar un modelo de producto por su ID.
+ */
+exports.getProductModelById = async (req, res) => {
+    try {
+        const { id_modelo } = req.params;
+        const result = await ProductService.getProductModelById(id_modelo);
+        res.status(200).json(result);
+    } catch (error) {
+        if (error.status) {
+            return res.status(error.status).json({ message: error.message });
+        }
+        console.error("Error en ProductController.getProductModelById:", error);
+        res.status(500).json({ message: "Error interno al consultar el modelo de producto." });
+    }
+};
+
+/**
+ * Registrar un nuevo Modelo de Producto.
+ */
+exports.createProductModel = async (req, res) => {
+    try {
+        const { nombre, tipo } = req.body; // 'tipo' corresponde al id_tipo_producto enviado desde la UI
+        const result = await ProductService.createModel(nombre, tipo);
+        
+        res.status(201).json({
+            message: "Modelo de producto registrado exitosamente.",
+            id_modelo: result
+        });
+    } catch (error) {
+        if (error.status) {
+            return res.status(error.status).json({ message: error.message });
+        }
+        console.error("Error en ProductController.createProductModel:", error);
+        res.status(500).json({ message: "Error interno al registrar el modelo de producto." });
+    }
+};
+
+/**
+ * Actualizar un Modelo de Producto existente.
+ */
+exports.updateProductModel = async (req, res) => {
+    try {
+        const { id_modelo } = req.params;
+        const { nombre, tipo } = req.body;
+        
+        await ProductService.updateModel(id_modelo, nombre, tipo);
+        
+        res.status(200).json({ message: "Modelo de producto actualizado exitosamente." });
+    } catch (error) {
+        if (error.status) {
+            return res.status(error.status).json({ message: error.message });
+        }
+        console.error("Error en ProductController.updateProductModel:", error);
+        res.status(500).json({ message: "Error interno al actualizar el modelo de producto." });
     }
 };

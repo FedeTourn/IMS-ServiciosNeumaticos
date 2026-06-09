@@ -55,7 +55,7 @@ const ConfigurationPage = () => {
                     <ConfigButton 
                         label="Modelos de Producto" 
                         icon="📐"
-                        onClick={() => console.log('Pendiente: Modelos')}
+                        onClick={() => navigate('/configuracion/modelos')}
                         variant="warning"
                     />
                     <ConfigButton 

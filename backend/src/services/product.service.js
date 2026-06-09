@@ -199,6 +199,80 @@ class ProductService {
         const models = await Product.findAllProductModels(typeId);
         return models
     };
+
+    /**
+     * Obtiene la información detallada de un modelo de producto específico.
+     * @param {number} id_modelo - ID del modelo a consultar.
+     * @returns {Promise<Object>} Datos del modelo encontrado.
+     * @throws {Object} Error 404 si el modelo no existe en el sistema.
+     */
+    static async getProductModelById(id_modelo) {
+        const model = await Product.findModelById(id_modelo);
+        if (!model) {
+            throw { status: 404, message: "Modelo de producto no encontrado." };
+        }
+        return model;
+    }
+
+    /**
+     * Valida la existencia del tipo de producto y registra un nuevo Modelo.
+     * @param {string} nombre - Nombre identificador del modelo.
+     * @param {number} tipo - ID del TipoProducto asociado (FK).
+     * @returns {Promise<number>} ID del nuevo modelo registrado.
+     * @throws {Object} Error 400 por campos vacíos o 404 si el tipo no existe.
+     */
+    static async createModel(nombre, tipo) {
+        if (!nombre || nombre.trim() === '' || !tipo) {
+            throw { status: 400, message: "El nombre del modelo y el ID de tipo son requeridos." };
+        }
+
+        
+        const existingType = await Product.findTypeById(tipo);
+        if (!existingType) {
+            throw { status: 404, message: `Operación abortada: El tipo de producto con ID ${tipo} no existe.` };
+        }
+
+        const nombreNormalizado = nombre.trim().toUpperCase();
+
+        
+        return await Product.createModel({
+            nombre: nombreNormalizado,
+            tipo: parseInt(tipo)
+        });
+    }
+
+    /**
+     * Valida y actualiza un Modelo de Producto existente.
+     * @param {number} id_modelo - ID del modelo a modificar.
+     * @param {string} nombre - Nuevo nombre del modelo.
+     * @param {number} tipo - Nuevo ID de tipo asociado.
+     * @returns {Promise<number>} Cantidad de filas afectadas.
+     * @throws {Object} Error si los datos son inválidos, si el modelo o el tipo no existen.
+     */
+    static async updateModel(id_modelo, nombre, tipo) {
+        if (!id_modelo || !nombre || nombre.trim() === '' || !tipo) {
+            throw { status: 400, message: "Todos los campos son requeridos para actualizar el modelo." };
+        }
+
+        // Verificar la existencia del tipo maestro
+        const existingType = await Product.findTypeById(tipo);
+        if (!existingType) {
+            throw { status: 404, message: `El tipo de producto asignado (ID: ${tipo}) no existe.` };
+        }
+
+        const nombreNormalizado = nombre.trim().toUpperCase();
+
+        const affectedRows = await Product.updateModel(id_modelo, {
+            nombre: nombreNormalizado,
+            tipo: parseInt(tipo)
+        });
+
+        if (affectedRows === 0) {
+            throw { status: 404, message: "Modelo de producto no encontrado o sin cambios." };
+        }
+
+        return affectedRows;
+    }
 }
 
 module.exports = ProductService;

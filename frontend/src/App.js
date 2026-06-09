@@ -24,6 +24,7 @@ import ProductsPage from './pages/Products/ProductsPage';
 import RegisterReceptionPage from './pages/Products/RegisterReceptionPage';
 import UpdateProductPage from './pages/Products/UpdateProductPage';
 import ProductTypesPage from './pages/Configuration/ProductTypesPage';
+import ProductModelsPage from './pages/Configuration/ProductModelsPage';
 
 // Componente que envuelve la lógica para rutas privadas
 const PrivateRoute = ({ children }) => {
@@ -77,6 +78,7 @@ function App() {
                     <Route path="/configuracion/roles" element={<ConstructionPage />} />
                     <Route path="/configuracion/alta-rol" element={<ConstructionPage />} />
                     <Route path="/configuracion/tipos" element={<ProductTypesPage />} />
+                    <Route path="/configuracion/modelos" element={<ProductModelsPage />} />
 
                     {/* --- PROCESOS ADMINISTRATIVOS --- */}
                     <Route path="/crear-orden" element={<ConstructionPage />} />
