@@ -358,3 +358,52 @@ exports.updateModel = async (id_modelo, modelData) => {
         throw error;
     }
 };
+
+
+/**
+ * Consulta en el diccionario los identificadores de estados destino permitidos para un origen dado.
+ * @param {number} estado_origen - Identificador del estado actual del producto.
+ * @returns {Promise<number[]>} Matriz con los IDs de los estados destinos parametrizados como válidos.
+ */
+exports.findAllowedDestinations = async (estado_origen) => {
+    const query = `
+        SELECT estado_destino 
+        FROM DiccionarioEstado 
+        WHERE estado_origen = ?
+    `;
+    try {
+        const [rows] = await db.query(query, [estado_origen]);
+        // Mapeamos las filas para devolver un array simple de números [2, 3, 4]
+        return rows.map(row => row.estado_destino);
+    } catch (error) {
+        console.error("Error en ProductModel.findAllowedDestinations:", error);
+        throw new Error("Error en la capa de datos al consultar las reglas de transición de estados.");
+    }
+};
+
+/**
+ * Consulta todas las reglas de transición registradas en el DiccionarioEstado.
+ * Realiza un JOIN para traer los nombres legibles de los estados.
+ * @returns {Promise<Array>} Lista de objetos { estado_origen, estado_destino, nombre_origen, nombre_destino }
+ */
+exports.getAllStateTransitions = async () => {
+    const query = `
+        SELECT 
+            de.estado_origen,
+            de.estado_destino,
+            eo.nombre AS nombre_origen,
+            ed.nombre AS nombre_destino
+        FROM DiccionarioEstado de
+        JOIN EstadoProducto eo ON de.estado_origen = eo.id_estado
+        JOIN EstadoProducto ed ON de.estado_destino = ed.id_estado
+        ORDER BY de.estado_origen ASC, de.estado_destino ASC
+    `;
+    
+    try {
+        const [rows] = await db.query(query);
+        return rows;
+    } catch (error) {
+        console.error("Error en ProductModel.getAllStateTransitions:", error);
+        throw new Error("Error en la capa de datos al consultar el diccionario de estados.");
+    }
+};

@@ -104,6 +104,19 @@ exports.getProductStates = async (req, res) => {
     }
 };
 
+exports.getStateTransitions = async (req, res) => {
+    try {
+        const result = await ProductService.getStateTransitions();
+        res.status(200).json(result);
+    } catch (error) {
+        if (error.status) {
+            return res.status(error.status).json({ message: error.message });
+        }
+        console.error("Error retrieving state transitions:", error);
+        res.status(500).json({ message: "Error retrieving state transition list." });
+    }
+}
+
 // ---------------------------------------------------------
 // MANEJO DE TIPOS DE PRODUCTO
 // ---------------------------------------------------------

@@ -101,6 +101,21 @@ export const fetchProductStates = async () => {
     return response.json();
 };
 
+/**
+ * Consulta la lista histórica de estados de producto.
+ */
+export const fetchStateTransitions = async () => {
+    const response = await fetch(`${API_URL}/states/transitions`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Error al obtener las transiciones de estados.");
+    }
+    return response.json();
+};
+
 // =========================================================
 // GESTIÓN DE TIPOS DE PRODUCTO
 // =========================================================

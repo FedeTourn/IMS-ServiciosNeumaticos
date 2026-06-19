@@ -37,11 +37,11 @@ const ConfigurationPage = () => {
                         icon="🛡️"
                         onClick={() => navigate('/configuracion/roles')}
                     />
-                    <ConfigButton 
+                    {/* <ConfigButton 
                         label="Agregar Rol" 
                         icon="🔑"
                         onClick={() => navigate('/configuracion/alta-rol')}
-                    />
+                    /> */}
                 </ConfigSection>
 
                 {/* --- SECCIÓN 2: CATÁLOGO DE PRODUCTOS (Válvulas) --- */}
@@ -61,7 +61,7 @@ const ConfigurationPage = () => {
                     <ConfigButton 
                         label="Diccionario de Estados" 
                         icon="🚦"
-                        onClick={() => console.log('Pendiente: Estados')}
+                        onClick={() => navigate('/configuracion/transiciones')}
                         variant="warning"
                     />
                 </ConfigSection>
@@ -79,13 +79,13 @@ const ConfigurationPage = () => {
                         icon="🏢"
                         onClick={() => console.log('Pendiente: Categorías Cliente')}
                         variant="pending"
-                    />
+                    />{/* 
                     <ConfigButton 
                         label="Gestionar Proveedores" 
                         icon="🚚"
                         onClick={() => console.log('Pendiente: Proveedores')}
                         variant="pending"
-                    />
+                    /> */}
                 </ConfigSection>
 
                 {/* --- SECCIÓN 4: AUDITORÍA Y SISTEMA --- */}

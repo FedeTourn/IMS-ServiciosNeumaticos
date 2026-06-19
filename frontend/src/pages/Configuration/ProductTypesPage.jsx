@@ -12,12 +12,12 @@ const ProductTypesPage = () => {
 
     useEffect(() => {
         const loadTypes = async () => {
-        try {
-            const data = await ProductService.fetchProductTypes();
-            setTypes(data);
-        } catch (err) {
-            setFeedback({ msg: "Error al cargar tipos", type: 'error' });
-        }
+            try {
+                const data = await ProductService.fetchProductTypes();
+                setTypes(data);
+            } catch (err) {
+                setFeedback({ msg: "Error al cargar tipos", type: 'error' });
+            }
         };
         loadTypes();
     }, []);

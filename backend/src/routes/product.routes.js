@@ -12,6 +12,9 @@ router.post('/', productController.createProduct);
 // GET /api/products/states - Consultar Estados (Lista de referencia)
 router.get('/states', productController.getProductStates);
 
+// GET /api/products/states/transitions - Consultar Transiciones de estados
+router.get('/states/transitions', productController.getStateTransitions);
+
 // =========================
 // RUTAS DE TIPO DE PRODUCTO
 // =========================
