@@ -77,8 +77,6 @@ function App() {
                     <Route path="/configuracion/usuarios" element={<UserListPage />} />
                     <Route path="/configuracion/alta-usuario" element={<CreateUserPage />} />
                     <Route path="/configuracion/modificar-usuario/:id_user" element={<UpdateUserPage />} />
-                    <Route path="/configuracion/roles" element={<ConstructionPage />} />
-                    <Route path="/configuracion/alta-rol" element={<ConstructionPage />} />
                     <Route path="/configuracion/tipos" element={<ProductTypesPage />} />
                     <Route path="/configuracion/modelos" element={<ProductModelsPage />} />
                     <Route path="/configuracion/transiciones" element={<StateTransitionsPage />} />

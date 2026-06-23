@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ModalClientCategory from './ModalClientCategory';
 
 /**
  * Página Principal de Configuración.
@@ -7,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
  */
 const ConfigurationPage = () => {
     const navigate = useNavigate();
+    const [isModalClientCategoryOpen, setIsModalClientCategoryOpen] = useState(false);
 
     return (
         <div className="space-y-8 animate-fade-in pb-10">
@@ -35,7 +37,8 @@ const ConfigurationPage = () => {
                     <ConfigButton 
                         label="Consultar Roles" 
                         icon="🛡️"
-                        onClick={() => navigate('/configuracion/roles')}
+                        onClick={() => console.log('Pendiente: Consultar Roles')}
+                        variant="pending"
                     />
                     {/* <ConfigButton 
                         label="Agregar Rol" 
@@ -77,8 +80,8 @@ const ConfigurationPage = () => {
                     <ConfigButton 
                         label="Categorías de Cliente" 
                         icon="🏢"
-                        onClick={() => console.log('Pendiente: Categorías Cliente')}
-                        variant="pending"
+                        onClick={() => setIsModalClientCategoryOpen(true)}
+                        variant="info"
                     />{/* 
                     <ConfigButton 
                         label="Gestionar Proveedores" 
@@ -96,7 +99,11 @@ const ConfigurationPage = () => {
                         </p>
                     </div>
                 </ConfigSection>
-
+                {/* Renderizado del Modal */}
+                <ModalClientCategory 
+                    isOpen={isModalClientCategoryOpen} 
+                    onClose={() => setIsModalClientCategoryOpen(false)} 
+                />
             </div>
         </div>
     );
