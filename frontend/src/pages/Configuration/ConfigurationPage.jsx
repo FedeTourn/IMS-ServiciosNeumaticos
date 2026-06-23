@@ -71,8 +71,8 @@ const ConfigurationPage = () => {
                     <ConfigButton 
                         label="Listas de Precios por Categoría" 
                         icon="🏷️"
-                        onClick={() => console.log('Pendiente: Precios')}
-                        variant="pending"
+                        onClick={() => navigate('/configuracion/precio-productos')}
+                        variant="info"
                     />
                     <ConfigButton 
                         label="Categorías de Cliente" 

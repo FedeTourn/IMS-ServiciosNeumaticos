@@ -13,6 +13,7 @@ import ConfigurationPage from './pages/Configuration/ConfigurationPage';
 import UserListPage from './pages/Configuration/UserListPage';
 import UpdateUserPage from './pages/Configuration/UpdateUserPage';
 import CreateUserPage from './pages/Configuration/CreateUserPage';
+import PriceMatrixPage from './pages/Configuration/PriceMatrixPage';
 
 // Rutas del cliente
 import ClientsPage from './pages/Clients/ClientsPage';
@@ -81,6 +82,7 @@ function App() {
                     <Route path="/configuracion/tipos" element={<ProductTypesPage />} />
                     <Route path="/configuracion/modelos" element={<ProductModelsPage />} />
                     <Route path="/configuracion/transiciones" element={<StateTransitionsPage />} />
+                    <Route path="/configuracion/precio-productos" element={<PriceMatrixPage />} />
 
                     {/* --- PROCESOS ADMINISTRATIVOS --- */}
                     <Route path="/crear-orden" element={<ConstructionPage />} />
