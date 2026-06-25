@@ -13,6 +13,7 @@ import ConfigurationPage from './pages/Configuration/ConfigurationPage';
 import UserListPage from './pages/Configuration/UserListPage';
 import UpdateUserPage from './pages/Configuration/UpdateUserPage';
 import CreateUserPage from './pages/Configuration/CreateUserPage';
+import PriceMatrixPage from './pages/Configuration/PriceMatrixPage';
 
 // Rutas del cliente
 import ClientsPage from './pages/Clients/ClientsPage';
@@ -23,6 +24,9 @@ import UpdateClientPage from './pages/Clients/UpdateClientPage';
 import ProductsPage from './pages/Products/ProductsPage';
 import RegisterReceptionPage from './pages/Products/RegisterReceptionPage';
 import UpdateProductPage from './pages/Products/UpdateProductPage';
+import ProductTypesPage from './pages/Configuration/ProductTypesPage';
+import ProductModelsPage from './pages/Configuration/ProductModelsPage';
+import StateTransitionsPage from './pages/Configuration/StateTransitionsPage';
 
 // Componente que envuelve la lógica para rutas privadas
 const PrivateRoute = ({ children }) => {
@@ -73,8 +77,10 @@ function App() {
                     <Route path="/configuracion/usuarios" element={<UserListPage />} />
                     <Route path="/configuracion/alta-usuario" element={<CreateUserPage />} />
                     <Route path="/configuracion/modificar-usuario/:id_user" element={<UpdateUserPage />} />
-                    <Route path="/configuracion/roles" element={<ConstructionPage />} />
-                    <Route path="/configuracion/alta-rol" element={<ConstructionPage />} />
+                    <Route path="/configuracion/tipos" element={<ProductTypesPage />} />
+                    <Route path="/configuracion/modelos" element={<ProductModelsPage />} />
+                    <Route path="/configuracion/transiciones" element={<StateTransitionsPage />} />
+                    <Route path="/configuracion/precio-productos" element={<PriceMatrixPage />} />
 
                     {/* --- PROCESOS ADMINISTRATIVOS --- */}
                     <Route path="/crear-orden" element={<ConstructionPage />} />

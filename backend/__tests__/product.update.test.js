@@ -32,19 +32,21 @@ describe('Integración: PUT /api/products/:id_producto', () => {
         // Aquí iría un script para vaciar la tabla de productos de la base de pruebas.
     });
 
-    // 1. Camino Feliz (Happy Path)
     it('Debe permitir la transición de RECIBIDO (1) a EN_REPARACION (2) devolviendo 200 OK', async () => {
+        // MOCKEO NECESARIO: Decimos que 1 permite transicionar a 2
+        Product.findAllowedDestinations.mockResolvedValue([2, 3, 4, 5, 6]);
+        
         const response = await request(app)
             .put(`/api/products/${testProductId}`)
             .send({
-                estado: 2, // EN_REPARACION
+                estado: 2, 
                 observaciones: 'El técnico comenzó la inspección.'
             });
 
         expect(response.status).toBe(200);
         expect(response.body.message).toBe("Product updated successfully.");
     });
-
+    
     // 2. Regla de Negocio (Falla Esperada)
     it('Debe rechazar la transición de EN_REPARACION (2) a RECIBIDO (1) devolviendo 403 Forbidden', async () => {
         const response = await request(app)

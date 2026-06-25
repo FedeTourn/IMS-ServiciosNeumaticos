@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ModalClientCategory from './ModalClientCategory';
 
 /**
  * Página Principal de Configuración.
@@ -7,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
  */
 const ConfigurationPage = () => {
     const navigate = useNavigate();
+    const [isModalClientCategoryOpen, setIsModalClientCategoryOpen] = useState(false);
 
     return (
         <div className="space-y-8 animate-fade-in pb-10">
@@ -35,13 +37,14 @@ const ConfigurationPage = () => {
                     <ConfigButton 
                         label="Consultar Roles" 
                         icon="🛡️"
-                        onClick={() => navigate('/configuracion/roles')}
+                        onClick={() => console.log('Pendiente: Consultar Roles')}
+                        variant="pending"
                     />
-                    <ConfigButton 
+                    {/* <ConfigButton 
                         label="Agregar Rol" 
                         icon="🔑"
                         onClick={() => navigate('/configuracion/alta-rol')}
-                    />
+                    /> */}
                 </ConfigSection>
 
                 {/* --- SECCIÓN 2: CATÁLOGO DE PRODUCTOS (Válvulas) --- */}
@@ -49,19 +52,19 @@ const ConfigurationPage = () => {
                     <ConfigButton 
                         label="Tipos de Producto" 
                         icon="📋"
-                        onClick={() => console.log('Pendiente: Tipos')}
+                        onClick={() => navigate('/configuracion/tipos')}
                         variant="warning"
                     />
                     <ConfigButton 
                         label="Modelos de Producto" 
                         icon="📐"
-                        onClick={() => console.log('Pendiente: Modelos')}
+                        onClick={() => navigate('/configuracion/modelos')}
                         variant="warning"
                     />
                     <ConfigButton 
                         label="Diccionario de Estados" 
                         icon="🚦"
-                        onClick={() => console.log('Pendiente: Estados')}
+                        onClick={() => navigate('/configuracion/transiciones')}
                         variant="warning"
                     />
                 </ConfigSection>
@@ -71,21 +74,21 @@ const ConfigurationPage = () => {
                     <ConfigButton 
                         label="Listas de Precios por Categoría" 
                         icon="🏷️"
-                        onClick={() => console.log('Pendiente: Precios')}
-                        variant="pending"
+                        onClick={() => navigate('/configuracion/precio-productos')}
+                        variant="info"
                     />
                     <ConfigButton 
                         label="Categorías de Cliente" 
                         icon="🏢"
-                        onClick={() => console.log('Pendiente: Categorías Cliente')}
-                        variant="pending"
-                    />
+                        onClick={() => setIsModalClientCategoryOpen(true)}
+                        variant="info"
+                    />{/* 
                     <ConfigButton 
                         label="Gestionar Proveedores" 
                         icon="🚚"
                         onClick={() => console.log('Pendiente: Proveedores')}
                         variant="pending"
-                    />
+                    /> */}
                 </ConfigSection>
 
                 {/* --- SECCIÓN 4: AUDITORÍA Y SISTEMA --- */}
@@ -96,7 +99,11 @@ const ConfigurationPage = () => {
                         </p>
                     </div>
                 </ConfigSection>
-
+                {/* Renderizado del Modal */}
+                <ModalClientCategory 
+                    isOpen={isModalClientCategoryOpen} 
+                    onClose={() => setIsModalClientCategoryOpen(false)} 
+                />
             </div>
         </div>
     );

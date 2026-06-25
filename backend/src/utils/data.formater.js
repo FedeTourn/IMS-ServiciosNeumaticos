@@ -1,6 +1,5 @@
 /**
  * Convierte una cadena a mayúsculas.
- * Útil para campos como CUIT.
  * @param {string} value
  * @returns {string}
  */
@@ -13,7 +12,6 @@ exports.toUpperCase = (value) => {
 
 /**
  * Convierte una cadena a formato Título (Capitalize).
- * Útil para campos como Nombres o Direcciones.
  * @param {string} value
  * @returns {string}
  */
@@ -25,5 +23,3 @@ exports.toTitleCase = (value) => {
     }
     return value;
 };
-
-// Puedes añadir aquí más funciones de limpieza, como eliminar caracteres especiales o espacios extra.

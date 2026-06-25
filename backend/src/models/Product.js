@@ -103,147 +103,6 @@ exports.findAll = async (options = {}) => {
 };
 
 /**
- * Consulta todos los productos con sus datos relacionados, permitiendo filtros y ordenamiento.
- * @param {Object} options - { orderBy, sortOrder, searchField, searchTerm }
- * @returns {Promise<Array>} Lista de objetos producto.
- */
-/* exports.findAll = async (options) => {
-    // 1. Sanitización de filtros (Crucial para evitar SQL Injection)
-    const orderBy = ALLOWED_ORDER_BY.includes(options.orderBy) ? options.orderBy : 'fecha_recepcion';
-    const sortOrder = ALLOWED_SORT_ORDER.includes(options.sortOrder?.toUpperCase()) ? options.sortOrder : 'DESC';
-
-    const { orderBy, sortOrder, searchField, searchTerm } = options;
-
-    let query = `
-        SELECT 
-            p.id_producto,
-            c.nombre AS cliente_nombre,
-            tp.nombre AS tipo_nombre,
-            mp.nombre AS modelo_nombre,
-            ep.nombre AS estado_nombre,
-            p.fecha_recepcion,
-            p.fecha_entrega,
-            p.id_orden_reparacion,
-            p.observaciones
-        FROM Producto p
-        JOIN Cliente c ON p.id_cliente = c.id_cliente
-        JOIN ModeloProducto mp ON p.modelo = mp.id_modelo
-        JOIN TipoProducto tp ON mp.tipo = tp.id_tipo
-        JOIN EstadoProducto ep ON p.estado = ep.id_estado
-    `;
-
-    
-    let params = [];
-    let whereClauses = [];
-    
-    // --- Mapeo seguro de columnas para BÚSQUEDA ---
-    const searchColumns = {
-        // Columna Específica | Columna SQL
-        cliente: 'c.nombre',
-        tipo: 'tp.nombre',
-        modelo: 'mp.nombre',
-        estado: 'ep.nombre',
-        recepcion: 'p.fecha_recepcion', // Se puede buscar por fecha (parcialmente)
-        todos: [ // Búsqueda Global: Combina varios campos
-            'c.nombre', 
-            'tp.nombre', 
-            'mp.nombre', 
-            'ep.nombre'
-        ]
-    };
-
-    // --- LÓGICA DE FILTRADO ---
-    if (searchTerm && searchTerm.trim() !== '') {
-        const term = `%${searchTerm.trim()}%`;
-        
-        if (searchField && searchColumns[searchField]) {
-            let fieldsToSearch = [];
-
-            if (searchField === 'todos') {
-                // Búsqueda Global
-                fieldsToSearch = searchColumns.todos;
-            } else {
-                // Búsqueda por Campo Específico
-                fieldsToSearch = [searchColumns[searchField]];
-            }
-            
-            // Construye la cláusula WHERE (campo LIKE %query%)
-            const conditions = fieldsToSearch.map(field => `${field} LIKE ?`).join(' OR ');
-            whereClauses.push(`(${conditions})`);
-
-            // Añade el término de búsqueda tantas veces como campos se estén buscando
-            fieldsToSearch.forEach(() => params.push(term));
-        }
-    }
-    
-    if (whereClauses.length > 0) {
-        query += ` WHERE ${whereClauses.join(' AND ')}`;
-    }
-    
-    // --- LÓGICA DE ORDENAMIENTO ---
-    const allowedColumns = {
-        cliente: 'c.nombre',
-        tipo: 'tp.nombre',
-        modelo: 'mp.nombre',
-        estado: 'ep.nombre',
-        fecha_recepcion: 'p.fecha_recepcion'
-    };
-
-    if (orderBy && allowedColumns[orderBy]) {
-        const orderDirection = sortOrder === 'DESC' ? 'DESC' : 'ASC';
-        query += ` ORDER BY ${allowedColumns[orderBy]} ${orderDirection}`;
-    } else {
-        query += ` ORDER BY p.fecha_recepcion DESC`;
-    }
-
-    try {
-        const [rows] = await db.query(query, params);
-        return rows;
-    } catch (error) {
-        console.error("Error fetching all products with options:", error);
-        throw error;
-    }
-}; */
-
-/**
- * Consulta todos los Tipos de Producto.
- * @returns {Promise<Array>} Lista de Objetos TipoProducto.
- */
-exports.findAllProductTypes = async () => {
-    const query = `SELECT id_tipo, nombre FROM TipoProducto ORDER BY nombre ASC`;
-    try {
-        const [rows] = await db.query(query);
-        return rows;
-    } catch (error) {
-        console.error("Error fetching all product types:", error);
-        throw error;
-    }
-};
-
-/**
- * Consulta todos los Modelos de Producto (opcionalmente filtrados por tipo).
- * @param {number} typeId - Tipo de producto.
- * @returns {Promise<Array>} Lista de Objetos ModeloProducto.
- */
-exports.findAllProductModels = async (typeId = null) => {
-    let query = `SELECT id_modelo, nombre, tipo FROM ModeloProducto`;
-    let params = [];
-    if (typeId) {
-        query += ` WHERE tipo = ?`;
-        params.push(typeId);
-    }
-    query += ` ORDER BY nombre ASC`;
-    
-    try {
-        const [rows] = await db.query(query, params);
-        return rows;
-    } catch (error) {
-        console.error("Error fetching all product models:", error);
-        throw error;
-    }
-};
-
-/**
  * Crea un nuevo producto. (Alta de Producto/Recepción)
  * @param {Object} productData - Objeto con la informacion del producto (modelo, fecha_recepcion, estado, id_cliente, observaciones).
  * @returns {Promise<number>} Id del producto creado.
@@ -343,34 +202,208 @@ exports.findAllProductStates = async () => {
     }
 };
 
-/* *
- * Consulta todos los productos con sus datos relacionados.
- * @returns {Promise<Array>} Lista de objetos producto.
+
+// ---------------------------------------------------------
+// EXPORTACIONES DE TIPOS DE PRODUCTO
+// ---------------------------------------------------------
+
+/**
+ * Consulta todos los Tipos de Producto.
+ * @returns {Promise<Array>} Lista de Objetos TipoProducto.
  */
-/* exports.findAll = async () => {
-    // Consulta JOIN para obtener el nombre en lugar de IDs
-    const query = `
-        SELECT 
-            p.id_producto,
-            c.nombre AS cliente_nombre,
-            tp.nombre AS tipo_nombre,
-            mp.nombre AS modelo_nombre,
-            ep.nombre AS estado_nombre,
-            p.fecha_recepcion,
-            p.fecha_entrega,
-            p.id_orden_reparacion
-        FROM Producto p
-        JOIN Cliente c ON p.id_cliente = c.id_cliente
-        JOIN ModeloProducto mp ON p.modelo = mp.id_modelo
-        JOIN TipoProducto tp ON mp.tipo = tp.id_tipo
-        JOIN EstadoProducto ep ON p.estado = ep.id_estado
-        ORDER BY p.fecha_recepcion DESC
-    `;
+exports.findAllProductTypes = async () => {
+    const query = `SELECT id_tipo, nombre FROM TipoProducto ORDER BY nombre ASC`;
     try {
         const [rows] = await db.query(query);
         return rows;
     } catch (error) {
-        console.error("Error fetching all products:", error);
+        console.error("Error fetching all product types:", error);
         throw error;
     }
-}; */
+};
+
+/**
+ * Busca un Tipo de Producto por su ID único.
+ * @param {number} id_tipo - Identificador del tipo de producto.
+ * @returns {Promise<Object|null>} Objeto TipoProducto o null si no existe.
+ */
+exports.findTypeById = async (id_tipo) => {
+    const query = `SELECT id_tipo, nombre FROM TipoProducto WHERE id_tipo = ?`;
+    try {
+        const [rows] = await db.query(query, [id_tipo]);
+        return rows[0] || null;
+    } catch (error) {
+        console.error("Error en ProductModel.findTypeById:", error);
+        throw new Error("Error al consultar el tipo de producto por ID.");
+    }
+};
+
+/**
+ * Registra un nuevo Tipo de Producto en el sistema.
+ * @param {Object} typeData - Objeto con el nombre del tipo.
+ * @returns {Promise<number>} ID del tipo creado.
+ */
+exports.createType = async (typeData) => {
+    const query = `INSERT INTO TipoProducto (nombre) VALUES (?)`;
+    try {
+        const [result] = await db.query(query, [typeData.nombre]);
+        return result.insertId;
+    } catch (error) {
+        console.error("Error en ProductModel.createType:", error);
+        throw error;
+    }
+};
+
+/**
+ * Actualiza el nombre de un Tipo de Producto existente.
+ * @param {number} id_tipo - ID del tipo a modificar.
+ * @param {Object} typeData - Objeto con el nuevo nombre.
+ * @returns {Promise<number>} Cantidad de filas afectadas.
+ */
+exports.updateType = async (id_tipo, typeData) => {
+    const query = `UPDATE TipoProducto SET nombre = ? WHERE id_tipo = ?`;
+    try {
+        const [result] = await db.query(query, [typeData.nombre, id_tipo]);
+        return result.affectedRows;
+    } catch (error) {
+        console.error("Error en ProductModel.updateType:", error);
+        throw error;
+    }
+};
+
+// ---------------------------------------------------------
+// EXPORTACIONES DE MODELOS DE PRODUCTO
+// ---------------------------------------------------------
+
+/**
+ * Consulta todos los modelos de producto con el nombre del tipo asociado.
+ * @param {number|null} typeId - Filtro opcional por ID de tipo.
+ * @returns {Promise<Array>} Lista de objetos ModeloProducto con el nombre del tipo.
+ */
+exports.findAllProductModels = async (typeId = null) => {
+    let query = `
+        SELECT 
+            mp.id_modelo, 
+            mp.nombre, 
+            mp.tipo AS id_tipo,
+            tp.nombre AS tipo_nombre
+        FROM ModeloProducto mp
+        JOIN TipoProducto tp ON mp.tipo = tp.id_tipo
+    `;
+    let params = [];
+    if (typeId) {
+        query += ` WHERE mp.tipo = ?`;
+        params.push(typeId);
+    }
+    query += ` ORDER BY mp.nombre ASC`;
+    
+    try {
+        const [rows] = await db.query(query, params);
+        return rows;
+    } catch (error) {
+        console.error("Error fetching all product models:", error);
+        throw error;
+    }
+};
+
+/**
+ * Busca un Modelo de Producto por su ID único, incluyendo los datos de su Tipo.
+ * @param {number} id_modelo - Identificador del modelo.
+ * @returns {Promise<Object|null>} Objeto ModeloProducto enriquecido o null.
+ */
+exports.findModelById = async (id_modelo) => {
+    const query = `
+        SELECT 
+            mp.id_modelo, 
+            mp.nombre, 
+            mp.tipo AS id_tipo,
+            tp.nombre AS tipo_nombre
+        FROM ModeloProducto mp
+        JOIN TipoProducto tp ON mp.tipo = tp.id_tipo
+        WHERE mp.id_modelo = ?
+    `;
+    try {
+        const [rows] = await db.query(query, [id_modelo]);
+        return rows[0] || null;
+    } catch (error) {
+        console.error("Error en ProductModel.findModelById:", error);
+        throw new Error("Error en la capa de datos al consultar el modelo por ID.");
+    }
+};
+
+/**
+ * Registra un nuevo Modelo de Producto.
+ */
+exports.createModel = async (modelData) => {
+    const query = `INSERT INTO ModeloProducto (nombre, tipo) VALUES (?, ?)`;
+    try {
+        const [result] = await db.query(query, [modelData.nombre, modelData.tipo]);
+        return result.insertId;
+    } catch (error) {
+        console.error("Error en ProductModel.createModel:", error);
+        throw error;
+    }
+};
+
+/**
+ * Actualiza los datos de un modelo.
+ */
+exports.updateModel = async (id_modelo, modelData) => {
+    const query = `UPDATE ModeloProducto SET nombre = ?, tipo = ? WHERE id_modelo = ?`;
+    try {
+        const [result] = await db.query(query, [modelData.nombre, modelData.tipo, id_modelo]);
+        return result.affectedRows;
+    } catch (error) {
+        console.error("Error en ProductModel.updateModel:", error);
+        throw error;
+    }
+};
+
+
+/**
+ * Consulta en el diccionario los identificadores de estados destino permitidos para un origen dado.
+ * @param {number} estado_origen - Identificador del estado actual del producto.
+ * @returns {Promise<number[]>} Matriz con los IDs de los estados destinos parametrizados como válidos.
+ */
+exports.findAllowedDestinations = async (estado_origen) => {
+    const query = `
+        SELECT estado_destino 
+        FROM DiccionarioEstado 
+        WHERE estado_origen = ?
+    `;
+    try {
+        const [rows] = await db.query(query, [estado_origen]);
+        // Mapeamos las filas para devolver un array simple de números [2, 3, 4]
+        return rows.map(row => row.estado_destino);
+    } catch (error) {
+        console.error("Error en ProductModel.findAllowedDestinations:", error);
+        throw new Error("Error en la capa de datos al consultar las reglas de transición de estados.");
+    }
+};
+
+/**
+ * Consulta todas las reglas de transición registradas en el DiccionarioEstado.
+ * Realiza un JOIN para traer los nombres legibles de los estados.
+ * @returns {Promise<Array>} Lista de objetos { estado_origen, estado_destino, nombre_origen, nombre_destino }
+ */
+exports.getAllStateTransitions = async () => {
+    const query = `
+        SELECT 
+            de.estado_origen,
+            de.estado_destino,
+            eo.nombre AS nombre_origen,
+            ed.nombre AS nombre_destino
+        FROM DiccionarioEstado de
+        JOIN EstadoProducto eo ON de.estado_origen = eo.id_estado
+        JOIN EstadoProducto ed ON de.estado_destino = ed.id_estado
+        ORDER BY de.estado_origen ASC, de.estado_destino ASC
+    `;
+    
+    try {
+        const [rows] = await db.query(query);
+        return rows;
+    } catch (error) {
+        console.error("Error en ProductModel.getAllStateTransitions:", error);
+        throw new Error("Error en la capa de datos al consultar el diccionario de estados.");
+    }
+};

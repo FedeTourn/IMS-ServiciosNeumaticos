@@ -16,8 +16,8 @@ describe('ClientService - Pruebas Unitarias', () => {
         const validClientDTO = {
             apellido: 'Perez',
             nombre: 'Juan',
-            cuit: '20-12345678-9',
-            email: 'JUAN@test.com', // Probaremos si el servicio lo pasa a minúsculas
+            cuit: '20-42329627-6',
+            email: 'JUAN@test.com',
             categoria: 1,
             provincia: 'Santa Fe',
             ciudad: 'Santo Tomé',
@@ -36,7 +36,7 @@ describe('ClientService - Pruebas Unitarias', () => {
             expect(Client.create).toHaveBeenCalledWith(
                 expect.objectContaining({
                 nombre: 'PEREZ JUAN', // Verificamos normalización
-                cuit: '20-12345678-9',
+                cuit: '20-42329627-6',
                 email: 'juan@test.com' // Verificamos minúsculas
             }));
             expect(Client.create).toHaveBeenCalledTimes(1);

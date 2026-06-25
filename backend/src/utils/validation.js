@@ -1,7 +1,7 @@
 /**
  * Valida el formato de un CUIT argentino (formato XX-XXXXXXXX-X)
  */
-export const isValidCUIT = (cuit) => {
+exports.isValidCUIT = (cuit) => {
     if (!cuit) return false;
     const cleanCuit = cuit.replace(/-/g, '');
     if (cleanCuit.length !== 11) return false;
@@ -20,7 +20,7 @@ export const isValidCUIT = (cuit) => {
 /**
  * Valida formato de email
  */
-export const isValidEmail = (email) => {
+exports.isValidEmail = (email) => {
     if (!email) return true; // Si es opcional, consideramos válido si está vacío
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return re.test(email);

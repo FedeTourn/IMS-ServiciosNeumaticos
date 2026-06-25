@@ -10,6 +10,7 @@ const cors = require('cors'); // Para permitir peticiones desde el frontend (Rea
 const authRoutes = require('./routes/auth.routes');
 const clientRoutes = require('./routes/client.routes');
 const productRoutes = require('./routes/product.routes');
+const priceRoutes = require('./routes/price.routes');
 
 // Esto va despues de todas las importaciones porque "levanta" la app express
 const app = express();
@@ -25,6 +26,7 @@ app.use(express.json()); // Para poder recibir datos JSON en las peticiones
 app.use('/api/auth', authRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/prices', priceRoutes);
 
 // --- RUTAS DE DIAGNÓSTICO ---
 app.get('/', (req, res) => {

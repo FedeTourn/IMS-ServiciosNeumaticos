@@ -75,3 +75,90 @@ describe('ProductService - Lógica Compleja', () => {
         expect(result).toHaveLength(1);
     });
 });
+
+describe('Unit Test: ProductService - Gestión de Tipos de Producto', () => {
+
+    it('createType: Debe rechazar un nombre vacío', async () => {
+        await expect(ProductService.createType(' '))
+            .rejects
+            .toMatchObject({ status: 400 });
+    });
+
+    it('createType: Debe rechazar un nombre duplicado', async () => {
+        // Preparamos el mock para devolver un tipo existente
+        Product.findAllProductTypes.mockResolvedValue([{ nombre: 'VALVULA' }]);
+
+        await expect(ProductService.createType('VALVULA'))
+            .rejects
+            .toMatchObject({ status: 409 });
+    });
+
+    it('createType: Debe crear un tipo si el nombre es válido y único', async () => {
+        Product.findAllProductTypes.mockResolvedValue([{ nombre: 'BOMBA' }]);
+        Product.createType.mockResolvedValue(1);
+
+        const id = await ProductService.createType('VALVULA');
+        
+        expect(id).toBe(1);
+        expect(Product.createType).toHaveBeenCalledWith({ nombre: 'VALVULA' });
+    });
+
+    it('updateType: Debe rechazar actualización si el ID no existe', async () => {
+        Product.findTypeById.mockResolvedValue(null);
+
+        await expect(ProductService.updateType(999, 'Nuevo Nombre'))
+            .rejects
+            .toMatchObject({ status: 404 });
+    });
+});
+
+describe('Unit Test: ProductService - Gestión de Modelos de Producto', () => {
+
+    it('createModel: Debe rechazar la creación si el nombre viene vacío o falta el tipo', async () => {
+        // Validación de campos obligatorios
+        await expect(ProductService.createModel(' ', 1))
+            .rejects
+            .toMatchObject({ status: 400, message: "El nombre del modelo y el ID de tipo son requeridos." });
+
+        await expect(ProductService.createModel('Modelo Alpha', null))
+            .rejects
+            .toMatchObject({ status: 400, message: "El nombre del modelo y el ID de tipo son requeridos." });
+    });
+
+    it('createModel: Debe rechazar si el TipoProducto (id_tipo) asignado no existe en la base de datos', async () => {
+        // Simulamos que el Tipo maestro no existe (devuelve null)
+        Product.findTypeById.mockResolvedValue(null);
+
+        await expect(ProductService.createModel('5/2 MONOESTABLE', 999))
+            .rejects
+            .toMatchObject({ status: 404, message: "Operación abortada: El tipo de producto con ID 999 no existe." });
+        
+        // Verificamos que no se haya llamado a la inserción
+        expect(Product.createModel).not.toHaveBeenCalled();
+    });
+
+    it('createModel: Debe persistir el modelo en mayúsculas si el tipo existe y los datos son válidos', async () => {
+        // Simulamos que el Tipo maestro sí existe
+        Product.findTypeById.mockResolvedValue({ id_tipo: 2, nombre: 'VALVULAS' });
+        Product.createModel.mockResolvedValue(45); // ID autoincremental simulado
+
+        const idResult = await ProductService.createModel('  3/2 biestable  ', 2);
+
+        expect(idResult).toBe(45);
+        // Comprobamos la normalización UPPERCASE y el parseo del tipo
+        expect(Product.createModel).toHaveBeenCalledWith({
+            nombre: '3/2 BIESTABLE',
+            tipo: 2
+        });
+    });
+
+    it('updateModel: Debe lanzar error 404 si el modelo a modificar no existe o no tiene cambios', async () => {
+        // El tipo existe, pero el update del modelo afecta a 0 filas
+        Product.findTypeById.mockResolvedValue({ id_tipo: 1, nombre: 'CILINDROS' });
+        Product.updateModel.mockResolvedValue(0);
+
+        await expect(ProductService.updateModel(88, 'Nuevo Nombre', 1))
+            .rejects
+            .toMatchObject({ status: 404, message: "Modelo de producto no encontrado o sin cambios." });
+    });
+});
