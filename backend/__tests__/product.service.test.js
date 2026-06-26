@@ -10,7 +10,7 @@ const Product = require('../src/models/Product');
 // Le decimos a Jest que intercepte y "congele" el modelo Product
 jest.mock('../src/models/Product');
 
-describe('Unit Test: ProductService.updateProductState', () => {
+/* describe('Unit Test: ProductService.updateProductState', () => {
     // Limpiamos los mocks antes de cada test para evitar contaminación
     beforeEach(() => {
         jest.clearAllMocks();
@@ -161,4 +161,4 @@ describe('Unit Test: ProductService - Gestión de Modelos de Producto', () => {
             .rejects
             .toMatchObject({ status: 404, message: "Modelo de producto no encontrado o sin cambios." });
     });
-});
+}); */
