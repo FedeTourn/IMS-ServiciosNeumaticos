@@ -30,6 +30,7 @@ import StateTransitionsPage from './pages/Configuration/StateTransitionsPage';
 
 // Rutas de Comprobantes de Recepcion
 import RegisterReceiptPage from './pages/Receipts/RegisterReceiptPage';
+import ReceiptsPage from './pages/Receipts/ReceiptsPage';
 
 
 // Componente que envuelve la lógica para rutas privadas
@@ -88,6 +89,8 @@ function App() {
 
                     {/* --- PROCESOS ADMINISTRATIVOS --- */}
                     <Route path="/registrar-recepcion" element={<RegisterReceiptPage />} />
+                    <Route path="/recepciones" element={<ReceiptsPage />} />
+
                     <Route path="/crear-orden" element={<ConstructionPage />} />
                     <Route path="/consultar-stock" element={<ConstructionPage />} />
                     <Route path="/estados-cuenta" element={<ConstructionPage />} />

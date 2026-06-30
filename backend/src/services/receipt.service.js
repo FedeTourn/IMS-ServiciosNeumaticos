@@ -61,6 +61,55 @@ class ReceiptService {
     };
 
 
+    /**
+     * Recupera y procesa el historial de comprobantes de recepción aplicando filtros y ordenamiento seguro.
+     * @param {Object} filters - Criterios opcionales de búsqueda e inclusión.
+     * @param {string|null} [filters.search] - Texto para buscar coincidencias por nombre o CUIT de cliente.
+     * @param {number|null} [filters.id_cliente] - Identificador único de un cliente para filtrado directo.
+     * @param {string|null} [filters.fecha_desde] - Límite temporal inferior en formato ISO/string (YYYY-MM-DD).
+     * @param {string|null} [filters.fecha_hasta] - Límite temporal superior en formato ISO/string (YYYY-MM-DD).
+     * @param {string} [filters.sort_by='fecha'] - Concepto base para ordenar la grilla de datos.
+     * @param {string} [filters.sort_order='DESC'] - Sentido del ordenamiento ('ASC' o 'DESC').
+     * @returns {Promise<Array<Object>>} Retorna la lista de comprobantes procesados con sus correspondientes agregaciones.
+     * @throws {Error} Propaga excepciones lógicas o de base de datos capturadas.
+     */
+    static async getAllReceipts(filters = {}) {
+
+        // Valores por defecto utilizando desestructuración limpia
+        const {
+            search = null,
+            id_cliente = null,
+            fecha_desde = null,
+            fecha_hasta = null,
+            sort_by = null,
+            sort_order = 'DESC'
+        } = filters;
+
+        const allowedSortColumns = ['fecha', 'id', 'cliente'];
+        const allowedSortOrders = ['ASC', 'DESC'];
+        
+        
+        const validatedSortBy = allowedSortColumns.includes(sort_by) ? sort_by : 'fecha';
+        const validatedSortOrder = allowedSortOrders.includes(sort_order.toUpperCase()) ? sort_order.toUpperCase() : 'DESC';
+        
+        try {
+            const queryCriteria = {
+                search,
+                id_cliente,
+                fecha_desde,
+                fecha_hasta,
+                sort_by: validatedSortBy,
+                sort_order: validatedSortOrder
+            };
+
+            return Receipt.findReceiptsByCriteria(queryCriteria);
+
+        } catch (error) {
+            console.error(`[ReceiptService Error] Falla en subproceso getAllReceipts: ${error.message}`);
+            // Propagación limpia hacia el controlador REST
+            throw error;
+        }
+    }
 }
 
 module.exports = ReceiptService;

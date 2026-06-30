@@ -21,6 +21,76 @@ exports.insertReceipt = async (connection, receiptData) => {
 
 }
 
+/**
+ * Consulta el historial de comprobantes aplicando filtros dinámicos.
+ * @param {Object} queryCriteria - Criterios de filtrado y ordenamiento ya sanitizados.
+ * @returns {Promise<Array<Object>>} Listado de comprobantes optimizado para la UI.
+ */
+exports.findReceiptsByCriteria = async (queryCriteria) => {
+    
+    const SORT_COLUMN_MAP = {
+        'fecha':   'fecha_recepcion',
+        'id':      'id_comprobante',
+        'cliente': 'id_cliente'
+    };
+
+    const { search, id_cliente, fecha_desde, fecha_hasta, sort_by, sort_order } = queryCriteria;
+
+    const conditions = [];
+    const values = [];
+
+    let query = `
+        SELECT 
+            CR.id_comprobante,
+            CR.fecha_recepcion,
+            CR.descripcion,
+            C.nombre AS cliente_nombre,
+            C.cuit AS cliente_cuit
+        FROM ComprobanteRecepcion CR
+        INNER JOIN Cliente C ON CR.id_cliente = C.id_cliente
+    `;
+
+    // Filtrado dinámico por texto (LIKE)
+    if (search) {
+        conditions.push(`(C.nombre LIKE ? OR C.cuit LIKE ?)`);
+        values.push(`%${search}%`, `%${search}%`);
+    }
+
+    // Filtrado exacto por Cliente
+    if (id_cliente) {
+        conditions.push(`CR.id_cliente = ?`);
+        values.push(id_cliente);
+    }
+
+    // Rango de Fechas
+    if (fecha_desde) {
+        conditions.push(`DATE(CR.fecha_recepcion) >= ?`);
+        values.push(fecha_desde);
+    }
+    if (fecha_hasta) {
+        conditions.push(`DATE(CR.fecha_recepcion) <= ?`);
+        values.push(fecha_hasta);
+    }
+
+    // Ensamble de condiciones WHERE
+    if (conditions.length > 0) {
+        query += ` WHERE ` + conditions.join(' AND ');
+    }
+
+    const sorter = SORT_COLUMN_MAP[sort_by];
+
+    // Ordenamiento dinámico inyectado (Validado por Whitelisting en el Service)
+    query += ` ORDER BY CR.${sorter} ${sort_order}`;
+
+    try{
+        const [rows] = await db.query(query, values);
+        return rows;
+    }catch{
+        console.error("[Receipt Model Error] Fallo al ejecutar findReceiptsByCriteria:", error);
+        throw error;
+    }
+}
+
 
 /**
  * Inserta masivamente los nuevos productos (válvulas) asociados al comprobante.

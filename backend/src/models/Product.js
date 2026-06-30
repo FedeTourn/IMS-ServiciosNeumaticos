@@ -90,7 +90,7 @@ exports.findAll = async (options = {}) => {
     const { condition: whereClause, params } = _buildSearchClause(searchField, searchTerm);
     const orderClause = _buildOrderClause(orderBy, sortOrder);
 
-    // Ensamblaje final de la consulta
+    // Ensamble final de la consulta
     const query = `${baseQuery} ${whereClause} ${orderClause}`;
 
     try {

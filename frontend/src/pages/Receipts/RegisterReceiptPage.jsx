@@ -401,6 +401,11 @@ const RegisterReceiptPage = () => {
                             </div>
                         )}
                     </div>
+                    <div className="mt-6 p-4 bg-blue-50 border border-blue-100 rounded-xl">
+                        <p className="text-[10px] text-blue-600 leading-relaxed uppercase font-bold text-center">
+                            Aviso: En la próxima actualización podrá adjuntar fotografías del componente y generar el comprobante de recepción en PDF.
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>

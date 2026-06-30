@@ -62,6 +62,19 @@ const InicioPage = () => {
                     <MetricCard title="Órdenes del Mes" value="45" icon="📈" color="text-purple-600" bg="bg-purple-50" />
                 </div>
             </div>
+
+            {/* SECCIÓN 3: Boton de prueba*/}
+            <div>
+                <h2 className="text-lg font-semibold text-gray-700 mb-4">Botón de test</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <ActionCard 
+                        title="Testea Pantallas" 
+                        description="Botón para el desarrollador"
+                        icon="🔍"
+                        onClick={() => navigate('/recepciones')} 
+                    />
+                </div>
+            </div>
         </div>
     );
 };
