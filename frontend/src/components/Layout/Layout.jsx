@@ -26,14 +26,14 @@ const Layout = ({ children }) => {
             {/* Componente Sidebar */}
             <Sidebar 
                 isCollapsed={isCollapsed} 
-                onToggle={() => setIsCollapsed(!isCollapsed)} 
+                onToggle={() => setIsCollapsed(!isCollapsed)}
             />
 
             {/* Contenedor de Contenido Principal */}
             <div className="flex-1 flex flex-col transition-all duration-300">
                 
                 {/* Header Global */}
-                <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 sticky top-0 z-10 shadow-sm">
+                <header className="print:hidden h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 sticky top-0 z-10 shadow-sm">
                     <h1 className="text-xl font-bold text-gray-800 tracking-tight">
                         {pageTitle}
                     </h1>
@@ -56,7 +56,7 @@ const Layout = ({ children }) => {
                     </div>
                 </main>
 
-                {/* Footer simple opcional */}
+                {/* Pie simple */}
                 <footer className="mt-auto py-4 px-6 text-center text-xs text-gray-400">
                     © 2026 Servicios Neumáticos - Sistema de Gestión Interna
                 </footer>

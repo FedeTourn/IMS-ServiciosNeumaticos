@@ -70,4 +70,48 @@ exports.getAllReceipts = async (req, res) => {
     }
     
 
-}
+};
+
+/**
+ * Recupera el detalle de un comprobante.
+ */
+exports.getReceiptById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const receipt = await ReceiptService.getReceiptDetails(id);
+        
+        return res.status(200).json({ success: true, data: receipt });
+    } catch (error) {
+
+        console.error(`[ReceiptController Error] GET /receipts/:id - ${error.message}`);
+        return res.status(error.statusCode || 500).json({ 
+            success: false, 
+            message: error.message 
+        });
+    }
+};
+
+/**
+ * Actualiza los datos de un comprobante.
+ * Maneja explícitamente el conflicto de estado (HTTP 409).
+ */
+exports.updateReceipt = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { fecha_recepcion, descripcion } = req.body;
+
+        // Delegación al servicio (aquí se dispara la validación de estado)
+        const result = await ReceiptService.updateReceipt(id, { fecha_recepcion, descripcion });
+        
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error(`[ReceiptController Error] PUT /receipts/:id - ${error.message}`);
+        
+        // Mapeo semántico de errores: 
+        // 409 para conflicto de reglas de negocio, 404 si no existe, 500 para errores técnicos.
+        return res.status(error.statusCode || 500).json({ 
+            success: false, 
+            message: error.message 
+        });
+    }
+};

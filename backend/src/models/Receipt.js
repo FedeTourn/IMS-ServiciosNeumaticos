@@ -93,29 +93,96 @@ exports.findReceiptsByCriteria = async (queryCriteria) => {
 
 
 /**
- * Inserta masivamente los nuevos productos (válvulas) asociados al comprobante.
- * @param {Object} connection - Conexión activa de MySQL para resguardo transaccional.
- * @param {number} receiptId - ID del comprobante recién generado.
- * @param {Array<Object>} productsList - Arreglo de objetos con los detalles de cada válvula.
- * @returns {Promise<number>} Cantidad de productos registrados en el ingreso.
+ * Recupera un comprobante de recepción específico junto con todo su detalle de válvulas.
+ * @param {number} receiptId - Identificador único del comprobante.
+ * @returns {Promise<Object|null>} Retorna el objeto del comprobante con su arreglo de productos, o null si no existe.
+ * @throws {Error} Propaga errores de sintaxis o conexión del motor MySQL.
  */
-/* exports.insertBulkProducts = async (connection, receiptId, productsList) => {
-    // MySQL soporta inserción masiva estructurando un arreglo de arreglos: [[val1, val2], [val1, val2]]
-    const query = `
-        INSERT INTO Producto (modelo, observaciones, estado, id_comprobante_recepcion, id_cliente, precio)
-        VALUES ?;
+exports.getReceiptById = async (receiptId) => {
+    // Obtener el encabezado del comprobante y los datos del cliente asociado
+    const headerQuery = `
+        SELECT 
+            CR.id_comprobante,
+            CR.fecha_recepcion,
+            CR.descripcion,
+            C.id_cliente,
+            C.nombre AS cliente_nombre,
+            C.cuit AS cliente_cuit
+        FROM ComprobanteRecepcion CR
+        INNER JOIN Cliente C ON CR.id_cliente = C.id_cliente
+        WHERE CR.id_comprobante = ?;
     `;
-    
-    // Mapeamos los objetos del negocio al formato plano que requiere el driver mysql2 para bulk insert
-    const values = productsList.map(product => [
-        product.modelo,
-        product.observaciones || null,
-        1, // Estado forzado estricto por regla de negocio
-        receiptId,
-        product.id_cliente,
-        product.precio || 0
-    ]);
-    
-    const [result] = await connection.query(query, [values]);
-    return result.affectedRows;
-} */
+
+    // Obtener el detalle de los productos (válvulas) vinculados
+    const detailsQuery = `
+        SELECT 
+            P.id_producto,
+            P.estado,
+            P.observaciones,
+            MP.nombre AS nombre_modelo,
+            TP.nombre AS nombre_tipo,
+            EP.nombre AS nombre_estado
+        FROM Producto P
+        JOIN ModeloProducto MP ON P.modelo = MP.id_modelo
+        JOIN TipoProducto TP ON MP.tipo = TP.id_tipo
+        JOIN EstadoProducto EP ON P.estado = EP.id_estado
+        WHERE P.id_comprobante_recepcion = ?;
+    `;
+
+    try {
+        // Ejecutamos ambas consultas de lectura en paralelo para optimizar la latencia I/O
+        const [headerResult, detailsResult] = await Promise.all([
+            db.query(headerQuery, [receiptId]),
+            db.query(detailsQuery, [receiptId])
+        ]);
+
+        const headerRows = headerResult[0];
+        const detailRows = detailsResult[0];
+
+        // Verificamos existencia
+        if (headerRows.length === 0) {
+            return null;
+        }
+
+        // Ensamblamos el objeto de negocio principal con su arreglo subordinado
+        const receiptDetail = {
+            ...headerRows[0],
+            productos: detailRows // Arreglo de válvulas (puede estar vacío pero nunca será undefined)
+        };
+
+        return receiptDetail;
+
+    } catch (error) {
+        console.error(`[Receipt Model Error] Fallo al ejecutar getReceiptById(${receiptId}):`, error);
+        throw error;
+    }
+}
+
+
+/**
+ * Actualiza de forma segura la información administrativa de un comprobante.
+ * @param {number} receiptId - Identificador del comprobante a mutar.
+ * @param {Object} updatedData - Objeto con los datos mutables autorizados.
+ * @param {string} updatedData.fecha_recepcion - Nueva fecha de registro asignada.
+ * @param {string} [updatedData.descripcion] - Nuevas observaciones del remito.
+ * @returns {Promise<number>} Cantidad de filas afectadas por la actualización.
+ */
+exports.updateReceipt = async (receiptId, updatedData) => {
+    const { fecha_recepcion, descripcion = null } = updatedData;
+
+    const query = `
+        UPDATE ComprobanteRecepcion 
+        SET 
+            fecha_recepcion = ?, 
+            descripcion = ?
+        WHERE id_comprobante = ?;
+    `;
+
+    try {
+        const [result] = await db.query(query, [fecha_recepcion, descripcion, receiptId]);
+        return result.affectedRows;
+    } catch (error) {
+        console.error(`[Receipt Model Error] Fallo al ejecutar updateReceiptMetadata para ID ${receiptId}:`, error);
+        throw error;
+    }
+}

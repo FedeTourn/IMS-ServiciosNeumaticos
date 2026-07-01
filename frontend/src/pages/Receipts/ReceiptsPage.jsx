@@ -240,22 +240,15 @@ const ReceiptsPage = () => {
                                         </td>
                                         <td className="px-6 py-2 text-center text-xs space-y-1">
                                             <div>
-                                                {/* Funcionalidad futura de consulta */}
+                                                {/* Funcionalidad de consulta */}
                                                 <button 
                                                     type="button"
-                                                    //onClick={() => navigate(`/recepcion/${receipt.id_comprobante}`)}
+                                                    onClick={() => navigate(`/recepcion/${receipt.id_comprobante}`)}
                                                     className="px-4 py-1.5 text-xs font-bold text-slate-600 hover:text-white hover:bg-blue-600 border border-slate-200 rounded-lg transition-all">
                                                     Ver Detalle
                                                 </button>
                                             </div>
-                                            <div>
-                                                {/* Funcionalidad futura de impresión */}
-                                                <button 
-                                                    type="button" 
-                                                    className="px-4 py-1.5 text-xs font-bold text-slate-600 hover:text-white hover:bg-slate-800 border border-slate-200 rounded-lg transition-all">
-                                                    Imprimir
-                                                </button>
-                                            </div>
+                                            
                                         </td>
 
                                     </tr>

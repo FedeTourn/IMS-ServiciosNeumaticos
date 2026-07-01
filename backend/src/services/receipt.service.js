@@ -1,5 +1,6 @@
 const { pool:db } = require('../config/db.config');
-const Receipt = require('../models/Receipt')
+const Receipt = require('../models/Receipt');
+const Product= require('../models/Product');
 
 class ReceiptService {
 
@@ -14,8 +15,6 @@ class ReceiptService {
         const connection = await db.getConnection();
 
         try {
-            const Product= require('../models/Product'); // Importamos el modelo de productos centralizado
-
             // Inicialización de la transacción atómica
             await connection.beginTransaction();
 
@@ -109,6 +108,70 @@ class ReceiptService {
             // Propagación limpia hacia el controlador REST
             throw error;
         }
+    };
+
+
+    /**
+     * Recupera la estructura de datos completa de un comprobante para su visualización e impresión (REQ 23).
+     * @param {number|string} receiptId - El identificador único del remito.
+     * @returns {Promise<Object>} El objeto de dominio con el encabezado y sus productos asociados.
+     * @throws {Error} Excepción HTTP 404 si el documento no existe en los registros.
+     */
+    static async getReceiptDetails(receiptId) {
+        if (!receiptId || isNaN(receiptId)) {
+            const error = new Error('Identificador de comprobante inválido o no proporcionado.');
+            error.statusCode = 400; // Bad Request
+            throw error;
+        }
+
+        const receipt = await Receipt.getReceiptById(receiptId);
+
+        if (!receipt) {
+            const error = new Error(`No se encontró un comprobante registrado bajo el número de documento #${receiptId}.`);
+            error.statusCode = 404; // Not Found
+            throw error;
+        }
+
+        return receipt;
+    };
+
+    /**
+     * Actualiza los metadatos permitidos de un comprobante aplicando la Regla de Inmutabilidad Contable (REQ 24).
+     * @param {number|string} receiptId - El identificador único del remito.
+     * @param {Object} updateData - Estructura con los nuevos valores.
+     * @param {string} updateData.fecha_recepcion - Fecha de ingreso a modificar.
+     * @param {string} [updateData.descripcion] - Observaciones a modificar.
+     * @returns {Promise<Object>} Objeto de confirmación de la mutación.
+     * @throws {Error} Excepción HTTP 409 si el estado de los componentes impide la modificación.
+     */
+    static async updateReceipt(receiptId, updateData) {
+        // Validamos la existencia y recuperamos el estado actual del dominio
+        const currentReceipt = await this.getReceiptDetails(receiptId);
+
+        // REGLA DE NEGOCIO CRÍTICA (Protección de Inmutabilidad)
+        // Asumimos que '1' es la representación lógica del estado 'Recibido' (estado inicial).
+        // Evaluamos si alguna de las válvulas asociadas ha migrado a un estado superior en la cadena de reparación.
+        const hasAdvancedProducts = currentReceipt.productos.some(prod => String(prod.estado) !== '1');
+
+        if (hasAdvancedProducts) {
+            const error = new Error('Inmutabilidad Contable: No se puede modificar el comprobante porque una o más válvulas vinculadas ya han avanzado en el proceso de reparación en el taller.');
+            error.statusCode = 409; // Conflict (Problema de estado con los recursos)
+            throw error;
+        }
+
+        // Ejecutamos la mutación estrictamente sobre los metadatos autorizados
+        const safePayload = {
+            fecha_recepcion: updateData.fecha_recepcion,
+            descripcion: updateData.descripcion
+        };
+
+        const affectedRows = await Receipt.updateReceipt(receiptId, safePayload);
+
+        return {
+            success: true,
+            message: 'Los datos del comprobante han sido actualizados y auditados correctamente.',
+            affectedRows
+        };
     }
 }
 

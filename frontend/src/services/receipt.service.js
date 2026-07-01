@@ -98,3 +98,38 @@ export const fetchReceipts = async (filters = {}) => {
         throw error;
     }
 };
+
+export const fetchReceiptById = async (id) => {
+    const response = await fetch(`${API_URL}/${id}`,{
+        method: 'GET',
+        headers: getAuthHeaders()
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Error al obtener los datos del comprobante.");
+    }
+    return response.json();
+};
+
+export const updateReceiptData = async (id, data) => {
+    const response = await fetch(`${API_URL}/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(data)
+    });
+
+    const result = await response.json();
+    
+    if (response.status === 409) {
+        // Se lanza un mensaje al usuario de que no es posible modificar el comprobante
+        throw new Error(result.message); // El mensaje viene del backend (la regla de negocio)
+    }
+    if (!response.ok) {
+        const error = new Error(result.message || "Error en la modificacion del comprobante.");
+        error.statusCode = response.status;
+        throw error;
+    }
+
+    return result;    
+};

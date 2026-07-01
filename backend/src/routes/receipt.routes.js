@@ -8,4 +8,10 @@ router.post('/', validateCreateReceipt, receiptController.createReceipt);
 
 router.get('/', receiptController.getAllReceipts);
 
+// Consulta de detalle
+router.get('/:id', receiptController.getReceiptById);
+
+// Modificación restringida (solo metadatos)
+router.put('/:id', receiptController.updateReceipt);
+
 module.exports = router;
