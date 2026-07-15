@@ -125,20 +125,6 @@ exports.create = async (connection = db, productData) => {
     // Se ejecuta sobre la conexión inyectada (que puede ser la transacción del Servicio de Comprobantes)
     const [result] = await connection.query(query,values);
     return result.insertId;
-
-    /* try {
-        const [result] = await db.query(query, [
-            productData.modelo,
-            productData.fecha_recepcion,
-            productData.estado || 1, // Asume el estado '1: Recibida' por defecto
-            productData.id_cliente,
-            productData.observaciones
-        ]);
-        return result.insertId;
-    } catch (error) {
-        console.error("Error creating product:", error);
-        throw error;
-    } */
 };
 
 /**
@@ -173,6 +159,44 @@ exports.findById = async (id_producto) => {
 };
 
 /**
+ * Recupera todos los productos de un cliente que están disponibles para ser reparados
+ * (estados: Recibido o Libre), cruzando su información con el precio sugerido actual según la categoría del cliente.
+ * * @param {number} id_cliente - ID del cliente.
+ * @returns {Promise<Array>} - Array de DTOs listos para el Frontend.
+ */
+exports.findProductPricesByClient = async (id_cliente) => {
+    const query = `
+        SELECT
+            p.id_producto,
+            mp.id_modelo,
+            tp.nombre AS tipo_nombre,
+            mp.nombre AS modelo_nombre,
+            ep.nombre AS estado_nombre,
+            p.fecha_recepcion,
+            COALESCE(ppc.precio, 0) AS precio_sugerido
+        FROM Producto p
+        INNER JOIN ModeloProducto mp ON p.modelo = mp.id_modelo
+        INNER JOIN TipoProducto tp ON mp.tipo = tp.id_tipo
+        INNER JOIN EstadoProducto ep ON p.estado = ep.id_estado
+        INNER JOIN Cliente c ON p.id_cliente = c.id_cliente
+        LEFT JOIN PrecioPorCategoria ppc
+            ON mp.id_modelo = ppc.id_modelo
+            AND ppc.id_categoria = c.categoria
+            AND ppc.vigente = 1
+        WHERE p.id_cliente = ?
+            AND ep.nombre IN ('Recibido', 'Libre')
+        ORDER BY p.fecha_recepcion DESC;
+    `;
+    try {
+        const [rows] = await db.query(query, [id_cliente]);
+        return rows;
+    } catch (error) {
+        console.error("[ProductModel - findProductPricesByClient] Error ejecutando la consulta:", error);
+        throw new Error("No se pudieron recuperar los productos y cotizaciones del cliente.");
+    }
+}
+
+/**
  * Actualiza los atributos modificables de un producto (observaciones y estado).
  * @param {number} id_producto - ID de Producto a modificar.
  * @param {Object} updateData - Datos a modificar de producto (Observaciones y estado).
@@ -198,6 +222,36 @@ exports.update = async (id_producto, updateData) => {
         console.error("Error updating product:", error);
         throw error;
     }
+};
+
+/**
+ * Actualiza la información comercial y de trazabilidad de un producto 
+ * al ser vinculado a una Orden de Reparación.
+ * @param {number} id_producto - ID del producto a modificar.
+ * @param {Object} updateData - Datos de vinculación (orden, precio, estado).
+ * @param {Object} connection - Instancia de conexión transaccional inyectada por el Service.
+ * @returns {Promise<number>} - Cantidad de filas afectadas.
+ */
+exports.updateForRepairOrder = async (id_producto, updateData, connection) => {
+    const query = `
+        UPDATE Producto SET 
+            id_orden_reparacion = ?,
+            precio = ?,
+            estado = ?,
+            fecha_reparacion = CURRENT_TIMESTAMP
+        WHERE id_producto = ?
+    `;
+    
+    // Al inyectar 'connection', nos aseguramos de que este UPDATE 
+    // ocurra dentro de la transacción iniciada por el servicio.
+    const [result] = await connection.execute(query, [
+        updateData.id_orden_reparacion,
+        updateData.precio_final,
+        updateData.nuevo_estado,
+        id_producto
+    ]);
+    
+    return result.affectedRows;
 };
 
 /**

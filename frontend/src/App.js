@@ -33,6 +33,8 @@ import RegisterReceiptPage from './pages/Receipts/RegisterReceiptPage';
 import ReceiptsPage from './pages/Receipts/ReceiptsPage';
 import UpdateReceiptPage from './pages/Receipts/UpdateReceiptPage';
 
+// Rutas Ordenes de Reparacion
+import CreateRepairOrderPage from './pages/RepairOrders/CreateRepairOrderPage';
 
 
 // Componente que envuelve la lógica para rutas privadas
@@ -90,11 +92,13 @@ function App() {
                     <Route path="/configuracion/precio-productos" element={<PriceMatrixPage />} />
 
                     {/* --- PROCESOS ADMINISTRATIVOS --- */}
+                    {/*-- RECEPCIONES --*/}
                     <Route path="/registrar-recepcion" element={<RegisterReceiptPage />} />
                     <Route path="/recepciones" element={<ReceiptsPage />} />
                     <Route path="/recepcion/:id_comprobante" element={<UpdateReceiptPage />} />
 
-                    <Route path="/crear-orden" element={<ConstructionPage />} />
+                    {/*-- ORDENES DE REPARACION --*/}
+                    <Route path="/crear-orden" element={<CreateRepairOrderPage />} />
                     <Route path="/consultar-stock" element={<ConstructionPage />} />
                     <Route path="/estados-cuenta" element={<ConstructionPage />} />
 

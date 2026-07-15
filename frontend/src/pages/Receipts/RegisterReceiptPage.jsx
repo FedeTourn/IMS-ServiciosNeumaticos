@@ -388,7 +388,7 @@ const RegisterReceiptPage = () => {
                         
                         <button 
                             type="button" 
-                            onClick={() => navigate('/productos-reparar')}
+                            onClick={() => navigate(-1)}
                             className="text-[10px] font-bold text-gray-400 hover:text-gray-600 uppercase tracking-widest transition-colors"
                         >
                             Cancelar

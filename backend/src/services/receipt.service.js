@@ -2,6 +2,8 @@ const { pool:db } = require('../config/db.config');
 const Receipt = require('../models/Receipt');
 const Product= require('../models/Product');
 
+const ESTADO_PRODUCTO_RECIBIDO = 1; // Reemplazar por consulta a la tabla
+
 class ReceiptService {
 
     static async registerReceiptWithProducts(receiptPayload, productsList) {
