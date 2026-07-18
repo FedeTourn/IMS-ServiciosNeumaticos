@@ -11,6 +11,7 @@ const authRoutes = require('./routes/auth.routes');
 const clientRoutes = require('./routes/client.routes');
 const productRoutes = require('./routes/product.routes');
 const priceRoutes = require('./routes/price.routes');
+const receiptRoutes = require('./routes/receipt.routes');
 
 // Esto va despues de todas las importaciones porque "levanta" la app express
 const app = express();
@@ -27,6 +28,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/prices', priceRoutes);
+app.use('/api/receipts', receiptRoutes);
 
 // --- RUTAS DE DIAGNÓSTICO ---
 app.get('/', (req, res) => {
