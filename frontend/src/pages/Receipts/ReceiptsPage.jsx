@@ -96,7 +96,7 @@ const ReceiptsPage = () => {
 
 
     return (
-        <div className="space-y-6 animate-fade-in">
+        <div className="max-w-7xl mx-auto pb-10 px-4 animate-fade-in space-y-6">
             <div className='bg-white p-6 rounded-xl shadow-sm border border-gray-100'>
                 {/* --- CABECERA Y ACCIONES --- */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b">
@@ -254,10 +254,6 @@ const ReceiptsPage = () => {
                                     </tr>
                                 ))
                             )}
-                            {/* Registro Fijo de Muestra 1 */}
-                            <tr className="hover:bg-slate-100 transition-colors">
-                                
-                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -267,10 +263,6 @@ const ReceiptsPage = () => {
                     <span className="text-xs text-gray-500 font-medium">
                         Mostrando {receipts.length} comprobante{receipts.length !== 1 && 's'} listado{receipts.length !== 1 && 's'}
                     </span>
-                    <div className="flex space-x-1">
-                        <button disabled type="button" className="px-3 py-1 bg-gray-200 text-gray-400 text-xs rounded-md font-bold cursor-not-allowed">Anterior</button>
-                        <button disabled type="button" className="px-3 py-1 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-xs rounded-md font-bold transition-colors">Siguiente</button>
-                    </div>
                 </div>
             </div>
 

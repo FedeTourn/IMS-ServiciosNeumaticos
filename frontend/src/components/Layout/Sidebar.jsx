@@ -6,7 +6,7 @@ const menuItems = [
     { name: 'Inicio', path: '/Inicio', icon: '🏠' },
     { name: 'Productos a Reparar', path: '/productos-reparar', icon: '🛠️' },
     { name: 'Consultar Recepciones', path: '/recepciones', icon: '📦' },
-    { name: 'Crear Orden', path: '/crear-orden', icon: '📝' },
+    { name: 'Consultar Ordenes', path: '/ordenes-reparacion', icon: '📝' },
     { name: 'Consultar Stock', path: '/consultar-stock', icon: '🛒' },
     { name: 'Estados de Cuenta', path: '/estados-cuenta', icon: '💰' },
     { name: 'Clientes', path: '/clientes', icon: '👥' },
