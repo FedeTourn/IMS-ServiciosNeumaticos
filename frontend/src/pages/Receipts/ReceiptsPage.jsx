@@ -49,7 +49,7 @@ const ReceiptsPage = () => {
             setError('');
             try {
                 const data = await fetchReceipts(filters);
-                setReceipts(data.data || []); 
+                setReceipts(data || []); 
             } catch (err) {
                 setError(`Error al recuperar el historial: ${err.message}`);
                 setReceipts([]);

@@ -24,8 +24,6 @@ describe('RepairOrderService Unit Tests', () => {
             release: jest.fn()
         };
         db.getConnection.mockResolvedValue(mockConnection);
-        
-        // Limpiamos los mocks antes de cada test
         jest.clearAllMocks();
     });
 
@@ -92,8 +90,59 @@ describe('RepairOrderService Unit Tests', () => {
         await expect(RepairOrderService.createRepairOrder(mockDTO)).rejects.toThrow("Database connection lost");
 
         expect(mockConnection.beginTransaction).toHaveBeenCalled();
-        expect(mockConnection.rollback).toHaveBeenCalled(); // ¡CRÍTICO! Validamos que hizo rollback
+        expect(mockConnection.rollback).toHaveBeenCalled();
         expect(mockConnection.commit).not.toHaveBeenCalled();
         expect(mockConnection.release).toHaveBeenCalled();
+    });
+
+    it('debe aplicar valores por defecto, normalizar ordenamiento y limpiar ceros iniciales en id_orden_reparacion', async () => {
+        const rawFilters = {
+            id_orden_reparacion: '00150', // Debe transformarse a '150' con la regex ^0+
+            id_cliente: '2',
+            estado: 'Abierta',
+            sort_by: 'importe_total',
+            sort_order: 'dsc' // Debe normalizarse a DESC
+        };
+
+        const mockResolvedData = [{ id_orden_reparacion: 150, importe_total: 50000 }];
+        RepairOrder.findAll.mockResolvedValue(mockResolvedData);
+
+        const result = await RepairOrderService.getRepairOrders(rawFilters);
+
+        expect(RepairOrder.findAll).toHaveBeenCalledTimes(1);
+        expect(RepairOrder.findAll).toHaveBeenCalledWith({
+            id_orden_reparacion: '150',
+            id_cliente: '2',
+            estado: 'Abierta',
+            sort_by: 'importe_total',
+            sort_order: 'DESC'
+        });
+
+        expect(result).toEqual(mockResolvedData);
+    });
+
+    it('debe aplicar listas blancas (whitelisting) y fallbacks ante parámetros inválidos de ordenamiento', async () => {
+        const maliciousFilters = {
+            sort_by: 'columna_ilegal_injection',
+            sort_order: 'INVALID'
+        };
+
+        RepairOrder.findAll.mockResolvedValue([]);
+
+        await RepairOrderService.getRepairOrders(maliciousFilters);
+
+        expect(RepairOrder.findAll).toHaveBeenCalledWith(
+            expect.objectContaining({
+                sort_by: 'fecha_creacion',
+                sort_order: 'DESC'
+            })
+        );
+    });
+
+    it('debe propagar limpiamente el error si la capa de datos de consulta falla', async () => {
+        const dbError = new Error('Error al ejecutar query en base de datos');
+        RepairOrder.findAll.mockRejectedValue(dbError);
+
+        await expect(RepairOrderService.getRepairOrders({})).rejects.toThrow('Error al ejecutar query en base de datos');
     });
 });

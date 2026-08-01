@@ -92,10 +92,73 @@ class RepairOrderService {
         }
     }
 
+    /**
+     * Recupera y procesa el historial de órdenes de reparación aplicando filtros y ordenamiento seguro.
+     * * Este método valida los parámetros de entrada provenientes de la capa de presentación
+     * antes de delegar la ejecución a la capa de acceso a datos, garantizando la integridad
+     * estructural y previniendo inyecciones o fallos por tipos de datos incorrectos.
+     * @param {Object} filters - Criterios opcionales de búsqueda e inclusión.
+     * @param {string|number|null} [filters.id_orden_reparacion] - Identificador parcial de la orden para búsqueda.
+     * @param {number|null} [filters.id_cliente] - Identificador único de un cliente para filtrado directo.
+     * @param {string|null} [filters.estado] - Estado de la orden (ej. 'Abierta', 'Cerrada', 'Entregada').
+     * @param {string} [filters.sort_by='fecha_creacion'] - Concepto base para ordenar la grilla de datos.
+     * @param {string} [filters.sort_order='DESC'] - Sentido del ordenamiento ('ASC' o 'DESC').
+     * @returns {Promise<Array<Object>>} Retorna la lista de órdenes procesadas.
+     * @throws {Error} Propaga excepciones lógicas o de base de datos capturadas.
+     */
+    static async getRepairOrders(filters = {}) {
+
+        const {
+            id_orden_reparacion = null,
+            id_cliente = null,
+            estado = null,
+            sort_by = null,
+            sort_order = 'DESC'
+        } = filters;
+
+        let sanitizedIdOrden = id_orden_reparacion;
+        if (sanitizedIdOrden !== null && sanitizedIdOrden !== undefined && sanitizedIdOrden !== '') {
+            sanitizedIdOrden = String(sanitizedIdOrden).trim().replace(/^0+/, '');
+        }
+
+        const allowedSortColumns = [
+            'id_orden_reparacion', 
+            'fecha_creacion', 
+            'fecha_cierre', 
+            'cliente', 
+            'importe_total', 
+            'estado'
+        ];
+        const allowedSortOrders = ['ASC', 'DESC'];
+        
+        // Validación de Lista Blanca (Whitelisting) para sanitizar el ordenamiento
+        const validatedSortBy = allowedSortColumns.includes(sort_by) ? sort_by : 'fecha_creacion';
+        // Se previene un posible error si sort_order viene como null o undefined evaluando con fallback
+        const validatedSortOrder = allowedSortOrders.includes(sort_order?.toUpperCase()) ? sort_order.toUpperCase() : 'DESC';
+        
+        try {
+            const queryCriteria = {
+                id_orden_reparacion: sanitizedIdOrden,
+                id_cliente,
+                estado,
+                sort_by: validatedSortBy,
+                sort_order: validatedSortOrder
+            };
+
+            return await RepairOrder.findAll(queryCriteria);
+
+        } catch (error) {
+            console.error(`[RepairOrderService Error] Falla en subproceso getRepairOrders: ${error.message}`);
+            // Propagación limpia hacia el controlador REST
+            throw error;
+        }
+    }
+
     static async getProductPricesByClient(id_cliente) {
-        const products = await Product.findProductPricesByClient(id_cliente); // Pasa las opciones al modelo
+        const products = await Product.findProductPricesByClient(id_cliente);
         return products;
     }
+
 }
 
 module.exports = RepairOrderService;

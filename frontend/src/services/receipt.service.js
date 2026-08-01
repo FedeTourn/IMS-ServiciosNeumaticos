@@ -91,7 +91,7 @@ export const fetchReceipts = async (filters = {}) => {
             throw error;
         }
 
-        return data; // Retorna el arreglo mapeado listo para los estados de React
+        return data.data;
 
     } catch (error) {
         console.error(`[ReceiptService Fetch Error] Falla en GET /api/receipts: ${error.message}`);

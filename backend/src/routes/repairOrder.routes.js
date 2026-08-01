@@ -14,10 +14,12 @@ const RepairOrderController = require('../controllers/repairOrder.controller');
 // router.post('/', verifyToken, RepairOrderController.createRepairOrder); // Versión con seguridad
 router.post('/', RepairOrderController.createRepairOrder);
 
+// GET /api/repair-orders
+router.get('/', RepairOrderController.getRepairOrders);
+
 router.get('/products-by-client/:id_cliente', RepairOrderController.getProductPricesByClient);
 
 // Futuras rutas irán aquí (Req. 26, 27, 28)
-// router.get('/', RepairOrderController.getAllRepairOrders);
 // router.get('/:id', RepairOrderController.getRepairOrderById);
 // router.put('/:id', RepairOrderController.updateRepairOrder);
 

@@ -4,7 +4,6 @@ services:
   # Base de Datos
   mysql-taller:
     image: mysql:8.0
-    restart: always
     environment:
       MYSQL_DATABASE: tallerdb
       MYSQL_ROOT_PASSWORD: 1234
@@ -16,7 +15,6 @@ services:
   # Backend (API)
   ims-backend:
     build: ./backend
-    restart: always
     ports:
       - "3001:3001"
     depends_on:

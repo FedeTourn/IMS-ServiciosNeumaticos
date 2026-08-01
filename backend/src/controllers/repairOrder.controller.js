@@ -40,6 +40,50 @@ exports.createRepairOrder = async (req, res) => {
     }
 };
 
+/**
+ * Maneja la petición HTTP para consultar el listado de órdenes de reparación.
+ * Actúa como fachada entre el enrutador de Express y la capa de servicios.
+ * * @param {Object} req - Objeto de petición de Express.
+ * @param {Object} res - Objeto de respuesta de Express.
+ */
+exports.getRepairOrders = async (req, res) => {
+    try {
+        const {
+            id_orden_reparacion,
+            id_cliente,
+            estado,
+            sort_by,
+            sort_order
+        } = req.query;
+
+        const filters = {
+            id_orden_reparacion,
+            id_cliente,
+            estado,
+            sort_by,
+            sort_order
+        };
+
+        // 3. Delegación de la ejecución a la Capa de Lógica de Negocio
+        const repairOrders = await RepairOrderService.getRepairOrders(filters);
+
+        // 4. Retorno exitoso al cliente frontend
+        return res.status(200).json({
+            success: true,
+            data: repairOrders
+        });
+
+    } catch (error) {
+        // 5. Manejo centralizado de excepciones
+        console.error(`[RepairOrderController Error] Falla al resolver GET /api/repair-orders: ${error.message}`);
+        
+        return res.status(500).json({
+            success: false,
+            message: 'Ocurrió un error interno al consultar las órdenes de reparación: ' + error.message
+        });
+    }
+};
+
 exports.getProductPricesByClient = async (req, res) => {
     try {
         const result = await RepairOrderService.getProductPricesByClient(req.params.id_cliente);

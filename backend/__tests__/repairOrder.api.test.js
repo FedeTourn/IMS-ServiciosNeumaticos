@@ -2,27 +2,28 @@ const request = require('supertest');
 const app = require('../src/app');
 const { pool: db } = require('../src/config/db.config');
 
-describe('POST /api/repair-orders (Integración)', () => {
+describe('Módulo de Órdenes de Reparación - Pruebas de Integración', () => {
 
     beforeAll(async () => {
         // Limpiamos las tablas antes de correr los tests para evitar basura
         // NOTA: Asegúrate de que NODE_ENV sea 'test' para no borrar producción.
         if(process.env.NODE_ENV === 'test') {
-           await db.execute('SET FOREIGN_KEY_CHECKS = 0;');
-           await db.execute('TRUNCATE TABLE Producto;');
-           await db.execute('TRUNCATE TABLE OrdenReparacion;');
-           await db.execute('TRUNCATE TABLE Cliente;');
-           await db.execute('SET FOREIGN_KEY_CHECKS = 1;');
+            await db.execute('SET FOREIGN_KEY_CHECKS = 0;');
+            await db.execute('TRUNCATE TABLE Producto;');
+            await db.execute('TRUNCATE TABLE OrdenReparacion;');
+            await db.execute('TRUNCATE TABLE Cliente;');
+            await db.execute('TRUNCATE TABLE EstadoOrdenReparacion;');
+            await db.execute('SET FOREIGN_KEY_CHECKS = 1;');
            
-           // Insertamos datos básicos necesarios (Dummy Data)
-           await db.execute("INSERT INTO Cliente (id_cliente, nombre, cuit) VALUES (1, 'Cliente Test', '30-123')");
-           // Insertamos dos válvulas libres/recibidas
-           await db.execute("INSERT INTO Producto (id_producto, id_cliente, estado, modelo) VALUES (10, 1, 1, 2), (11, 1, 6, 3)");
+            await db.execute("INSERT INTO EstadoOrdenReparacion (id_estado_orden, nombre) VALUES (1, 'Abierta'), (2, 'Cerrada')");
+            await db.execute("INSERT INTO Cliente (id_cliente, nombre, cuit) VALUES (1, 'Cliente Test', '30-123'), (2, 'Servicios Hidráulicos SRL', '30-222')");
+            await db.execute("INSERT INTO Producto (id_producto, id_cliente, estado, modelo) VALUES (10, 1, 1, 2), (11, 1, 6, 3)");
+           
         }
     });
 
     afterAll(async () => {
-        await db.end(); // Cerramos el pool al finalizar la suite
+        await db.end(); 
     });
 
     it('debe retornar 400 Bad Request si el DTO no tiene items', async () => {
@@ -78,5 +79,33 @@ describe('POST /api/repair-orders (Integración)', () => {
         const prod10 = productos.find(p => p.id_producto === 10);
         expect(prod10.estado).toBe(3); 
         expect(Number(prod10.precio)).toBe(1000);
+    });
+
+    
+    it('debe retornar un listado con las órdenes registradas aplicando ordenamiento por defecto', async () => {
+        const res = await request(app).get('/api/repair-orders');
+
+        expect(res.statusCode).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(Array.isArray(res.body.data)).toBe(true);
+        expect(res.body.data.length > 0);
+    });
+
+    it('debe filtrar correctamente las órdenes por id_cliente exacto', async () => {
+        const res = await request(app).get('/api/repair-orders?id_cliente=1');
+
+        expect(res.statusCode).toBe(200);
+        res.body.data.forEach(order => {
+            expect(order.id_cliente).toBe(1);
+        });
+    });
+
+    it('debe permitir la búsqueda parcial de órdenes omitiendo ceros iniciales (ej: 001 -> 1)', async () => {
+        // Asumiendo que la orden creada en el test anterior tiene ID 1
+        const res = await request(app).get('/api/repair-orders?id_orden_reparacion=001');
+
+        expect(res.statusCode).toBe(200);
+        expect(res.body.data.length).toBe(1);
+        expect(res.body.data[0].id_orden_reparacion).toBe(1);
     });
 });
