@@ -114,3 +114,73 @@ exports.findAll = async (queryCriteria = {}) => {
         throw error;
     }
 };
+
+/**
+ * Recupera el detalle completo de una orden de reparación (Maestro-Detalle).
+ * Ejecuta consultas paralelas para optimizar la latencia I/O.
+ * 
+ * @param {number|string} id - Identificador único de la orden de reparación.
+ * @returns {Promise<Object|null>} Retorna el objeto de la orden con su arreglo de productos, o null si no existe.
+ * @throws {Error} Propaga errores de sintaxis o conexión del motor MySQL.
+ */
+exports.findById = async (id) => {
+    const headerQuery = `
+        SELECT 
+            O.id_orden_reparacion,
+            O.id_estado_orden,
+            EOR.nombre AS estado_orden_nombre,
+            O.fecha_cierre,
+            O.importe_total,
+            O.observaciones,
+            C.id_cliente,
+            C.nombre AS cliente_nombre,
+            C.cuit AS cliente_cuit,
+            C.direccion AS cliente_direccion
+        FROM OrdenReparacion O
+        INNER JOIN Cliente C ON O.id_cliente = C.id_cliente
+        INNER JOIN EstadoOrdenReparacion EOR ON O.id_estado_orden = EOR.id_estado_orden
+        WHERE O.id_orden_reparacion = ?;
+    `;
+
+    const detailsQuery = `
+        SELECT 
+            P.id_producto,
+            MP.nombre AS modelo_nombre,
+            MP.id_modelo AS id_modelo,
+            TP.nombre AS tipo_nombre,
+            EP.nombre AS producto_estado_nombre,
+            P.fecha_recepcion,
+            P.precio AS precio_final
+
+        FROM Producto P
+        INNER JOIN ModeloProducto MP ON P.modelo = MP.id_modelo
+        INNER JOIN TipoProducto TP ON MP.tipo = TP.id_tipo
+        INNER JOIN EstadoProducto EP ON P.estado = EP.id_estado
+        WHERE P.id_orden_reparacion = ?;
+    `;
+
+    try {
+        const [headerResult, detailsResult] = await Promise.all([
+            db.query(headerQuery, [id]),
+            db.query(detailsQuery, [id])
+        ]);
+
+        const headerRows = headerResult[0];
+        const detailRows = detailsResult[0];
+
+        if (headerRows.length === 0) {
+            return null;
+        }
+
+        const repairOrderDetail = {
+            ...headerRows[0],
+            productos: detailRows
+        };
+
+        return repairOrderDetail;
+
+    } catch (error) {
+        console.error(`[RepairOrder Model Error] Fallo al ejecutar findById(${id}):`, error);
+        throw error;
+    }
+};

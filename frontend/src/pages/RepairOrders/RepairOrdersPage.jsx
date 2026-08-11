@@ -241,7 +241,7 @@ const RepairOrdersPage = () => {
                                         <td className="px-6 py-3 text-center flex justify-center gap-3">
                                             <button 
                                                 type="button"
-                                                onClick={() => navigate(`/repair-orders/${orden.id_orden_reparacion}`)}
+                                                onClick={() => navigate(`/ordenes-reparacion/${orden.id_orden_reparacion}`)}
                                                 className="px-4 py-1.5 text-xs font-bold text-slate-600 hover:text-white hover:bg-blue-600 border border-slate-200 rounded-lg transition-all"
                                             >
                                                 Ver Detalle

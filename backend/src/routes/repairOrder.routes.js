@@ -5,13 +5,8 @@ const RepairOrderController = require('../controllers/repairOrder.controller');
 // Opcional: Aquí podrías importar tu middleware de autenticación/autorización
 // const { verifyToken, isAdmin } = require('../middlewares/auth.middleware');
 
-/**
- * Rutas para la gestión de Órdenes de Reparación
- * Base URL esperada: /api/repair-orders
- */
 
-// POST: Crear nueva orden de reparación
-// router.post('/', verifyToken, RepairOrderController.createRepairOrder); // Versión con seguridad
+// router.post('/', verifyToken, RepairOrderController.createRepairOrder);
 router.post('/', RepairOrderController.createRepairOrder);
 
 // GET /api/repair-orders
@@ -19,8 +14,8 @@ router.get('/', RepairOrderController.getRepairOrders);
 
 router.get('/products-by-client/:id_cliente', RepairOrderController.getProductPricesByClient);
 
-// Futuras rutas irán aquí (Req. 26, 27, 28)
-// router.get('/:id', RepairOrderController.getRepairOrderById);
+// GET /api/repair-orders/:id
+router.get('/:id', RepairOrderController.getRepairOrderById);
 // router.put('/:id', RepairOrderController.updateRepairOrder);
 
 module.exports = router;

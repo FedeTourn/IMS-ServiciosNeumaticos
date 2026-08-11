@@ -78,15 +78,15 @@ const CreateRepairOrderPage = () => {
     const selectedProducts = products.filter(p => selectedProductIds.includes(p.id_producto));
 
     const groupedProducts = Object.values(
-        selectedProducts.reduce((acc, product) => {
+        selectedProducts.reduce((accumulator, product) => {
             const { id_modelo, modelo_nombre, tipo_nombre, precio_sugerido } = product;
 
-            if (!acc[id_modelo]) {
+            if (!accumulator[id_modelo]) {
                 const currentPrice = customPrices[id_modelo] !== undefined
                     ? customPrices[id_modelo]
                     : (precio_sugerido || 0);
 
-                acc[id_modelo] = {
+                accumulator[id_modelo] = {
                     id_modelo,
                     descripcion: `${tipo_nombre} ${modelo_nombre}`,
                     cantidad: 0,
@@ -95,10 +95,10 @@ const CreateRepairOrderPage = () => {
                 };
             }
 
-            acc[id_modelo].cantidad +=1;
-            acc[id_modelo].subtotal = acc[id_modelo].cantidad * acc[id_modelo].precioSugerido;
+            accumulator[id_modelo].cantidad +=1;
+            accumulator[id_modelo].subtotal = accumulator[id_modelo].cantidad * accumulator[id_modelo].precioSugerido;
 
-            return acc;
+            return accumulator;
         }, {})
     );
 

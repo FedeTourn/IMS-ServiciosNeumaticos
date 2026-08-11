@@ -6,13 +6,13 @@ const API_URL = `${API_BASE_URL}/repair-orders`;
  * Construye las cabeceras estándar con el token de sesión.
  * @returns {Object} Cabeceras HTTP.
  */
-/* const getAuthHeaders = () => {
+const getAuthHeaders = () => {
     const token = localStorage.getItem('user_token');
     return {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}` 
     };
-}; */
+};
 
 /**
  * Envía el payload para crear una nueva Orden de Reparación.
@@ -24,10 +24,7 @@ export const createRepairOrder = async (orderData) => {
     try {
         const response = await fetch(API_URL, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                // 'Authorization': `Bearer ${localStorage.getItem('token')}` // Descomentar cuando integres seguridad
-            },
+            headers: getAuthHeaders(),
             body: JSON.stringify(orderData)
         });
 
@@ -50,63 +47,60 @@ export const createRepairOrder = async (orderData) => {
 };
 
 /**
-     * Recupera el listado de órdenes de reparación aplicando filtros y ordenamiento seguro.
-     * Abstrae la comunicación de red y traduce los errores HTTP en excepciones de interfaz.
-     * * @param {Object} filters - Criterios opcionales de búsqueda y ordenamiento.
-     * @param {string|number} [filters.id_orden_reparacion] - Búsqueda parcial por número de orden.
-     * @param {number|string} [filters.id_cliente] - Filtrado exacto por cliente.
-     * @param {string} [filters.estado] - Estado de la orden (ej. 'Abierta', 'Cerrada').
-     * @param {string} [filters.sort_by] - Columna por la cual ordenar.
-     * @param {string} [filters.sort_order] - Dirección del ordenamiento ('ASC' o 'DESC').
-     * @returns {Promise<Array>} Retorna el arreglo de órdenes mapeadas listas para los estados de React.
-     * @throws {Error} Excepción enriquecida con el código de estado HTTP para manejo en UI.
-     */
-    export const fetchRepairOrders = async (filters = {}) => {
-        try {
-            // Inicializar el constructor nativo de parámetros URL
-            const queryParams = new URLSearchParams();
+ * Recupera el listado de órdenes de reparación aplicando filtros y ordenamiento seguro.
+ * Abstrae la comunicación de red y traduce los errores HTTP en excepciones de interfaz.
+ * * @param {Object} filters - Criterios opcionales de búsqueda y ordenamiento.
+ * @param {string|number} [filters.id_orden_reparacion] - Búsqueda parcial por número de orden.
+ * @param {number|string} [filters.id_cliente] - Filtrado exacto por cliente.
+ * @param {string} [filters.estado] - Estado de la orden (ej. 'Abierta', 'Cerrada').
+ * @param {string} [filters.sort_by] - Columna por la cual ordenar.
+ * @param {string} [filters.sort_order] - Dirección del ordenamiento ('ASC' o 'DESC').
+ * @returns {Promise<Array>} Retorna el arreglo de órdenes mapeadas listas para los estados de React.
+ * @throws {Error} Excepción enriquecida con el código de estado HTTP para manejo en UI.
+ */
+export const fetchRepairOrders = async (filters = {}) => {
+    try {
+        // Inicializar el constructor nativo de parámetros URL
+        const queryParams = new URLSearchParams();
 
-            // Mapeo defensivo de criterios: Solo inyectamos parámetros con valor real
-            if (filters.id_orden_reparacion && String(filters.id_orden_reparacion).trim() !== '') {
-                queryParams.append('id_orden_reparacion', String(filters.id_orden_reparacion).trim());
-            }
-            if (filters.id_cliente) {
-                queryParams.append('id_cliente', filters.id_cliente);
-            }
-            if (filters.estado && filters.estado.trim() !== '') {
-                queryParams.append('estado', filters.estado.trim());
-            }
-            if (filters.sort_by) {
-                queryParams.append('sort_by', filters.sort_by);
-            }
-            if (filters.sort_order) {
-                queryParams.append('sort_order', filters.sort_order);
-            }
+        // Mapeo defensivo de criterios: Solo inyectamos parámetros con valor real
+        if (filters.id_orden_reparacion && String(filters.id_orden_reparacion).trim() !== '') {
+            queryParams.append('id_orden_reparacion', String(filters.id_orden_reparacion).trim());
+        }
+        if (filters.id_cliente) {
+            queryParams.append('id_cliente', filters.id_cliente);
+        }
+        if (filters.estado && filters.estado.trim() !== '') {
+            queryParams.append('estado', filters.estado.trim());
+        }
+        if (filters.sort_by) {
+            queryParams.append('sort_by', filters.sort_by);
+        }
+        if (filters.sort_order) {
+            queryParams.append('sort_order', filters.sort_order);
+        }
 
-            const url = `${API_URL}?${queryParams.toString()}`;
+        const url = `${API_URL}?${queryParams.toString()}`;
 
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json'
-                    // 'Authorization': `Bearer ${localStorage.getItem('token')}` // Descomentar si usa JWT
-                }
-            });
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: getAuthHeaders(),
+        });
 
-            const data = await response.json();
+        const data = await response.json();
 
-            if (!response.ok) {
-                const error = new Error(data.message || 'Error al recuperar las órdenes de reparación.');
-                error.statusCode = response.status;
-                throw error;
-            }
-
-            return data.data; 
-
-        } catch (error) {
-            console.error(`[RepairOrderService Fetch Error] Falla en GET /api/repair-orders: ${error.message}`);
+        if (!response.ok) {
+            const error = new Error(data.message || 'Error al recuperar las órdenes de reparación.');
+            error.statusCode = response.status;
             throw error;
         }
+
+        return data.data; 
+
+    } catch (error) {
+        console.error(`[RepairOrderService Fetch Error] Falla en GET /api/repair-orders: ${error.message}`);
+        throw error;
+    }
 };
 
 /**
@@ -128,6 +122,32 @@ export const fetchProductsByClient = async (id_cliente) => {
         throw error;
     }
 };
-// Aquí iremos agregando luego las demás llamadas (Req 26, 27, 28)
-// export const fetchRepairOrders = async (params) => { ... }
-// export const fetchRepairOrderById = async (id) => { ... }
+
+/**
+ * Obtiene el detalle de una orden de reparación por su ID.
+ * Se espera que el backend devuelva el DTO validado (Metadatos, Cliente y Productos).
+ * 
+ * @param {number|string} id - El identificador de la orden de reparación.
+ * @returns {Promise<Object>} Promesa que resuelve con el objeto de la orden.
+ */
+export const fetchRepairOrderById = async (id) => {
+    try {
+        // Reemplaza "/api/repair-orders" por tu variable de entorno o configuración base si usas Axios
+        const response = await fetch(`${API_URL}/${id}`, {
+            method: 'GET',
+            headers: getAuthHeaders(),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || "Error al obtener los datos de la orden.");
+        }
+
+        const data = await response.json();
+        return data;
+
+    } catch (error) {
+        console.error(`[Service Error] fetchRepairOrderById(${id}):`, error);
+        throw error; 
+    }
+};

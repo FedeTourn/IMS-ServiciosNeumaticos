@@ -159,6 +159,41 @@ class RepairOrderService {
         return products;
     }
 
+    static async getRepairOrderById(id) {
+        const rawOrder = await RepairOrder.findById(id);
+
+        if (!rawOrder) {
+            const error = new Error(`No se encontró ninguna orden de reparación asociada al identificador #${id}.`);
+            error.statusCode = 404;
+            throw error;
+        }
+
+        return {
+            id_orden_reparacion: rawOrder.id_orden_reparacion,
+            id_estado_orden: rawOrder.id_estado_orden,
+            estado_nombre: rawOrder.estado_orden_nombre,
+            fecha_cierre: rawOrder.fecha_cierre,
+            importe_total: Number(rawOrder.importe_total),
+            observaciones: rawOrder.observaciones,
+            cliente: {
+                id_cliente: rawOrder.id_cliente,
+                nombre: rawOrder.cliente_nombre,
+                cuit: rawOrder.cliente_cuit,
+                direccion: rawOrder.cliente_direccion
+            },
+            productos: rawOrder.productos.map(p => ({
+                id_producto: p.id_producto,
+                id_modelo: p.id_modelo,
+                modelo_nombre: p.modelo_nombre,
+                tipo_nombre: p.tipo_nombre,
+                estado_nombre: p.producto_estado_nombre,
+                fecha_recepcion: p.fecha_recepcion,
+                precio_final: Number(p.precio_final)
+            }))
+        };
+    }
+    
+
 }
 
 module.exports = RepairOrderService;

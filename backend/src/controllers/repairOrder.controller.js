@@ -99,3 +99,44 @@ exports.getProductPricesByClient = async (req, res) => {
         });
     }
 };
+
+/**
+ * Maneja la petición HTTP para consultar el detalle de una orden de reparación específica.
+ * Actúa como fachada entre el enrutador de Express y la capa de servicios.
+ * 
+ * @param {Object} req - Objeto de petición de Express.
+ * @param {Object} res - Objeto de respuesta de Express.
+ */
+exports.getRepairOrderById = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!id || isNaN(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "El identificador de la orden de reparación es inválido o no fue proporcionado."
+            });
+        }
+
+        const repairOrder = await RepairOrderService.getRepairOrderById(id);
+
+        return res.status(200).json({
+            success: true,
+            data: repairOrder
+        });
+
+    } catch (error) {
+        if (error.statusCode || error.status) {
+            return res.status(error.statusCode || error.status).json({
+                success: false,
+                message: error.message
+            });
+        }
+        console.error(`[RepairOrderController Error] Falla al resolver GET /api/repair-orders/${req.params.id}: ${error.message}`);
+        
+        return res.status(500).json({
+            success: false,
+            message: 'Ocurrió un error interno al consultar el detalle de la orden de reparación: ' + error.message
+        });
+    }
+};

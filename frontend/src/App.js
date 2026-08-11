@@ -36,6 +36,7 @@ import UpdateReceiptPage from './pages/Receipts/UpdateReceiptPage';
 // Rutas Ordenes de Reparacion
 import CreateRepairOrderPage from './pages/RepairOrders/CreateRepairOrderPage';
 import RepairOrdersPage from './pages/RepairOrders/RepairOrdersPage';
+import UpdateRepairOrderPage from './pages/RepairOrders/UpdateRepairOrderPage';
 
 
 // Componente que envuelve la lógica para rutas privadas
@@ -101,6 +102,10 @@ function App() {
                     {/*-- ORDENES DE REPARACION --*/}
                     <Route path="/crear-orden" element={<CreateRepairOrderPage />} />
                     <Route path="/ordenes-reparacion" element={<RepairOrdersPage />} />
+                    <Route path="/ordenes-reparacion/:id_orden" element={<UpdateRepairOrderPage />} />
+
+
+
                     <Route path="/estados-cuenta" element={<ConstructionPage />} />
 
                     <Route path="*" element={<Navigate to="/Inicio" replace />} />
