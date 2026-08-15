@@ -108,4 +108,40 @@ describe('Módulo de Órdenes de Reparación - Pruebas de Integración', () => {
         expect(res.body.data.length).toBe(1);
         expect(res.body.data[0].id_orden_reparacion).toBe(1);
     });
+    it('debe retornar 200 OK y el DTO detallado al consultar un ID válido', async () => {
+        const res = await request(app).get('/api/repair-orders/1');
+
+        expect(res.statusCode).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(res.body.data).toBeDefined();
+        
+        expect(res.body.data).toHaveProperty('id_orden_reparacion', 1);
+        expect(res.body.data).toHaveProperty('estado_nombre');
+        expect(res.body.data).toHaveProperty('importe_total');
+        
+        expect(res.body.data.cliente).toHaveProperty('id_cliente');
+        expect(res.body.data.cliente).toHaveProperty('nombre');
+        
+        expect(Array.isArray(res.body.data.productos)).toBe(true);
+        expect(res.body.data.productos.length).toBeGreaterThan(0);
+        expect(res.body.data.productos[0]).toHaveProperty('id_producto');
+        expect(res.body.data.productos[0]).toHaveProperty('precio_final');
+    });
+
+    it('debe retornar 404 Not Found si se consulta una orden que no existe', async () => {
+        const res = await request(app).get('/api/repair-orders/99999');
+
+        expect(res.statusCode).toBe(404);
+        expect(res.body.success).toBe(false);
+        expect(res.body.message).toMatch(/No se encontró ninguna orden de reparación/i);
+    });
+
+    it('debe retornar 400 Bad Request si el parámetro ID es inválido (Fail-Fast)', async () => {
+        const res = await request(app).get('/api/repair-orders/texto-invalido');
+
+        expect(res.statusCode).toBe(400);
+        expect(res.body.success).toBe(false);
+        expect(res.body.message).toMatch(/inválido o no fue proporcionado/i);
+    });
+
 });

@@ -145,4 +145,63 @@ describe('RepairOrderService Unit Tests', () => {
 
         await expect(RepairOrderService.getRepairOrders({})).rejects.toThrow('Error al ejecutar query en base de datos');
     });
+
+    it('debe obtener y mapear correctamente el detalle de una orden, casteando los numéricos', async () => {
+        const mockRawModelData = {
+            id_orden_reparacion: 15,
+            id_estado_orden: 2,
+            estado_orden_nombre: 'Cerrada',
+            fecha_cierre: '2026-08-15T10:00:00Z',
+            importe_total: '125000.50',
+            observaciones: 'Prueba de mapeo',
+            id_cliente: 7,
+            cliente_nombre: 'Cliente Test SA',
+            cliente_cuit: '30-12345678-9',
+            cliente_direccion: 'Calle Falsa 123',
+            productos: [
+                {
+                    id_producto: 101,
+                    modelo_nombre: 'Modelo X',
+                    tipo_nombre: 'Válvula',
+                    producto_estado_nombre: 'Reparado',
+                    fecha_recepcion: '2026-08-01T10:00:00Z',
+                    precio_final: '62500.25'
+                }
+            ]
+        };
+
+        RepairOrder.findById.mockResolvedValue(mockRawModelData);
+
+        const result = await RepairOrderService.getRepairOrderById(15);
+
+        // Assert: Verificamos delegación al DAO
+        expect(RepairOrder.findById).toHaveBeenCalledWith(15);
+        
+        // Assert: Verificamos el mapeo estructural (Data Mapper)
+        expect(result.id_orden_reparacion).toBe(15);
+        expect(result.cliente.nombre).toBe('Cliente Test SA');
+        expect(result.productos).toHaveLength(1);
+        expect(result.productos[0].modelo_nombre).toBe('Modelo X');
+
+        // Assert: CRÍTICO - Verificamos el Type Safety (casteo estricto a Number)
+        expect(typeof result.importe_total).toBe('number');
+        expect(result.importe_total).toBe(125000.50);
+        expect(typeof result.productos[0].precio_final).toBe('number');
+        expect(result.productos[0].precio_final).toBe(62500.25);
+    });
+
+    it('debe lanzar un error 404 si la capa de datos retorna null al buscar por ID', async () => {
+        // Arrange: Modelo no encuentra la orden
+        RepairOrder.findById.mockResolvedValue(null);
+
+        // Act & Assert
+        await expect(RepairOrderService.getRepairOrderById(99))
+            .rejects
+            .toMatchObject({
+                statusCode: 404,
+                message: 'No se encontró ninguna orden de reparación asociada al identificador #99.'
+            });
+
+        expect(RepairOrder.findById).toHaveBeenCalledWith(99);
+    });
 });
