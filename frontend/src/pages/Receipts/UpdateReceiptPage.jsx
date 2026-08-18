@@ -100,79 +100,76 @@ const UpdateReceiptPage = () => {
 
     return (
         // print:p-0 y print:m-0 remueven los márgenes al momento de imprimir
-        <div className="max-w-5xl mx-auto pb-10 px-4 animate-fade-in space-y-6 print:p-0 print:m-0 print:max-w-full">
-            
+        <div className="receipt-page  animate-fade-in">
+
             {/* Contenedor Principal */}
-            <div className="bg-white shadow-xl rounded-2xl overflow-hidden border border-gray-100 print:shadow-none print:border-none print:rounded-none">
-                
+            <div className="receipt-card">
+
                 {/* Header Institucional (Se adapta para la impresión) */}
-                <div className="bg-slate-800 p-6 text-white flex justify-between items-center print:bg-white print:text-black print:border-b-2 print:border-black print:p-2">
+                <div className="receipt-header">
                     <div>
-                        <h1 className="text-xl font-bold uppercase tracking-tight">Comprobante de Recepción</h1>
+                        <h1 className="receipt-header-title">Comprobante de Recepción</h1>
                         {/* El número de comprobante es clave para la trazabilidad impresa */}
-                        <div className="flex text-s mt-1 uppercase font-mono print:text-gray-600">
-                            <p className="text-slate-400">
-                                Documento Nro: 
+                        <div className="receipt-header-doc-row">
+                            <p className="receipt-header-doc-label">
+                                Documento Nro:
                             </p>
-                            <p className="font-bold print:text-gray-800">
+                            <p className="receipt-header-doc-value">
                                 #REC-{String(receiptInfo.id_comprobante).padStart(5,0)}
                             </p>
                         </div>
-                        
-                        
+
+
                     </div>
                     {/* Fecha de la Impresion o Consulta */}
                     <div className="text-right">
-                        <span className="text-sm bg-slate-700 px-3 py-1.5 rounded-md font-mono text-emerald-400 font-bold border border-slate-600 print:border-none print:bg-transparent print:text-black print:p-0">
+                        <span className="receipt-header-date-badge">
                             Fecha: {dateToday}
                         </span>
                     </div>
                 </div>
 
-                <div className="p-8 space-y-8 print:p-4">
-                    
-                    {/* SECCIÓN 1: Datos del Comprobante (Editables en web, texto plano en impresión) */}
-                    <div className="space-y-4 print:space-y-1">
-                        <h2 className="text-xs font-black uppercase text-slate-400 tracking-widest border-b pb-2 print:text-black print:border-black">
+                <div className="receipt-body">
+
+                    {/* SECCIÓN 1: Datos del Comprobante */}
+                    <div className="receipt-section">
+                        <h2 className="receipt-section-title">
                             1. Datos Generales del Remito
                         </h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            
-                            {/* Cliente (Inmutable) */}
+
                             <div>
-                                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 print:text-black">
+                                <label className="receipt-field-label">
                                     Cliente Solicitante
                                 </label>
-                                <div className="w-full p-3 bg-gray-100 border border-gray-200 rounded-xl text-gray-700 font-bold text-sm cursor-not-allowed print:border-none print:bg-transparent print:p-0">
+                                <div className="receipt-static-field">
                                     {receiptInfo.cliente_nombre + ' (CUIT: '+ receiptInfo.cliente_cuit +')'}
                                 </div>
                             </div>
 
-                            {/* Fecha de Ingreso (Editable) */}
                             <div>
-                                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widste mb-1 print:text-black">
-                                    Fecha de Ingreso 
-                                    <span className="print:hidden text-emerald-600">* (Editable)</span>
+                                <label className="receipt-field-label">
+                                    Fecha de Ingreso
+                                    <span className="receipt-field-label-editable">* (Editable)</span>
                                 </label>
-                                <input 
-                                    type="date" 
+                                <input
+                                    type="date"
                                     name="fecha_ingreso"
                                     defaultValue={formData.fecha_ingreso}
                                     onChange={handleInputChange}
-                                    className="w-full p-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-mono text-sm print:border-none print:appearance-none print:p-0"
+                                    className="receipt-date-input"
                                 />
                             </div>
 
-                            {/* Observaciones (Editable) */}
                             <div className="md:col-span-2">
-                                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 print:text-black">
-                                    Observaciones Generales del Remito <span className="print:hidden text-emerald-600">* (Editable)</span>
+                                <label className="receipt-field-label">
+                                    Observaciones Generales del Remito <span className="receipt-field-label-editable">* (Editable)</span>
                                 </label>
-                                <textarea 
+                                <textarea
                                     defaultValue={receiptInfo.descripcion}
                                     name="observaciones"
                                     onChange={handleInputChange}
-                                    className="w-full p-2 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all min-h-[40px] text-sm print:border-none print:p-0 print:resize-y"
+                                    className="receipt-textarea"
                                 ></textarea>
                             </div>
                         </div>
@@ -180,35 +177,35 @@ const UpdateReceiptPage = () => {
 
                     {/* SECCIÓN 2: Grilla de Válvulas (Solo Lectura) */}
                     <div className="space-y-4">
-                        <h2 className="text-xs font-black uppercase text-slate-400 tracking-widest border-b pb-2 print:text-black print:border-black">
+                        <h2 className="receipt-section-title">
                             2. Detalle de Válvulas Recibidas
                         </h2>
-                        
-                        <div className="p-1 border border-gray-200 rounded-xl overflow-hidden shadow-sm print:border-black print:shadow-none">
-                            <table className="min-w-full divide-y divide-gray-200 print:divide-black">
-                                <thead className="bg-gray-50 font-bold text-gray-600 text-xs uppercase tracking-wider print:bg-gray-200 print:text-black">
+
+                        <div className="receipt-table-wrapper">
+                            <table className="receipt-table">
+                                <thead className="receipt-table-head">
                                     <tr>
-                                        <th className="px-4 py-3 text-left print:py-2">Ítem</th>
-                                        <th className="px-4 py-3 text-left print:py-2">Descripción Válvula</th>
-                                        <th className="px-4 py-3 text-left print:py-2">Estado Actual</th>
-                                        <th className="px-4 py-3 text-left print:py-2">Observaciones Técnicas</th>
+                                        <th className="receipt-table-th">Ítem</th>
+                                        <th className="receipt-table-th">Descripción Válvula</th>
+                                        <th className="receipt-table-th">Estado Actual</th>
+                                        <th className="receipt-table-th">Observaciones Técnicas</th>
                                     </tr>
                                 </thead>
-                                <tbody className="bg-white divide-y divide-gray-200 text-sm text-gray-700 font-medium print:divide-gray-400">
+                                <tbody className="receipt-table-body">
                                     {products.map((product, index) => (
                                         <tr key={product.id_producto}>
-                                            <td className="px-4 py-3 font-mono text-xs text-gray-400 print:text-black">
+                                            <td className="receipt-table-index">
                                                 {index+1}
                                             </td>
-                                            <td className="px-4 py-3 font-bold text-slate-800 print:text-black">
+                                            <td className="receipt-table-desc">
                                                 {product.nombre_tipo + ' ' + product.nombre_modelo}
                                             </td>
                                             <td className="px-4 py-3">
-                                                <span className="px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-full bg-blue-50 text-blue-700 border border-blue-100 print:border-none print:bg-transparent print:p-0 print:text-black">
+                                                <span className="receipt-status-pill">
                                                     {product.nombre_estado}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-3 text-left text-gray-500 text-xs italic print:text-black">
+                                            <td className="receipt-table-notes">
                                                 {product.observaciones || '-'}
                                             </td>
                                         </tr>
@@ -219,39 +216,39 @@ const UpdateReceiptPage = () => {
                     </div>
 
                     {/* Botonera General (Oculta al imprimir) */}
-                    <div className="print:hidden pt-7 border-t border-gray-100">
+                    <div className="receipt-actions">
                         {message && (
-                            <div className={`gap-y-5 mx-8 mb-6 p-2 rounded-xl text-center text-xs font-bold ${isError ? 'bg-red-50 text-red-700 border border-red-100' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'}`}>
+                            <div className={`receipt-message ${isError ? 'receipt-message--error' : 'receipt-message--success'}`}>
                                 {message}
                             </div>
                         )}
-                        <div className="flex flex-col sm:flex-row justify-between gap-4 items-center">
-                            <div className="flex gap-4 w-full sm:w-auto">
-                                <button 
+                        <div className="receipt-actions-row">
+                            <div className="receipt-actions-left">
+                                <button
                                     type="button"
                                     onClick={handleSubmit}
                                     disabled={isSaving}
-                                    className="w-full sm:w-auto px-8 py-3.5 rounded-xl font-black text-xs uppercase tracking-widest text-white shadow-lg transition-all bg-emerald-600 hover:bg-emerald-700 active:scale-95 shadow-emerald-100"
+                                    className="receipt-btn-save"
                                 >
                                     {isSaving ? 'Guardando...' : 'Guardar Cambios'}
                                 </button>
-                                
-                                <button 
+
+                                <button
                                     type="button"
                                     onClick={handleSaveAndPrint}
-                                    className="w-full sm:w-auto px-8 py-3.5 rounded-xl font-black text-xs uppercase tracking-widest text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition-all shadow-sm"
+                                    className="receipt-btn-print"
                                 >
                                     🖨️ Guardar e Imprimir
                                 </button>
                             </div>
-                            <button 
+                            <button
                                 type="button" onClick={() => navigate('/recepciones')}
-                                className="px-6 py-3 rounded-xl font-bold text-gray-400 hover:text-gray-600 uppercase text-xs tracking-widest"
+                                className="receipt-btn-back"
                             >
                                 Volver
                             </button>
                         </div>
-                        
+
                     </div>
                 </div>
             </div>

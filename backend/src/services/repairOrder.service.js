@@ -94,7 +94,7 @@ class RepairOrderService {
 
     /**
      * Recupera y procesa el historial de órdenes de reparación aplicando filtros y ordenamiento seguro.
-     * * Este método valida los parámetros de entrada provenientes de la capa de presentación
+     * Este método valida los parámetros de entrada provenientes de la capa de presentación
      * antes de delegar la ejecución a la capa de acceso a datos, garantizando la integridad
      * estructural y previniendo inyecciones o fallos por tipos de datos incorrectos.
      * @param {Object} filters - Criterios opcionales de búsqueda e inclusión.

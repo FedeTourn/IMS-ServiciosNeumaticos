@@ -72,74 +72,91 @@ const UpdateRepairOrderPage = () => {
     if (isLoading) return <div className="p-10 text-center animate-pulse text-gray-400">Cargando protocolo de recepción...</div>;
 
     return (
-        <div className="max-w-5xl mx-auto pb-10 px-4 animate-fade-in space-y-6">
-            <div className="bg-white shadow-xl rounded-2xl overflow-hidden border border-gray-100">
-                
-                {/* Header Institucional (Mantenido) */}
-                <div className="bg-slate-800 p-6 text-white flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div>
-                        <h1 className="text-xl font-bold uppercase tracking-tight">Detalle de Orden de Reparación</h1>
-                        <p className="text-slate-400 text-xs mt-1 uppercase font-mono" > Módulo Administrativo y Contable </p>
+        <div className="ro-page animate-fade-in">
+
+            <div className="ro-card">
+                {/* Header Institucional */}
+                <div className="ro-header">
+                    <div className="ro-header-main">
+                        <h1 className="ro-header-title">Orden de Reparación</h1>
+                        <p className="ro-header-subtitle" > Módulo Administrativo y Contable </p>
+                        <div className="ro-print-order-info">
+                            <p className='ro-header-disclaimer'> (Documento No Válido Como Factura) </p>
+                            <span>
+                                Fecha: {new Date().toLocaleDateString('es-AR')}
+                            </span>
+
+                            <span>
+                                N° Orden: {id_orden || '1024'}
+                            </span>
+                        </div>
                     </div>
-                    <div className="flex gap-3">
-                        {esCerrada? 
-                            <span className="text-xs bg-red-600 px-3 py-1.5 rounded-md font-mono text-white font-bold border border-red-900">
-                                CERRADA
-                            </span> 
-                        :   <span className="text-xs px-3 py-1.5 rounded-md font-mono font-bold border bg-green-600 text-white border-green-900">
-                                ABIERTA
-                            </span>}
-                        
-                        <span className="text-xs bg-slate-700 px-3 py-1.5 rounded-md font-mono text-blue-400 font-bold border border-slate-600">
+                    <div className="ro-header-badges">
+                        <span className={`ro-status-badge ${esCerrada ? 'ro-status-badge--closed' : 'ro-status-badge--open'}`}>
+                            {esCerrada ? 'CERRADA' : 'ABIERTA'}
+                        </span>
+                        <span className="ro-info-badge ro-info-badge--date">
                             Fecha: {new Date().toLocaleDateString('es-AR')}
                         </span>
-                        <span className="text-xs bg-slate-700 px-3 py-1.5 rounded-md font-mono text-emerald-400 font-bold border border-slate-600">
-                            N° Orden: #{id_orden || '1024'}
+                        <span className="ro-info-badge ro-info-badge--id">
+                            N° Órden: {id_orden || '1024'}
                         </span>
+                    </div>
+                    <div className="ro-print-generator">
+                        <strong>SERVICIOS NEUMÁTICOS</strong>
+                        
+                        <span>Ing. Mauricio Tourn - CUIT: 20-23240839-2</span>
+                        <span>CEL. 0342 155 422425 - Email: ingmtourn@yahoo.com.ar</span>
+                        <span>IVA RESPONSABLE INSCRIPTO - Inicio de Act.: 01/03/2008</span>
                     </div>
                 </div>
 
-                <div className="p-8 space-y-8">
+                <div className="ro-body">
 
-                    <div className="space-y-4">
-                        <h2 className="text-xs font-black uppercase text-slate-400 tracking-widest border-b pb-2">1. Datos del Cliente Asociado</h2>
+                    <div className="ro-section">
+                        <h2 className="ro-section-title">
+                            Datos del Cliente
+                        </h2>
                         <div >
                             {selectedClient && (
-                                <div className="flex  gap-6 text-xs">
-                                    <div className="pl-2 flex-1 block font-bold text-slate-600 uppercase tracking-widest mb-1"> 
-                                        <span className="text-emerald-600">Cliente:</span> {selectedClient.nombre}
+                                <div className="ro-client-info">
+                                    <div className="ro-client-field">
+                                        <span className="ro-client-field-label">Cliente:</span> {selectedClient.nombre}
                                     </div>
-                                    <div className="pl-2 flex-1 block font-bold text-slate-600 uppercase tracking-widest mb-1"> 
-                                        <span className="text-emerald-600">CUIT:</span> {selectedClient.cuit}
+                                    <div className="ro-client-field">
+                                        <span className="ro-client-field-label">CUIT:</span> {selectedClient.cuit}
                                     </div>
-                                    <div className="pl-2 flex-1 block font-bold text-slate-600 uppercase tracking-widest mb-1"> 
-                                        <span className="text-emerald-600">Domicilio:</span> {selectedClient.direccion || 'No especificado'}
+                                    <div className="ro-client-field">
+                                        <span className="ro-client-field-label">Domicilio:</span> {selectedClient.direccion || 'No especificado'}
                                     </div>
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    <div className="space-y-4">
-                        <h2 className="text-xs font-black uppercase text-slate-400 tracking-widest border-b pb-2">2. Válvulas Asignadas a esta Orden</h2>
-                        <div className="p-6 bg-slate-50 border border-slate-100 rounded-2xl space-y-4">
-                            <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-xl bg-white shadow-sm">
-                                <table className="min-w-full divide-y divide-gray-200 text-sm">
-                                    <thead className="bg-gray-50 font-bold text-gray-600 text-xs uppercase tracking-wider sticky top-0 shadow-sm">
+                    {/* Valvulas Asignadas a la Orden */}
+                    <div className="space-y-4 print:hidden">
+                        <h2 className="ro-section-title">
+                            Válvulas Asignadas a esta Orden
+                        </h2>
+                        <div className="ro-panel">
+                            <div className="ro-table-wrapper">
+                                <table className="ro-table">
+                                    <thead className="ro-table-head">
                                         <tr>
-                                            {!esCerrada && <th className="px-4 py-3 text-center w-12">Inc.</th>}
-                                            <th className="px-4 py-3 text-left">ID</th>
-                                            <th className="px-4 py-3 text-left">Descripción</th>
-                                            <th className="px-4 py-3 text-left">Estado Actual</th>
-                                            <th className="px-4 py-3 text-left">Fecha Recepción</th>
+                                            {!esCerrada && <th className="ro-table-th-center">Inc.</th>}
+                                            <th className="ro-table-th">ID</th>
+                                            <th className="ro-table-th">Descripción</th>
+                                            <th className="ro-table-th">Estado Actual</th>
+                                            <th className="ro-table-th">Fecha Recepción</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="bg-white divide-y divide-gray-200 text-gray-700 font-medium">
+                                    <tbody className="ro-table-body">
                                         {products.map((p) => (
-                                            <tr key={p.id_producto} className="hover:bg-slate-50 transition-colors">
+                                            <tr key={p.id_producto} className="ro-table-row">
                                                 {!esCerrada && <td className="px-4 py-3 text-center">
-                                                    <input 
-                                                        className="w-4 h-4 text-emerald-600 bg-gray-200 border-gray-300 rounded cursor-not-allowed opacity-70"
+                                                    <input
+                                                        className="ro-table-checkbox"
                                                         type="checkbox"
                                                         checked={true}
                                                         readOnly
@@ -160,39 +177,43 @@ const UpdateRepairOrderPage = () => {
                                 </table>
                             </div>
                             <div>
-                                <span className="text-[10px] font-bold bg-white border border-slate-200 px-2 py-1 rounded text-slate-500 uppercase">Total: {products.length}</span>
+                                <span className="ro-total-tag">
+                                    Total: {products.length}
+                                </span>
                             </div>
                         </div>
                     </div>
-                    
+
                     <div className="space-y-3">
-                        <h2 className="text-xs font-black uppercase text-slate-400 tracking-widest border-b pb-2">3. Detalle y Cotización</h2>
-                        <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-                            <table className="min-w-full divide-y divide-gray-200 text-sm">
-                                <thead className="bg-gray-50 font-bold text-gray-600 text-xs uppercase tracking-wider">
+                        <h2 className="ro-section-title">
+                            Detalle y Cotización
+                        </h2>
+                        <div className="ro-quote-table-wrapper">
+                            <table className="ro-table">
+                                <thead className="ro-quote-table-head">
                                     <tr>
                                         <th className="px-4 py-3 text-center">Cant. Seleccionada</th>
-                                        <th className="px-4 py-3 text-left">Descripción</th>
+                                        <th className="ro-table-th">Detalle</th>
                                         <th className="px-4 py-3 text-right">Precio Unitario ($)</th>
                                         <th className="px-4 py-3 text-right">IMPORTE ($)</th>
                                     </tr>
                                 </thead>
-                                <tbody className="bg-white divide-y divide-gray-200 text-gray-700 font-medium">
+                                <tbody className="ro-table-body">
                                     {groupedProducts.map((item, idx) => (
-                                        <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                                        <tr key={idx} className="ro-quote-row">
                                             <td className="px-4 py-4 text-center font-mono text-slate-600">{item.cantidad}</td>
                                             <td className="px-4 py-4 font-bold text-slate-800">{item.descripcion}</td>
                                             <td className="px-4 py-4 text-right font-bold">
                                                 { esCerrada ?
                                                     item.precioSugerido
-                                                : <input 
-                                                    type="number" 
+                                                : <input
+                                                    type="number"
                                                     value={item.precioSugerido}
                                                     readOnly
-                                                    className="w-32 p-2 bg-gray-50 border border-gray-200 text-gray-500 rounded-lg outline-none text-right font-mono text-sm cursor-not-allowed"
+                                                    className="ro-price-input"
                                                 />
                                                 }
-                                                
+
                                             </td>
                                             <td className="px-4 py-4 text-right font-black text-slate-800 font-mono">
                                                 {item.subtotal}
@@ -204,36 +225,35 @@ const UpdateRepairOrderPage = () => {
                         </div>
 
                         {/* Banner de Total */}
-                        <div className="flex justify-end pt-4">
-                            <div className="bg-slate-800 text-white p-4 rounded-xl shadow-md min-w-[280px] flex justify-between items-center border border-slate-700">
-                                <span className="text-[11px] font-black uppercase tracking-widest text-slate-300">Importe Total</span>
-                                <span className="text-xl font-mono font-bold text-emerald-400">$ {orderTotal}</span>
+                        <div className="ro-total-banner-wrapper">
+                            <div className="ro-total-banner">
+                                <span className="ro-total-banner-label">Importe Total</span>
+                                <span className="ro-total-banner-value">$ {orderTotal}</span>
                             </div>
                         </div>
                     </div>
 
                     {message && (
-                        <div className={`flex-1 mt-5 mx-5 p-3 rounded-xl text-s font-bold text-center animate-fade-in 
-                            ${isError ? 'bg-red-100 text-red-800 border border-red-100' : 'bg-emerald-100 text-emerald-800 border border-emerald-100'}`}>
+                        <div className={`ro-message animate-fade-in ${isError ? 'ro-message--error' : 'ro-message--success'}`}>
                             {message}
                         </div>
                     )}
 
-                    {/* BOTONERA DE ACCIONES (Adaptada a Consulta) */}
-                    <div className="pt-6 border-t border-gray-100 flex flex-col sm:flex-row gap-4 items-center justify-end">
-                        <button 
-                            type="button" 
+                    {/* BOTONERA DE ACCIONES */}
+                    <div className="ro-actions">
+                        <button
+                            type="button"
                             onClick={() => navigate(-1)}
-                            className="text-[10px] font-bold text-gray-400 hover:text-gray-600 uppercase tracking-widest transition-colors mr-auto"
+                            className="ro-btn-back"
                         >
                             Volver al Listado
                         </button>
-                        
+
                         {/* Botón de Impresión - Requerimiento 27 */}
-                        <button 
+                        <button
                             type="button"
                             onClick={() => window.print()}
-                            className="w-full sm:w-auto px-8 py-3.5 rounded-xl font-black text-[11px] uppercase tracking-widest text-white shadow-lg bg-emerald-600 hover:bg-emerald-700 active:scale-95 shadow-emerald-100 transition-all"
+                            className="ro-btn-print"
                         >
                             Imprimir Remito
                         </button>

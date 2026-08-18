@@ -20,3 +20,380 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #10b981; /* Emerald-500 */
 }
+
+@layer components{
+
+  /* Página Comprobante de Recepción (Receipt) */
+  .receipt-page {
+    @apply max-w-5xl mx-auto pb-10 px-4 space-y-6 print:p-0 print:m-0 print:max-w-full;
+  }
+  .receipt-card {
+    @apply bg-white shadow-xl rounded-2xl overflow-hidden border border-gray-100 print:shadow-none print:border-none print:rounded-none;
+  }
+  .receipt-header {
+    @apply bg-slate-800 p-6 text-white flex justify-between items-center print:bg-white print:text-black print:border-b-2 print:border-black print:p-2;
+  }
+  .receipt-header-title {
+    @apply text-xl font-bold uppercase tracking-tight;
+  }
+  .receipt-header-doc-row {
+    @apply flex mt-1 uppercase font-mono print:text-gray-600;
+    font-size: medium;
+  }
+  .receipt-header-doc-label {
+    @apply text-slate-400;
+  }
+  .receipt-header-doc-value {
+    @apply font-bold print:text-gray-800;
+  }
+  .receipt-header-date-badge {
+    @apply text-sm bg-slate-700 px-3 py-1.5 rounded-md font-mono text-emerald-400 font-bold border border-slate-600 print:border-none print:bg-transparent print:text-black print:p-0;
+  }
+  .receipt-body {
+    @apply p-8 space-y-8 print:p-4;
+  }
+  .receipt-section {
+    @apply space-y-4 print:space-y-1;
+  }
+  .receipt-section-title {
+    @apply text-xs font-black uppercase text-slate-400 tracking-widest border-b pb-2 print:text-black print:border-black;
+  }
+  .receipt-field-label {
+    @apply block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 print:text-black;
+  }
+  .receipt-field-label-editable {
+    @apply print:hidden text-emerald-600;
+  }
+  .receipt-static-field {
+    @apply w-full p-3 bg-gray-100 border border-gray-200 rounded-xl text-gray-700 font-bold text-sm cursor-not-allowed print:border-none print:bg-transparent print:p-0;
+  }
+  .receipt-date-input {
+    @apply w-full p-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-mono text-sm print:border-none print:appearance-none print:p-0;
+  }
+  .receipt-textarea {
+    @apply w-full p-2 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all min-h-[40px] text-sm print:border-none print:p-0 print:resize-y;
+  }
+  .receipt-table-wrapper {
+    @apply p-1 border border-gray-200 rounded-xl overflow-hidden shadow-sm print:border-black print:shadow-none;
+  }
+  .receipt-table {
+    @apply min-w-full divide-y divide-gray-200 print:divide-black;
+  }
+  .receipt-table-head {
+    @apply bg-gray-50 font-bold text-gray-600 text-xs uppercase tracking-wider print:bg-gray-200 print:text-black;
+  }
+  .receipt-table-th {
+    @apply px-4 py-3 text-left print:py-2;
+  }
+  .receipt-table-body {
+    @apply bg-white divide-y divide-gray-200 text-sm text-gray-700 font-medium print:divide-gray-400;
+  }
+  .receipt-table-index {
+    @apply px-4 py-3 font-mono text-xs text-gray-400 print:text-black;
+  }
+  .receipt-table-desc {
+    @apply px-4 py-3 font-bold text-slate-800 print:text-black;
+  }
+  .receipt-status-pill {
+    @apply px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-full bg-blue-50 text-blue-700 border border-blue-100 print:border-none print:bg-transparent print:p-0 print:text-black;
+  }
+  .receipt-table-notes {
+    @apply px-4 py-3 text-left text-gray-500 text-xs italic print:text-black;
+  }
+  .receipt-actions {
+    @apply print:hidden pt-7 border-t border-gray-100;
+  }
+  .receipt-message {
+    @apply gap-y-5 mx-8 mb-6 p-2 rounded-xl text-center text-xs font-bold;
+  }
+  .receipt-message--error {
+    @apply bg-red-50 text-red-700 border border-red-100;
+  }
+  .receipt-message--success {
+    @apply bg-emerald-50 text-emerald-700 border border-emerald-100;
+  }
+  .receipt-actions-row {
+    @apply flex flex-col sm:flex-row justify-between gap-4 items-center;
+  }
+  .receipt-actions-left {
+    @apply flex gap-4 w-full sm:w-auto;
+  }
+  .receipt-btn-save {
+    @apply w-full sm:w-auto px-8 py-3.5 rounded-xl font-black text-xs uppercase tracking-widest text-white shadow-lg transition-all bg-emerald-600 hover:bg-emerald-700 active:scale-95 shadow-emerald-100;
+  }
+  .receipt-btn-print {
+    @apply w-full sm:w-auto px-8 py-3.5 rounded-xl font-black text-xs uppercase tracking-widest text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition-all shadow-sm;
+  }
+  .receipt-btn-back {
+    @apply px-6 py-3 rounded-xl font-bold text-gray-400 hover:text-gray-600 uppercase text-xs tracking-widest;
+  }
+
+  /* Página de Orden de Reparación (Remito) */
+  .ro-page {
+    @apply max-w-5xl mx-auto pb-10 px-4 space-y-6 print:p-0 print:m-0 print:max-w-full;
+  }
+  .ro-card {
+    @apply bg-white shadow-xl rounded-2xl overflow-hidden border border-gray-100 print:shadow-none print:border-none print:rounded-none;
+  }
+  .ro-header {
+    @apply bg-slate-800 p-6 text-white flex flex-col md:flex-row justify-between items-start md:items-center gap-4;
+  }
+  .ro-header-title {
+    @apply text-xl font-bold uppercase tracking-tight;
+  }
+  .ro-header-subtitle {
+    @apply text-slate-400 text-xs mt-1 uppercase font-mono print:hidden;
+  }
+
+  .ro-print-order-info,
+  .ro-print-generator {
+      display: none;
+  }
+  .ro-header-badges {
+    @apply flex gap-3;
+  }
+  .ro-status-badge {
+    @apply text-xs px-3 py-1.5 rounded-md font-mono font-bold border text-white  print:hidden;
+  }
+  .ro-status-badge--closed {
+    @apply bg-red-600 border-red-900;
+  }
+  .ro-status-badge--open {
+    @apply bg-green-600 border-green-900;
+  }
+  .ro-info-badge {
+    @apply text-xs bg-slate-700 px-3 py-1.5 rounded-md font-mono font-bold border border-slate-600 print:border-hidden;
+  }
+  .ro-info-badge--date {
+    @apply text-blue-400;
+  }
+  .ro-info-badge--id {
+    @apply text-emerald-400;
+  }
+  .ro-body {
+    @apply p-8 space-y-6;
+  }
+  .ro-section {
+    @apply space-y-4;
+  }
+  .ro-section-title {
+    @apply text-xs font-black uppercase text-slate-400 tracking-widest border-b pb-2 print:border-black;
+  }
+  .ro-client-info {
+    @apply flex gap-6 text-xs;
+  }
+  .ro-client-field {
+    @apply pl-2 flex-1 block font-bold text-slate-600 uppercase tracking-widest mb-1;
+  }
+  .ro-client-field-label {
+    @apply text-emerald-600;
+  }
+  .ro-panel {
+    @apply p-6 bg-slate-50 border border-slate-100 rounded-2xl space-y-4;
+  }
+  .ro-table-wrapper {
+    @apply max-h-60 overflow-y-auto border border-gray-200 rounded-xl bg-white shadow-sm;
+  }
+  .ro-table {
+    @apply min-w-full divide-y divide-gray-200 text-sm;
+  }
+  .ro-table-head {
+    @apply bg-gray-50 font-bold text-gray-600 text-xs uppercase tracking-wider sticky top-0 shadow-sm;
+  }
+  .ro-table-th {
+    @apply px-4 py-3 text-left;
+  }
+  .ro-table-th-center {
+    @apply px-4 py-3 text-center w-12;
+  }
+  .ro-table-body {
+    @apply bg-white divide-y divide-gray-200 text-gray-700 font-medium;
+  }
+  .ro-table-row {
+    @apply hover:bg-slate-50 transition-colors;
+  }
+  .ro-table-checkbox {
+    @apply w-4 h-4 text-emerald-600 bg-gray-200 border-gray-300 rounded cursor-not-allowed opacity-70;
+  }
+  .ro-total-tag {
+    @apply text-[10px] font-bold bg-white border border-slate-200 px-2 py-1 rounded text-slate-500 uppercase;
+  }
+  .ro-quote-table-wrapper {
+    @apply border border-gray-200 rounded-xl overflow-hidden shadow-sm;
+  }
+  .ro-quote-table-head {
+    @apply bg-gray-50 font-bold text-gray-600 text-xs uppercase tracking-wider;
+  }
+  .ro-quote-row {
+    @apply hover:bg-slate-50/50 transition-colors;
+  }
+  .ro-price-input {
+    @apply w-32 p-2 bg-gray-50 border border-gray-200 text-gray-500 rounded-lg outline-none text-right font-mono text-sm cursor-not-allowed;
+  }
+  .ro-total-banner-wrapper {
+    @apply flex justify-end pt-4;
+  }
+  .ro-total-banner {
+    @apply bg-slate-800 text-white p-4 rounded-xl shadow-md min-w-[280px] flex justify-between items-center border border-slate-700;
+  }
+  .ro-total-banner-label {
+    @apply text-[11px] font-black uppercase tracking-widest text-slate-300;
+  }
+  .ro-total-banner-value {
+    @apply text-xl font-mono font-bold text-emerald-400;
+  }
+  .ro-message {
+    @apply flex-1 mt-5 mx-5 p-3 rounded-xl text-sm font-bold text-center;
+  }
+  .ro-message--error {
+    @apply bg-red-100 text-red-800 border border-red-100;
+  }
+  .ro-message--success {
+    @apply bg-emerald-100 text-emerald-800 border border-emerald-100;
+  }
+  .ro-actions {
+    @apply pt-6 border-t border-gray-100 flex flex-col sm:flex-row gap-4 items-center justify-end print:hidden;
+  }
+  .ro-btn-back {
+    @apply text-[10px] font-bold text-gray-400 hover:text-gray-600 uppercase tracking-widest transition-colors mr-auto;
+  }
+  .ro-btn-print {
+    @apply w-full sm:w-auto px-8 py-3.5 rounded-xl font-black text-[11px] uppercase tracking-widest text-white shadow-lg bg-emerald-600 hover:bg-emerald-700 active:scale-95 shadow-emerald-100 transition-all;
+  }
+}
+
+@media print {
+  body,
+  body * {
+    color: #000 !important;
+  }
+
+  body *::before,
+  body *::after {
+    color: #000 !important;
+  }
+
+  .ro-header {
+    background: white !important;
+    color: black !important;
+
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+
+    /* Hace que ambas columnas tengan exactamente la misma altura */
+    align-items: stretch;
+
+    border-bottom: 2px solid black;
+    padding: 10px !important;
+
+    /* Evita diferencias por los márgenes internos */
+    min-height: 90px;
+  }
+
+  /*
+   * COLUMNA IZQUIERDA
+   */
+  .ro-header-main {
+    grid-column: 1;
+
+    display: flex;
+    flex-direction: column;
+
+    /* Ocupa toda la altura de la fila */
+    height: 100%;
+
+    /* Distribuye el contenido verticalmente */
+    justify-content: space-between;
+  }
+
+  .ro-header-title {
+    color: black !important;
+
+    margin: 0 !important;
+    line-height: 1.1 !important;
+  }
+
+  .ro-header-subtitle {
+    display: none !important;
+  }
+
+  /* Información de la orden */
+  .ro-print-order-info {
+    display: flex !important;
+    flex-direction: column;
+
+    gap: 2px;
+
+    margin-top: 3px;
+
+    font-size: 12px;
+    font-weight: 600;
+
+    color: black !important;
+  }
+
+  .ro-print-order-info p,
+  .ro-print-order-info span {
+    margin: 0 !important;
+    line-height: 1.3 !important;
+  }
+
+  .ro-header-disclaimer {
+    font-size: 10px;
+    font-weight: 400;
+
+    color: black !important;
+  }
+
+  /*
+   * COLUMNA DERECHA
+   */
+  .ro-print-generator {
+    grid-column: 2;
+    grid-row: 1;
+
+    display: flex !important;
+    flex-direction: column;
+    height: 100%;
+
+    justify-content: space-between;
+
+    font-size: 11px;
+    color: black !important;
+
+    text-align: right;
+  }
+
+  .ro-print-generator strong,
+  .ro-print-generator span {
+    margin: 0 !important;
+    line-height: 1.3 !important;
+  }
+
+  .ro-print-generator strong {
+    font-size: 12px;
+    margin-bottom: 0 !important;
+  }
+
+  /* Ocultar los badges originales */
+  .ro-header-badges {
+    display: none !important;
+  }
+
+
+  /* Modificaciones fuera del header*/
+  .ro-quote-table-wrapper {
+    border: 1px solid #9ca3af !important;
+    padding: 5px;
+  }
+
+  .ro-body {
+    @apply p-4 space-y-4;
+  }
+
+  .ro-total-banner {
+    border: none;
+    box-shadow: none;
+    padding-top: 0;
+  }
+}
