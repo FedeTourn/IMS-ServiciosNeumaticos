@@ -204,4 +204,215 @@ describe('RepairOrderService Unit Tests', () => {
 
         expect(RepairOrder.findById).toHaveBeenCalledWith(99);
     });
+
+    describe('updateRepairOrder', () => {
+        const mockOpenOrder = {
+            id_orden_reparacion: 5,
+            estado_orden_nombre: 'Abierta',
+            observaciones: 'Observación original',
+            productos: [
+                { id_producto: 10 },
+                { id_producto: 11 }
+            ]
+        };
+
+        it('debe lanzar un error 404 si la orden a modificar no existe', async () => {
+            RepairOrder.findById.mockResolvedValue(null);
+
+            await expect(RepairOrderService.updateRepairOrder(99, {
+                items: [{ id_producto: 10, precio_final: 1000 }]
+            })).rejects.toMatchObject({ statusCode: 404 });
+
+            expect(db.getConnection).not.toHaveBeenCalled();
+        });
+
+        it('debe lanzar un error 409 (Fail-Fast) si la orden ya se encuentra Cerrada', async () => {
+            RepairOrder.findById.mockResolvedValue({ ...mockOpenOrder, estado_orden_nombre: 'Cerrada' });
+
+            await expect(RepairOrderService.updateRepairOrder(5, {
+                items: [{ id_producto: 10, precio_final: 1000 }]
+            })).rejects.toMatchObject({ statusCode: 409 });
+
+            expect(db.getConnection).not.toHaveBeenCalled();
+            expect(RepairOrder.update).not.toHaveBeenCalled();
+        });
+
+        it('debe lanzar un error 400 si el payload no contiene items', async () => {
+            RepairOrder.findById.mockResolvedValue(mockOpenOrder);
+
+            await expect(RepairOrderService.updateRepairOrder(5, { items: [] }))
+                .rejects.toMatchObject({ statusCode: 400 });
+
+            expect(db.getConnection).not.toHaveBeenCalled();
+        });
+
+        it('debe desvincular únicamente las válvulas que fueron removidas del payload', async () => {
+            RepairOrder.findById.mockResolvedValue(mockOpenOrder);
+            Product.unlinkFromRepairOrder.mockResolvedValue(1);
+            Product.updateForRepairOrder.mockResolvedValue(1);
+            RepairOrder.update.mockResolvedValue(1);
+
+            await RepairOrderService.updateRepairOrder(5, {
+                items: [{ id_producto: 10, precio_final: 1000 }]
+            });
+
+            expect(Product.unlinkFromRepairOrder).toHaveBeenCalledTimes(1);
+            expect(Product.unlinkFromRepairOrder).toHaveBeenCalledWith(11, mockConnection);
+        });
+
+        it('no debe desvincular ninguna válvula si el payload conserva todas las existentes', async () => {
+            RepairOrder.findById.mockResolvedValue(mockOpenOrder);
+            Product.updateForRepairOrder.mockResolvedValue(1);
+            RepairOrder.update.mockResolvedValue(1);
+
+            await RepairOrderService.updateRepairOrder(5, {
+                items: [
+                    { id_producto: 10, precio_final: 1000 },
+                    { id_producto: 11, precio_final: 2000 }
+                ]
+            });
+
+            expect(Product.unlinkFromRepairOrder).not.toHaveBeenCalled();
+        });
+
+        it('debe vincular/actualizar cada válvula presente en el payload con su precio y nuevo estado', async () => {
+            RepairOrder.findById.mockResolvedValue(mockOpenOrder);
+            Product.updateForRepairOrder.mockResolvedValue(1);
+            RepairOrder.update.mockResolvedValue(1);
+
+            await RepairOrderService.updateRepairOrder(5, {
+                items: [
+                    { id_producto: 10, precio_final: 1000 },
+                    { id_producto: 12, precio_final: 2000 }
+                ]
+            });
+
+            expect(Product.updateForRepairOrder).toHaveBeenCalledTimes(2);
+            expect(Product.updateForRepairOrder).toHaveBeenCalledWith(
+                10,
+                expect.objectContaining({ id_orden_reparacion: 5, precio_final: 1000, nuevo_estado: 3 }),
+                mockConnection
+            );
+            expect(Product.updateForRepairOrder).toHaveBeenCalledWith(
+                12,
+                expect.objectContaining({ id_orden_reparacion: 5, precio_final: 2000, nuevo_estado: 3 }),
+                mockConnection
+            );
+        });
+
+        it('debe recalcular el importe_total y mantener la orden Abierta cuando es_cerrada es false', async () => {
+            RepairOrder.findById.mockResolvedValue(mockOpenOrder);
+            Product.unlinkFromRepairOrder.mockResolvedValue(1);
+            Product.updateForRepairOrder.mockResolvedValue(1);
+            RepairOrder.update.mockResolvedValue(1);
+
+            await RepairOrderService.updateRepairOrder(5, {
+                es_cerrada: false,
+                items: [
+                    { id_producto: 10, precio_final: 1500 },
+                    { id_producto: 11, precio_final: 2500 }
+                ]
+            });
+
+            expect(RepairOrder.update).toHaveBeenCalledWith(
+                5,
+                expect.objectContaining({
+                    importe_total: 4000,
+                    id_estado_orden: 1,
+                    fecha_cierre: null
+                }),
+                mockConnection
+            );
+        });
+
+        it('debe transicionar la orden a Cerrada (id_estado_orden 2, fecha_cierre asignada) cuando es_cerrada es true', async () => {
+            RepairOrder.findById.mockResolvedValue(mockOpenOrder);
+            Product.unlinkFromRepairOrder.mockResolvedValue(1);
+            Product.updateForRepairOrder.mockResolvedValue(1);
+            RepairOrder.update.mockResolvedValue(1);
+
+            await RepairOrderService.updateRepairOrder(5, {
+                es_cerrada: true,
+                items: [{ id_producto: 10, precio_final: 1000 }]
+            });
+
+            expect(RepairOrder.update).toHaveBeenCalledWith(
+                5,
+                expect.objectContaining({ id_estado_orden: 2 }),
+                mockConnection
+            );
+
+            const updateCallArgs = RepairOrder.update.mock.calls[0][1];
+            expect(updateCallArgs.fecha_cierre).toBeInstanceOf(Date);
+        });
+
+        it('debe preservar las observaciones existentes si el DTO no las envía', async () => {
+            RepairOrder.findById.mockResolvedValue(mockOpenOrder);
+            Product.unlinkFromRepairOrder.mockResolvedValue(1);
+            Product.updateForRepairOrder.mockResolvedValue(1);
+            RepairOrder.update.mockResolvedValue(1);
+
+            await RepairOrderService.updateRepairOrder(5, {
+                items: [{ id_producto: 10, precio_final: 1000 }]
+            });
+
+            expect(RepairOrder.update).toHaveBeenCalledWith(
+                5,
+                expect.objectContaining({ observaciones: mockOpenOrder.observaciones }),
+                mockConnection
+            );
+        });
+
+        it('debe sobrescribir las observaciones si el DTO las envía explícitamente', async () => {
+            RepairOrder.findById.mockResolvedValue(mockOpenOrder);
+            Product.unlinkFromRepairOrder.mockResolvedValue(1);
+            Product.updateForRepairOrder.mockResolvedValue(1);
+            RepairOrder.update.mockResolvedValue(1);
+
+            await RepairOrderService.updateRepairOrder(5, {
+                observaciones: 'Nueva observación',
+                items: [{ id_producto: 10, precio_final: 1000 }]
+            });
+
+            expect(RepairOrder.update).toHaveBeenCalledWith(
+                5,
+                expect.objectContaining({ observaciones: 'Nueva observación' }),
+                mockConnection
+            );
+        });
+
+        it('debe revertir la transacción (rollback) si falla la actualización de un producto', async () => {
+            RepairOrder.findById.mockResolvedValue(mockOpenOrder);
+            Product.updateForRepairOrder.mockRejectedValue(new Error('Fallo de conexión'));
+
+            await expect(RepairOrderService.updateRepairOrder(5, {
+                items: [{ id_producto: 10, precio_final: 1000 }]
+            })).rejects.toThrow('Fallo de conexión');
+
+            expect(mockConnection.beginTransaction).toHaveBeenCalled();
+            expect(mockConnection.rollback).toHaveBeenCalled();
+            expect(mockConnection.commit).not.toHaveBeenCalled();
+            expect(mockConnection.release).toHaveBeenCalled();
+        });
+
+        it('debe retornar el resultado exitoso con el formato esperado', async () => {
+            RepairOrder.findById.mockResolvedValue(mockOpenOrder);
+            Product.unlinkFromRepairOrder.mockResolvedValue(1);
+            Product.updateForRepairOrder.mockResolvedValue(1);
+            RepairOrder.update.mockResolvedValue(1);
+
+            const result = await RepairOrderService.updateRepairOrder(5, {
+                items: [{ id_producto: 10, precio_final: 1000 }]
+            });
+
+            expect(result).toEqual({
+                success: true,
+                message: "Orden de reparación actualizada exitosamente",
+                id_orden_reparacion: 5
+            });
+
+            expect(mockConnection.commit).toHaveBeenCalled();
+            expect(mockConnection.release).toHaveBeenCalled();
+        });
+    });
 });

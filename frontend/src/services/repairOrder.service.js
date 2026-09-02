@@ -47,6 +47,35 @@ export const createRepairOrder = async (orderData) => {
 };
 
 /**
+ * Envía el nuevo estado deseado de una Orden de Reparación existente hacia el servidor.
+ * @param {number|string} id - Identificador de la orden a modificar.
+ * @param {Object} orderData - DTO con los datos actualizados de la orden y sus válvulas.
+ * @returns {Promise<Object>} - Respuesta del backend con el resultado de la operación.
+ * @throws {Error} - Lanza un error detallado si la petición falla.
+ */
+export const updateRepairOrder = async (id, orderData) => {
+    try {
+        const response = await fetch(`${API_URL}/${id}`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(orderData)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Ocurrió un error al actualizar la orden de reparación.');
+        }
+
+        return data;
+
+    } catch (error) {
+        console.error(`[RepairOrderService - updateRepairOrder] Error de red o servidor:`, error);
+        throw error;
+    }
+};
+
+/**
  * Recupera el listado de órdenes de reparación aplicando filtros y ordenamiento seguro.
  * Abstrae la comunicación de red y traduce los errores HTTP en excepciones de interfaz.
  * * @param {Object} filters - Criterios opcionales de búsqueda y ordenamiento.

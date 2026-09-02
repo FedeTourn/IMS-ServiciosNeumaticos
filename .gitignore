@@ -21,3 +21,5 @@ yarn-error.log*
 # Dejamos la carpeta 'frontend' para que se use su propio .gitignore interno.
 # Si tu backend tiene su propio node_modules en /backend:
 /backend/node_modules
+
+database_dumps

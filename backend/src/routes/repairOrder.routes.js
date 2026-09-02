@@ -16,6 +16,8 @@ router.get('/products-by-client/:id_cliente', RepairOrderController.getProductPr
 
 // GET /api/repair-orders/:id
 router.get('/:id', RepairOrderController.getRepairOrderById);
-// router.put('/:id', RepairOrderController.updateRepairOrder);
+
+// PUT /api/repair-orders/:id
+router.put('/:id', RepairOrderController.updateRepairOrder);
 
 module.exports = router;

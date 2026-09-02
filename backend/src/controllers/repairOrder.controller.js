@@ -101,6 +101,46 @@ exports.getProductPricesByClient = async (req, res) => {
 };
 
 /**
+ * Endpoint encargado de procesar la modificación de una Orden de Reparación existente.
+ * Valida la forma básica del payload y delega la orquestación de negocio al servicio.
+ * @param {Object} req - Objeto de petición Express.
+ * @param {Object} res - Objeto de respuesta Express.
+ */
+exports.updateRepairOrder = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { items } = req.body;
+
+        if (!id || isNaN(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "El identificador de la orden de reparación es inválido o no fue proporcionado."
+            });
+        }
+
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "La orden debe contener al menos un producto (items)."
+            });
+        }
+
+        const result = await RepairOrderService.updateRepairOrder(id, req.body);
+
+        return res.status(200).json(result);
+
+    } catch (error) {
+        console.error(`[RepairOrderController Error] Falla al despachar endpoint de actualización: ${error.message}`);
+
+        const statusCode = error.statusCode || 500;
+        return res.status(statusCode).json({
+            success: false,
+            message: error.message || 'Ocurrió un error interno en el servidor al actualizar la orden de reparación.'
+        });
+    }
+};
+
+/**
  * Maneja la petición HTTP para consultar el detalle de una orden de reparación específica.
  * Actúa como fachada entre el enrutador de Express y la capa de servicios.
  * 

@@ -215,6 +215,9 @@ body {
   .ro-table-checkbox {
     @apply w-4 h-4 text-emerald-600 bg-gray-200 border-gray-300 rounded cursor-not-allowed opacity-70;
   }
+  .ro-table-checkbox--editable {
+    @apply bg-gray-100 cursor-pointer opacity-100 focus:ring-2 focus:ring-emerald-500;
+  }
   .ro-total-tag {
     @apply text-[10px] font-bold bg-white border border-slate-200 px-2 py-1 rounded text-slate-500 uppercase;
   }
@@ -229,6 +232,9 @@ body {
   }
   .ro-price-input {
     @apply w-32 p-2 bg-gray-50 border border-gray-200 text-gray-500 rounded-lg outline-none text-right font-mono text-sm cursor-not-allowed;
+  }
+  .ro-price-input--editable {
+    @apply bg-white border-gray-300 text-slate-800 cursor-text focus:ring-2 focus:ring-emerald-500;
   }
   .ro-total-banner-wrapper {
     @apply flex justify-end pt-4;
@@ -265,6 +271,21 @@ body {
 @media print {
   body,
   body * {
+    color: #000 !important;
+  }
+  
+  .ro-page--no-print .ro-card {
+    display: none !important;
+  }
+
+  .ro-page--no-print::before {
+    content: "Esta Orden de Reparación se encuentra ABIERTA y no puede imprimirse hasta ser cerrada.";
+    display: block;
+    padding: 60px 20px;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 700;
+    text-transform: uppercase;
     color: #000 !important;
   }
 

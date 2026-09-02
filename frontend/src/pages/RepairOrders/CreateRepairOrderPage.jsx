@@ -248,7 +248,7 @@ const CreateRepairOrderPage = () => {
                     <div className="p-6 bg-slate-50 border border-slate-100 rounded-2xl space-y-4">
                         <div className="flex justify-between items-center border-b border-slate-200 pb-2">
                             <h2 className="text-xs font-black uppercase text-slate-500 tracking-widest">2. Válvulas Disponibles en Taller</h2>
-                            <span className="text-[10px] font-bold bg-white border border-slate-200 px-2 py-1 rounded text-slate-500 uppercase">Estado: Recibido / Libre</span>
+                            <span className="text-[10px] font-bold bg-white border border-slate-200 px-2 py-1 rounded text-slate-500 uppercase">Estado: Recibido / Libre / Reparado</span>
                         </div>
                         {products.length === 0 ? (
                             <div className="p-8 text-center text-gray-400 text-sm border-2 border-dashed border-gray-200 rounded-xl bg-gray-50 font-medium">

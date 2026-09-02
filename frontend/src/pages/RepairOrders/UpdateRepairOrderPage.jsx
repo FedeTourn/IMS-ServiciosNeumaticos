@@ -1,60 +1,130 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import StatusBadge from '../../components/common/StatusBadge';
-import { fetchRepairOrderById } from '../../services/repairOrder.service';
+import ConfirmationModal from '../../components/common/ConfirmationModal';
+import { fetchRepairOrderById, fetchProductsByClient, updateRepairOrder } from '../../services/repairOrder.service';
 
 const UpdateRepairOrderPage = () => {
     const navigate = useNavigate();
     const { id_orden } = useParams();
 
     const [selectedClient, setSelectedClient] = useState(null);
-    const [products, setProducts] = useState([]);
-    
+    const [observaciones, setObservaciones] = useState('');
+
+    // Válvulas ya vinculadas a la orden (origen: detalle de la orden)
+    const [linkedProducts, setLinkedProducts] = useState([]);
+    // Válvulas libres del cliente, candidatas a agregarse (origen: catálogo por cliente)
+    const [availableProducts, setAvailableProducts] = useState([]);
+
+    const [selectedProductIds, setSelectedProductIds] = useState([]);
+    const [customPrices, setCustomPrices] = useState({});
+
     // Manejo de UI
     const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
     const [message, setMessage] = useState(false);
     const [isError, setIsError] = useState(false);
     const [esCerrada, setEsCerrada] = useState(false);
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+
+    const loadOrderData = async () => {
+        setIsLoading(true);
+        setMessage(false);
+        setIsError(false);
+
+        try {
+            const response = await fetchRepairOrderById(id_orden);
+            const orderData = response.data ? response.data : response;
+
+            setSelectedClient(orderData.cliente);
+            setObservaciones(orderData.observaciones || '');
+
+            const cerrada = orderData.estado_nombre === 'Cerrada';
+            setEsCerrada(cerrada);
+
+            const normalizedLinked = (orderData.productos || []).map(p => ({
+                id_producto: p.id_producto,
+                id_modelo: p.id_modelo,
+                tipo_nombre: p.tipo_nombre,
+                modelo_nombre: p.modelo_nombre,
+                estado_nombre: p.estado_nombre,
+                fecha_recepcion: p.fecha_recepcion,
+                precio_sugerido: p.precio_final
+            }));
+
+            setLinkedProducts(normalizedLinked);
+            setSelectedProductIds(normalizedLinked.map(p => p.id_producto));
+
+            if (cerrada) {
+                setAvailableProducts([]);
+                setCustomPrices({});
+                return;
+            }
+
+            // Orden Abierta: se completa el catálogo con las válvulas disponibles del cliente
+            const linkedIds = normalizedLinked.map(p => p.id_producto);
+            const clientProducts = orderData.cliente
+                ? await fetchProductsByClient(orderData.cliente.id_cliente)
+                : [];
+
+            setAvailableProducts(clientProducts.filter(p => !linkedIds.includes(p.id_producto)));
+
+            const initialPrices = {};
+            normalizedLinked.forEach(p => {
+                initialPrices[p.id_modelo] = p.precio_sugerido;
+            });
+            setCustomPrices(initialPrices);
+
+        } catch (err) {
+            setMessage(`Error al cargar la orden: ${err.message}`);
+            setIsError(true);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const loadOrderData = async () => {
-            setIsLoading(true);
-            setMessage(false);
-            setIsError(false);
-
-            try {
-                const response = await fetchRepairOrderById(id_orden);
-                const orderData = response.data ? response.data : response;
-
-                setSelectedClient(orderData.cliente);
-                
-                setProducts(orderData.productos || []);
-                
-                setEsCerrada(orderData.estado_nombre === 'Cerrada');
-
-            } catch (err) {
-                setMessage(`Error al cargar la orden: ${err.message}`);
-                setIsError(true);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
         if (id_orden) {
-            loadOrderData();
+            loadOrderData(); // eslint-disable-line
         }
     }, [id_orden]);
 
+    // Catálogo unificado únicamente para renderizar/consultar, nunca se persiste en estado
+    const displayProducts = [...linkedProducts, ...availableProducts];
+
+    const handleProductSelected = (productId) => {
+        setSelectedProductIds(prevSelected => {
+            if (prevSelected.includes(productId)) {
+                return prevSelected.filter(id => id !== productId);
+            } else {
+                return [...prevSelected, productId];
+            }
+        });
+    };
+
+    const handlePriceChange = (id_modelo, newPrice) => {
+        setCustomPrices(prev => ({
+            ...prev,
+            [id_modelo]: parseFloat(newPrice) || 0
+        }));
+    };
+
+    const selectedProducts = displayProducts.filter(p => selectedProductIds.includes(p.id_producto));
+
     const groupedProducts = Object.values(
-        products.reduce((accumulator, product) => {
-            const { id_modelo, modelo_nombre, tipo_nombre, precio_final } = product;
+        selectedProducts.reduce((accumulator, product) => {
+            const { id_modelo, modelo_nombre, tipo_nombre, precio_sugerido } = product;
 
             if (!accumulator[id_modelo]) {
+                const currentPrice = customPrices[id_modelo] !== undefined
+                    ? customPrices[id_modelo]
+                    : (precio_sugerido || 0);
+
                 accumulator[id_modelo] = {
                     id_modelo,
                     descripcion: `${tipo_nombre} ${modelo_nombre}`,
                     cantidad: 0,
-                    precioSugerido: precio_final || 0,
+                    precioSugerido: currentPrice,
                     subtotal: 0
                 };
             }
@@ -68,11 +138,66 @@ const UpdateRepairOrderPage = () => {
 
     const orderTotal = groupedProducts.reduce((sum, item) => sum + item.subtotal, 0);
 
+    const handleSaveIntent = (esCerradaIntent) => {
+        if (selectedProductIds.length === 0) {
+            setMessage("Debe seleccionar al menos una válvula para la orden.");
+            setIsError(true);
+            return;
+        }
+
+        setMessage(false);
+
+        if (esCerradaIntent) {
+            setIsConfirmOpen(true);
+        } else {
+            executeSave(false);
+        }
+    };
+
+    const executeSave = async (esCerradaIntent) => {
+        setIsSaving(true);
+        setMessage(false);
+
+        try {
+            const itemsToSubmit = selectedProductIds.map(id => {
+                const product = displayProducts.find(p => p.id_producto === id);
+                return {
+                    id_producto: id,
+                    precio_final: customPrices[product.id_modelo] !== undefined
+                        ? customPrices[product.id_modelo]
+                        : product.precio_sugerido
+                };
+            });
+
+            const payload = {
+                id_cliente: selectedClient?.id_cliente,
+                es_cerrada: esCerradaIntent,
+                observaciones,
+                items: itemsToSubmit
+            };
+
+            const result = await updateRepairOrder(id_orden, payload);
+
+            setMessage(esCerradaIntent
+                ? ("Orden NRO " + result.id_orden_reparacion + " cerrada y actualizada con éxito.")
+                : ("Orden NRO " + result.id_orden_reparacion + " actualizada con éxito."));
+            setIsError(false);
+
+            await loadOrderData();
+
+        } catch (error) {
+            setMessage(`Error al actualizar la orden: ${error.message}`);
+            setIsError(true);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
 
     if (isLoading) return <div className="p-10 text-center animate-pulse text-gray-400">Cargando protocolo de recepción...</div>;
 
     return (
-        <div className="ro-page animate-fade-in">
+        <div className={`ro-page animate-fade-in ${!esCerrada ? 'ro-page--no-print' : ''}`}>
 
             <div className="ro-card">
                 {/* Header Institucional */}
@@ -104,12 +229,22 @@ const UpdateRepairOrderPage = () => {
                     </div>
                     <div className="ro-print-generator">
                         <strong>SERVICIOS NEUMÁTICOS</strong>
-                        
+
                         <span>Ing. Mauricio Tourn - CUIT: 20-23240839-2</span>
                         <span>CEL. 0342 155 422425 - Email: ingmtourn@yahoo.com.ar</span>
                         <span>IVA RESPONSABLE INSCRIPTO - Inicio de Act.: 01/03/2008</span>
                     </div>
                 </div>
+
+                {esCerrada && (
+                    <div className="mx-6 mt-6 p-4 bg-blue-50 border border-blue-100 rounded-xl print:hidden">
+                        <p className="text-[10px] text-blue-600 leading-relaxed uppercase font-bold text-center">
+                            Aviso: La Orden de reparación se encuentra CERRADA, no se puede modificar.
+                        </p>
+                    </div>
+                )}
+
+
 
                 <div className="ro-body">
 
@@ -134,10 +269,10 @@ const UpdateRepairOrderPage = () => {
                         </div>
                     </div>
 
-                    {/* Valvulas Asignadas a la Orden */}
+                    {/* Valvulas Asignadas y Disponibles */}
                     <div className="space-y-4 print:hidden">
                         <h2 className="ro-section-title">
-                            Válvulas Asignadas a esta Orden
+                            {esCerrada ? 'Válvulas Asignadas a esta Orden' : 'Válvulas de la Orden y Disponibles del Cliente'}
                         </h2>
                         <div className="ro-panel">
                             <div className="ro-table-wrapper">
@@ -152,14 +287,14 @@ const UpdateRepairOrderPage = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="ro-table-body">
-                                        {products.map((p) => (
+                                        {displayProducts.map((p) => (
                                             <tr key={p.id_producto} className="ro-table-row">
                                                 {!esCerrada && <td className="px-4 py-3 text-center">
                                                     <input
-                                                        className="ro-table-checkbox"
+                                                        className="ro-table-checkbox ro-table-checkbox--editable"
                                                         type="checkbox"
-                                                        checked={true}
-                                                        readOnly
+                                                        checked={selectedProductIds.includes(p.id_producto)}
+                                                        onChange={() => handleProductSelected(p.id_producto)}
                                                     />
                                                 </td>
                                                 }
@@ -178,7 +313,7 @@ const UpdateRepairOrderPage = () => {
                             </div>
                             <div>
                                 <span className="ro-total-tag">
-                                    Total: {products.length}
+                                    Seleccionadas: {selectedProductIds.length}
                                 </span>
                             </div>
                         </div>
@@ -206,12 +341,15 @@ const UpdateRepairOrderPage = () => {
                                             <td className="px-4 py-4 text-right font-bold">
                                                 { esCerrada ?
                                                     item.precioSugerido
-                                                : <input
-                                                    type="number"
-                                                    value={item.precioSugerido}
-                                                    readOnly
-                                                    className="ro-price-input"
-                                                />
+                                                : <>
+                                                    <input
+                                                        type="number"
+                                                        value={item.precioSugerido}
+                                                        onChange={(e) => handlePriceChange(item.id_modelo, e.target.value)}
+                                                        className="ro-price-input ro-price-input--editable print:hidden"
+                                                    />
+                                                    <span className="hidden print:inline">{item.precioSugerido}</span>
+                                                </>
                                                 }
 
                                             </td>
@@ -234,7 +372,7 @@ const UpdateRepairOrderPage = () => {
                     </div>
 
                     {message && (
-                        <div className={`ro-message animate-fade-in ${isError ? 'ro-message--error' : 'ro-message--success'}`}>
+                        <div className={`ro-message animate-fade-in print:hidden ${isError ? 'ro-message--error' : 'ro-message--success'}`}>
                             {message}
                         </div>
                     )}
@@ -249,18 +387,55 @@ const UpdateRepairOrderPage = () => {
                             Volver al Listado
                         </button>
 
-                        {/* Botón de Impresión - Requerimiento 27 */}
                         <button
                             type="button"
-                            onClick={() => window.print()}
-                            className="ro-btn-print"
+                            disabled={!esCerrada}
+                            onClick={() => esCerrada && window.print()}
+                            title={!esCerrada ? "Solo se puede imprimir una orden Cerrada." : undefined}
+                            className={`ro-btn-print ${!esCerrada ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
-                            Imprimir Remito
+                            Imprimir Órden
                         </button>
+
+                        {!esCerrada && (
+                            <>
+                                <button
+                                    type="button"
+                                    disabled={isSaving}
+                                    onClick={() => handleSaveIntent(false)}
+                                    className={`w-full sm:w-auto px-6 py-3.5 rounded-xl font-black text-[11px] uppercase tracking-widest text-slate-700 border-2 border-slate-200 transition-all
+                                        ${isSaving ? 'opacity-50 cursor-not-allowed' : 'bg-white hover:bg-slate-50 hover:border-slate-300 active:scale-95'}`}
+                                >
+                                    Guardar Cambios
+                                </button>
+
+                                <button
+                                    type="button"
+                                    disabled={isSaving}
+                                    onClick={() => handleSaveIntent(true)}
+                                    className={`w-full sm:w-auto px-8 py-3.5 rounded-xl font-black text-[11px] uppercase tracking-widest text-white shadow-lg transition-all
+                                        ${isSaving ? 'bg-gray-300 shadow-none cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 active:scale-95 shadow-emerald-100'}`}
+                                >
+                                    Guardar y Cerrar
+                                </button>
+                            </>
+                        )}
                     </div>
 
                 </div>
             </div>
+
+            <ConfirmationModal
+                isOpen={isConfirmOpen}
+                onClose={() => setIsConfirmOpen(false)}
+                onConfirm={() => {
+                    setIsConfirmOpen(false);
+                    executeSave(true);
+                }}
+                title="¿Confirmar Cierre de Orden?"
+                message="Esta acción guarda las válvulas en su estado final y cierra la orden de reparación. Una vez cerrada, no admitirá modificaciones."
+                isDanger={false}
+            />
         </div>
     );
 };

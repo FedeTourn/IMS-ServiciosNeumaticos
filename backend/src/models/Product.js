@@ -184,7 +184,8 @@ exports.findProductPricesByClient = async (id_cliente) => {
             AND ppc.id_categoria = c.categoria
             AND ppc.vigente = 1
         WHERE p.id_cliente = ?
-            AND ep.nombre IN ('Recibido', 'Libre')
+            AND ep.nombre IN ('Recibido', 'Libre', 'Reparado')
+            AND p.id_orden_reparacion IS NULL
         ORDER BY p.fecha_recepcion DESC;
     `;
     try {
@@ -251,6 +252,25 @@ exports.updateForRepairOrder = async (id_producto, updateData, connection) => {
         id_producto
     ]);
     
+    return result.affectedRows;
+};
+
+/**
+ * Desvincula una válvula de su Orden de Reparación (id_orden_reparacion = NULL),
+ * conservando su estado físico actual (ej. "Reparado") sin alterarlo.
+ * @param {number} id_producto - ID del producto a desvincular.
+ * @param {Object} connection - Conexión transaccional inyectada por el Service.
+ * @returns {Promise<number>} - Cantidad de filas afectadas.
+ */
+exports.unlinkFromRepairOrder = async (id_producto, connection) => {
+    const query = `
+        UPDATE Producto SET
+            id_orden_reparacion = NULL
+        WHERE id_producto = ?
+    `;
+
+    const [result] = await connection.execute(query, [id_producto]);
+
     return result.affectedRows;
 };
 

@@ -35,6 +35,38 @@ exports.create = async (orderData, connection) => {
 };
 
 /**
+ * Actualiza los datos maestros de una Orden de Reparación existente dentro de una transacción.
+ * @param {number|string} id - Identificador de la orden a actualizar.
+ * @param {Object} updateData - Datos a persistir.
+ * @param {number} updateData.importe_total - Importe total recalculado de la orden.
+ * @param {string} [updateData.observaciones] - Observaciones generales (opcional).
+ * @param {number} updateData.id_estado_orden - Estado destino de la orden (Abierta o Cerrada).
+ * @param {Date|null} [updateData.fecha_cierre] - Fecha de cierre si aplica (opcional).
+ * @param {Object} connection - Conexión transaccional inyectada por el Service.
+ * @returns {Promise<number>} - Cantidad de filas afectadas.
+ */
+exports.update = async (id, updateData, connection) => {
+    const query = `
+        UPDATE OrdenReparacion SET
+            importe_total = ?,
+            observaciones = ?,
+            id_estado_orden = ?,
+            fecha_cierre = ?
+        WHERE id_orden_reparacion = ?
+    `;
+
+    const [result] = await connection.execute(query, [
+        updateData.importe_total,
+        updateData.observaciones || null,
+        updateData.id_estado_orden,
+        updateData.fecha_cierre || null,
+        id
+    ]);
+
+    return result.affectedRows;
+};
+
+/**
  * Consulta y recupera el listado completo de órdenes de reparación aplicando
  * criterios dinámicos de filtrado y ordenamiento en la capa de datos.
  *

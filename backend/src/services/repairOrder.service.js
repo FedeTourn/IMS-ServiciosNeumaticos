@@ -93,6 +93,95 @@ class RepairOrderService {
     }
 
     /**
+     * Orquesta la modificación de una Orden de Reparación existente: compara las válvulas
+     * actualmente vinculadas contra las enviadas por el cliente para deducir qué desvincular
+     * y qué actualizar, y persiste todo dentro de una única transacción atómica.
+     * @param {number|string} id - Identificador de la orden a modificar.
+     * @param {Object} dto - Data Transfer Object proveniente del controlador.
+     * @returns {Promise<Object>} - Resultado de la operación.
+     */
+    static async updateRepairOrder(id, dto) {
+
+        const currentOrder = await RepairOrder.findById(id);
+
+        if (!currentOrder) {
+            const error = new Error(`No se encontró ninguna orden de reparación asociada al identificador #${id}.`);
+            error.statusCode = 404;
+            throw error;
+        }
+
+        // Regla de negocio crítica: una orden Cerrada es inmutable (Fail-Fast)
+        if (currentOrder.estado_orden_nombre === 'Cerrada') {
+            const error = new Error('No es posible modificar una Orden de Reparación que ya se encuentra Cerrada.');
+            error.statusCode = 409;
+            throw error;
+        }
+
+        if (!dto.items || dto.items.length === 0) {
+            const error = new Error('No se puede actualizar una Orden de reparación sin asociar al menos una válvula.');
+            error.statusCode = 400;
+            throw error;
+        }
+
+        // Diff declarativo entre las válvulas ya vinculadas y las enviadas por el frontend
+        const existingProductIds = currentOrder.productos.map(p => p.id_producto);
+        const newProductIds = dto.items.map(item => item.id_producto);
+        const idsToUnlink = existingProductIds.filter(pid => !newProductIds.includes(pid));
+
+        const id_estado_orden = dto.es_cerrada ? 2 : 1;
+        const fecha_cierre = dto.es_cerrada ? new Date() : null;
+        const importe_total = dto.items.reduce((acc, item) => acc + Number(item.precio_final), 0);
+
+        const connection = await db.getConnection();
+
+        try {
+            await connection.beginTransaction();
+
+            // Desvincular las válvulas que el usuario sacó de la orden, sin alterar su estado
+            const unlinkPromises = idsToUnlink.map(id_producto =>
+                Product.unlinkFromRepairOrder(id_producto, connection)
+            );
+            await Promise.all(unlinkPromises);
+
+            // Vincular/actualizar precio y estado de las válvulas presentes en el payload
+            const updatePromises = dto.items.map(item => {
+                const updateData = {
+                    id_orden_reparacion: id,
+                    precio_final: item.precio_final,
+                    nuevo_estado: ESTADO_PRODUCTO_REPARADO
+                };
+                return Product.updateForRepairOrder(item.id_producto, updateData, connection);
+            });
+            await Promise.all(updatePromises);
+
+            // Actualizar los datos maestros de la orden
+            const orderData = {
+                importe_total: importe_total,
+                observaciones: dto.observaciones !== undefined ? dto.observaciones : currentOrder.observaciones,
+                id_estado_orden: id_estado_orden,
+                fecha_cierre: fecha_cierre
+            };
+            await RepairOrder.update(id, orderData, connection);
+
+            await connection.commit();
+
+            return {
+                success: true,
+                message: "Orden de reparación actualizada exitosamente",
+                id_orden_reparacion: Number(id)
+            };
+
+        } catch (error) {
+            await connection.rollback();
+            console.error(`[RepairOrderService Error] Transacción de actualización abortada de manera segura. Razón: ${error.message}`);
+            throw error;
+
+        } finally {
+            connection.release();
+        }
+    }
+
+    /**
      * Recupera y procesa el historial de órdenes de reparación aplicando filtros y ordenamiento seguro.
      * Este método valida los parámetros de entrada provenientes de la capa de presentación
      * antes de delegar la ejecución a la capa de acceso a datos, garantizando la integridad
