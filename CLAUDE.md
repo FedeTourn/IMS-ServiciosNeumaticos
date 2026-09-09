@@ -62,3 +62,32 @@ Create React App + React Router v7 + Tailwind CSS. Structure under `frontend/src
 - `App.js` — all routes are declared here; everything except `/login` is wrapped in a `PrivateRoute` that redirects to `/login` when unauthenticated, then rendered inside the shared `Layout`/`Sidebar` chrome.
 
 When adding a new domain feature, follow the existing pattern end-to-end: backend route/controller/service/model files, a matching frontend `services/*.service.js`, and a `pages/<Domain>/` folder, wired into `App.js`.
+
+## Commit message format
+
+Follow the Conventional Commits style already used throughout this repo's history:
+
+```
+type(scope): Descripción breve en español, en modo imperativo
+
+- Capa: detalle de qué se hizo, con `nombres.de(funciones)` y archivos entre backticks.
+- Otra capa: idem.
+```
+
+- **type**: `feat` for the vast majority of commits so far (also acceptable: `fix`, `test`, `docs`, `refactor` when they truly apply).
+- **scope**: the domain/module in kebab-case, matching the feature area — e.g. `payments`, `repair-order`/`repair-orders`, `receipt`/`receipts`, `products`, `pricing`, `ui`. Singular vs. plural is inconsistent in history; pick whichever reads naturally for the scope.
+- **subject**: short, in Spanish, starts with a capital or lowercase letter (both appear in history — not strictly enforced), verb first (`Implementar`, `Define`, `Crea`, `Agrega`), no trailing period.
+- **body** (optional, used for multi-layer changes): bullet list, one line per architectural layer touched (`Modelo`, `Servicio`, `Controlador y Rutas`, `Integración`, `UI`, `Tests`), each starting with a bold-ish label followed by a colon and a concise description of what changed and why. Wrap function/file names in backticks. Omit the body entirely for small, single-purpose commits.
+
+Example from this repo's history:
+
+```
+feat(repair-order): Implementar modificación de órdenes de reparación
+
+- Modelo: Añade `RepairOrder.update` y `Product.unlinkFromRepairOrder`; extiende `findProductPricesByClient` para incluir válvulas "Reparado" desvinculadas.
+- Servicio: Implementa `updateRepairOrder` con regla de inmutabilidad sobre órdenes Cerradas (Fail-Fast) y diff transaccional entre válvulas vinculadas y desvinculadas.
+- Controlador y Rutas: Expone `PUT /api/repair-orders/:id` con validación de forma y mapeo semántico de errores de negocio (404/409/400).
+- Integración: Añade `updateRepairOrder` al servicio frontend.
+- UI: Habilita edición de válvulas y precios en `UpdateRepairOrderPage` para órdenes Abiertas; bloquea edición e impresión (tambien por navegador) en órdenes Cerradas/Abiertas según corresponda.
+- Tests: Cubre `updateRepairOrder` con pruebas unitarias y de integración para creación, diff, cierre e inmutabilidad.
+```

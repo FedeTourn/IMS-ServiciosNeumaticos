@@ -13,6 +13,7 @@ const productRoutes = require('./routes/product.routes');
 const priceRoutes = require('./routes/price.routes');
 const receiptRoutes = require('./routes/receipt.routes');
 const repairOrderRoutes = require('./routes/repairOrder.routes');
+const paymentRoutes = require('./routes/payment.routes');
 
 // Esto va despues de todas las importaciones porque "levanta" la app express
 const app = express();
@@ -31,6 +32,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/prices', priceRoutes);
 app.use('/api/receipts', receiptRoutes);
 app.use('/api/repair-orders', repairOrderRoutes);
+app.use('/api/payment', paymentRoutes);
 
 // --- RUTAS DE DIAGNÓSTICO ---
 app.get('/', (req, res) => {
