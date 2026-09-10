@@ -58,17 +58,13 @@ El objetivo de este requerimiento es permitir la captura y persistencia formal d
 * `fecha_pago` (DATETIME, NOT NULL)
 * `numero_comprobante` (VARCHAR(100), NULL)
 * `observaciones` (TEXT, NULL)
-* `created_at` (TIMESTAMP, DEFAULT CURRENT_TIMESTAMP)
-* `updated_at` (TIMESTAMP, NULL ON UPDATE CURRENT_TIMESTAMP)
+* `fecha_creacion` (TIMESTAMP, DEFAULT CURRENT_TIMESTAMP)
+* `fecha_actualizacion` (TIMESTAMP, NULL ON UPDATE CURRENT_TIMESTAMP)
 
 
 #### 1. Capa de Datos (`backend/src/models/Payment.js`)
 
-
-* **Tarea 1.1:** Crear el archivo de persistencia `src/models/Payment.js`.
-
-
-* **Tarea 1.2:** Implementar la función `create(paymentData, connection = null)`. Construir la sentencia parametrizada `INSERT INTO Pago (...) VALUES (...)`, permitiendo el uso de una conexión transaccional inyectada o el pool general del sistema, retornando el `insertId` generado.
+* **Tarea 1.1:** Implementar la función `create(paymentData, connection = null)`. Construir la sentencia parametrizada `INSERT INTO Pago (...) VALUES (...)`, permitiendo el uso de una conexión transaccional inyectada o el pool general del sistema, retornando el `insertId` generado.
 
 
 
@@ -76,7 +72,7 @@ El objetivo de este requerimiento es permitir la captura y persistencia formal d
 
 
 
-* **Tarea 2.1:** Crear `src/services/payment.service.js` e implementar la función principal `createPayment(paymentData)`.
+* **Tarea 2.1:** Implementar la función principal `createPayment(paymentData)`.
 
 
 * **Tarea 2.2 (Regla de Negocio Crítica - Validación de Entidad):** Consultar la existencia del cliente mediante la capa de datos de clientes (`Client.findById`); si no existe, interrumpir el flujo elevando una excepción de negocio tipificada (`HTTP 404`).

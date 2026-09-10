@@ -89,3 +89,44 @@ exports.findMethodById = async (idMedioPago) => {
         throw new Error("Error en la capa de datos al buscar el medio de pago.");
     }
 };
+
+/**
+ * Inserta un nuevo registro de pago en la tabla Pago. Soporta la inyección explícita de una
+ * conexión transaccional para garantizar atomicidad en operaciones compuestas; en su ausencia,
+ * utiliza el pool general de conexiones.
+ * @param {Object} paymentData - Datos del pago a persistir.
+ * @param {number} paymentData.id_cliente - Identificador del cliente asociado.
+ * @param {number} paymentData.id_estado_pago - Identificador del estado inicial del pago.
+ * @param {number} paymentData.id_medio_pago - Identificador del medio de pago utilizado.
+ * @param {number} paymentData.monto - Importe del pago (estrictamente positivo).
+ * @param {Date|string} paymentData.fecha_pago - Fecha y hora de la transacción.
+ * @param {string} [paymentData.numero_comprobante] - Número de comprobante de respaldo (opcional).
+ * @param {string} [paymentData.observaciones] - Observaciones adicionales (opcional).
+ * @param {Object} [connection=null] - Conexión transaccional inyectada por el Service (opcional).
+ * @returns {Promise<number>} Identificador (`insertId`) del registro de pago creado.
+ */
+exports.create = async (paymentData, connection = null) => {
+    const executor = connection || db;
+
+    const query = `
+        INSERT INTO Pago
+        (id_cliente, id_estado_pago, id_medio_pago, monto, fecha_pago, numero_comprobante, observaciones)
+        VALUES (?, ?, ?, ?, ?, ?, ?);
+    `;
+
+    try {
+        const [result] = await executor.execute(query, [
+            paymentData.id_cliente,
+            paymentData.id_estado_pago,
+            paymentData.id_medio_pago,
+            paymentData.monto,
+            paymentData.fecha_pago,
+            paymentData.numero_comprobante || null,
+            paymentData.observaciones || null
+        ]);
+        return result.insertId;
+    } catch (error) {
+        console.error("Error en Payment.create:", error);
+        throw new Error("Error en la capa de datos al registrar el pago.");
+    }
+};
