@@ -71,7 +71,7 @@ const InicioPage = () => {
                         title="Testea Pantallas" 
                         description="Botón para el desarrollador"
                         icon="🔍"
-                        onClick={() => navigate('/ordenes-reparacion/:id_orden')} 
+                        onClick={() => navigate('/crear-pago')} 
                     />
                 </div>
             </div>

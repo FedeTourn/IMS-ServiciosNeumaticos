@@ -15,6 +15,32 @@ const getAuthHeaders = () => {
 };
 
 /**
+ * Envía el payload para registrar un nuevo pago.
+ * @returns {Promise<Object>} Registro de pago creado, incluyendo su identificador y estado inicial.
+ */
+export const apiCreatePayment = async (paymentData) => {
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(paymentData)
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+            const error = new Error(data.message || 'Error al registrar el pago.');
+            error.statusCode = response.status;
+            throw error;
+        }
+
+        return data.data;
+    } catch (error) {
+        console.error('[PaymentService Front Error] Falla de comunicación con el endpoint POST /api/payment:', error.message);
+        throw error;
+    }
+};
+
+/**
  * Obtiene el catálogo completo de medios de pago parametrizados (ej. Efectivo, Transferencia, Cheque).
  * @returns {Promise<Array<Object>>} Listado de medios de pago disponibles.
  */

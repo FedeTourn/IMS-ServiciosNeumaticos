@@ -38,6 +38,9 @@ import CreateRepairOrderPage from './pages/RepairOrders/CreateRepairOrderPage';
 import RepairOrdersPage from './pages/RepairOrders/RepairOrdersPage';
 import UpdateRepairOrderPage from './pages/RepairOrders/UpdateRepairOrderPage';
 
+// Rutas Pagos
+import CreatePaymentPage from './pages/Payments/CreatePaymentPage';
+
 
 // Componente que envuelve la lógica para rutas privadas
 const PrivateRoute = ({ children }) => {
@@ -104,7 +107,8 @@ function App() {
                     <Route path="/ordenes-reparacion" element={<RepairOrdersPage />} />
                     <Route path="/ordenes-reparacion/:id_orden" element={<UpdateRepairOrderPage />} />
 
-
+                    {/*-- PAGOS --*/}
+                    <Route path="/crear-pago" element={<CreatePaymentPage />} />
 
                     <Route path="/estados-cuenta" element={<ConstructionPage />} />
 
