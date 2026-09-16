@@ -266,6 +266,95 @@ body {
   .ro-btn-print {
     @apply w-full sm:w-auto px-8 py-3.5 rounded-xl font-black text-[11px] uppercase tracking-widest text-white shadow-lg bg-emerald-600 hover:bg-emerald-700 active:scale-95 shadow-emerald-100 transition-all;
   }
+
+  /* Página de Registro de Pago */
+  .pay-page {
+    @apply max-w-5xl mx-auto pb-10 px-4 space-y-6;
+  }
+  .pay-card {
+    @apply bg-white shadow-xl rounded-2xl overflow-hidden border border-gray-100;
+  }
+  .pay-header {
+    @apply bg-slate-800 p-6 text-white flex flex-col md:flex-row justify-between items-start md:items-center gap-4;
+  }
+  .pay-header-title {
+    @apply text-xl font-bold uppercase tracking-tight;
+  }
+  .pay-header-subtitle {
+    @apply text-slate-400 text-xs mt-1 uppercase font-mono;
+  }
+  .pay-header-badges {
+    @apply flex gap-3;
+  }
+  .pay-info-badge {
+    @apply text-xs bg-slate-700 px-3 py-1.5 rounded-md font-mono font-bold border border-slate-600;
+  }
+  .pay-info-badge--date {
+    @apply text-blue-400;
+  }
+  .pay-info-badge--id {
+    @apply text-emerald-400;
+  }
+  .pay-body {
+    @apply p-8 space-y-8;
+  }
+  .pay-section {
+    @apply space-y-4;
+  }
+  .pay-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 gap-6;
+  }
+  .pay-grid-3 {
+    @apply grid grid-cols-1 md:grid-cols-3 gap-6;
+  }
+  .pay-field-label {
+    @apply block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1;
+  }
+  .pay-select {
+    @apply w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-gray-700 text-sm;
+  }
+  .pay-input {
+    @apply w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-sm;
+  }
+  .pay-text-input {
+    @apply w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500;
+  }
+  .pay-field-hint {
+    @apply block text-[12px] font-normal text-gray-400 normal-case tracking-normal italic mb-1;
+  }
+  .pay-client-info {
+    @apply space-y-1;
+  }
+  .pay-client-field {
+    @apply pl-2 block text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-1;
+  }
+  .pay-client-field-label {
+    @apply text-emerald-600;
+  }
+  .pay-client-placeholder {
+    @apply items-center h-full pl-2 block text-[10px] font-bold text-gray-400 uppercase tracking-widest;
+  }
+  .pay-message {
+    @apply p-3 rounded-xl text-sm font-bold text-center;
+  }
+  .pay-message--error {
+    @apply bg-red-100 text-red-800 border border-red-100;
+  }
+  .pay-message--success {
+    @apply bg-emerald-100 text-emerald-800 border border-emerald-100;
+  }
+  .pay-actions {
+    @apply pt-6 border-t border-gray-100 flex flex-col sm:flex-row gap-4 items-center justify-end;
+  }
+  .pay-btn-back {
+    @apply text-[10px] font-bold text-gray-400 hover:text-gray-600 uppercase tracking-widest transition-colors mr-auto;
+  }
+  .pay-btn-draft {
+    @apply w-full sm:w-auto px-6 py-3.5 rounded-xl font-black text-[11px] uppercase tracking-widest text-slate-700 border-2 border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 active:scale-95 transition-all;
+  }
+  .pay-btn-draft--disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
 }
 
 @media print {

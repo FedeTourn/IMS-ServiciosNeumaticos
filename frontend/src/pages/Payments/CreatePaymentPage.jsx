@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchClients } from '../../services/client.service';
 //import StatusBadge from '../../components/common/StatusBadge';
-import ConfirmationModal from '../../components/common/ConfirmationModal'
-import { createRepairOrder, fetchProductsByClient } from '../../services/repairOrder.service';
+import { fetchPaymentMethods, apiCreatePayment } from '../../services/payment.service';
 
 const CreatePaymentPage = () => {
     const navigate = useNavigate();
@@ -12,25 +11,32 @@ const CreatePaymentPage = () => {
     const [clients, setClients] = useState([]);
     const [selectedClientId, setSelectedClientId] = useState("");
     const [selectedClient, setSelectedClient] = useState("");
-    
-    // Productos
-    const [products, setProducts] = useState([]);
-    const [selectedProductIds, setSelectedProductIds] = useState([]);
-    const [customPrices, setCustomPrices] = useState([]);
+
+    // Metodo de Pago
+    const [paymentMethods, setPaymentMethods] = useState([]);
+    const [selectedMethodId, setSelectedMethodId] = useState("");
+
+    // Datos del pago
+    const [monto, setMonto] = useState("");
+    const [fechaPago, setFechaPago] = useState("");
+    const [comprobanteExterno, setComprobanteExterno] = useState("");
+    const [observaciones, setObservaciones] = useState("");
 
     // Manejo
     const [message, setMessage] = useState(false);
     const [isError, setIsError] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
-    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
-    // Cargar los clientes al select
+    // Cargar los clientes y metodos de pago al select
     useEffect(() => {
         const loadInitialData = async () => {
             try {
                 const clientData = await fetchClients();
                 setClients(clientData);
+                
+                const paymentMethodData = await fetchPaymentMethods();
+                setPaymentMethods(paymentMethodData);
             } catch (err) {
                 setMessage(`Error al cargar datos: ${err.message}`);
                 setIsError(true);
@@ -48,116 +54,83 @@ const CreatePaymentPage = () => {
         setSelectedClient(
             clients.find(client => client.id_cliente === parseInt(id))
         );
-        
-        if (id) {
-            const productsList = await fetchProductsByClient(id);
-            setProducts(productsList);
-        } else {
-            setProducts([]);
-        }
     }
 
-    /* const handleProductSelected = (productId) => {
-        setSelectedProductIds(prevSelected => {
-            // Si ya estaba seleccionado, lo quitamos. Si no, lo agregamos.
-            if (prevSelected.includes(productId)) {
-                return prevSelected.filter(id => id !== productId);
-            } else {
-                return [...prevSelected, productId];
-            }
-        });
+    // Seleccion de un metodo de pago
+    const handlePaymentMethodChange = async (e) => {
+        const id = e.target.value;
+        setSelectedMethodId(id);
+    }
+
+    // Solo permite dígitos y un único separador decimal
+    const handleMontoChange = (e) => {
+        const value = e.target.value;
+        if (value === "" || /^\d*\.?\d*$/.test(value)) {
+            setMonto(value);
+        }
     };
 
-    const handlePriceChange = (id_modelo, newPrice) => {
-        setCustomPrices(prev => ({
-            ...prev,
-            [id_modelo]: parseFloat(newPrice) || 0
-        }));
-    }
-    
-    const selectedProducts = products.filter(p => selectedProductIds.includes(p.id_producto));
+    // Seleccion de la fecha de pago
+    const handleFechaPagoChange = (e) => {
+        setFechaPago(e.target.value);
+    };
 
-    const groupedProducts = Object.values(
-        selectedProducts.reduce((accumulator, product) => {
-            const { id_modelo, modelo_nombre, tipo_nombre, precio_sugerido } = product;
+    // Edicion del numero de comprobante externo
+    const handleComprobanteExternoChange = (e) => {
+        setComprobanteExterno(e.target.value);
+    };
 
-            if (!accumulator[id_modelo]) {
-                const currentPrice = customPrices[id_modelo] !== undefined
-                    ? customPrices[id_modelo]
-                    : (precio_sugerido || 0);
+    // Edicion de las observaciones del pago
+    const handleObservacionesChange = (e) => {
+        setObservaciones(e.target.value);
+    };
 
-                accumulator[id_modelo] = {
-                    id_modelo,
-                    descripcion: `${tipo_nombre} ${modelo_nombre}`,
-                    cantidad: 0,
-                    precioSugerido: currentPrice,
-                    subtotal: 0
-                };
-            }
+    const handleSave = async () => {
+        // Evita disparar un nuevo guardado mientras uno anterior sigue en curso
+        if (isSaving) {
+            return;
+        }
 
-            accumulator[id_modelo].cantidad +=1;
-            accumulator[id_modelo].subtotal = accumulator[id_modelo].cantidad * accumulator[id_modelo].precioSugerido;
-
-            return accumulator;
-        }, {})
-    ); */
-
-    // const orderTotal = groupedProducts.reduce((sum, item) => sum + item.subtotal, 0);
-
-
-    const handleSaveIntent = async (esCerrada) => {
         if (!selectedClientId) {
             setMessage("Por favor, seleccione un cliente antes de guardar.");
             setIsError(true);
             return;
         }
 
-        if (selectedProductIds.length === 0) {
-            setMessage("Debe seleccionar al menos una válvula para la orden.");
+        if (!selectedMethodId) {
+            setMessage("Por favor, seleccione un método de pago antes de guardar.");
             setIsError(true);
             return;
         }
 
-        setIsSaving(false);
-        setMessage(false);
-
-        if (esCerrada) {
-            setIsConfirmOpen(true);
-        } else {
-            executeSave(false);
+        if (!monto || Number(monto) <= 0) {
+            setMessage("El monto debe ser un número positivo mayor a cero.");
+            setIsError(true);
+            return;
         }
-    };
 
-    const executeSave = async (esCerrada) => {
         setIsSaving(true);
         setMessage(false);
 
         try {
-            const itemsToSubmit = selectedProductIds.map(id => {
-                const product = products.find(p => p.id_producto === id);
-                return {
-                    id_producto: id,
-                    precio_final: customPrices[product.id_modelo] || product.precio_sugerido
-                };
-            });
-
             const payload = {
                 id_cliente: parseInt(selectedClientId),
-                es_cerrada: esCerrada,
-                items: itemsToSubmit
+                id_medio_pago: parseInt(selectedMethodId),
+                monto: Number(monto),
+                fecha_pago: fechaPago || null,
+                numero_comprobante: comprobanteExterno || null,
+                observaciones: observaciones || null,
             };
 
-            const result = await createRepairOrder(payload);
+            const result = await apiCreatePayment(payload);
 
-            setMessage(esCerrada 
-                ? ("Orden NRO " + result.id_orden_reparacion + " cerrada y registrada con éxito.") 
-                : ("Orden NRO " + result.id_orden_reparacion + " guardada como borrador."));
+            setMessage("Pago NRO " + result.id_pago + " registrado con éxito.");
             setIsError(false);
 
             setTimeout(() => handleClearScreen(), 2000);
 
         } catch (error) {
-            setMessage(`Error al procesar la orden: ${error.message}`);
+            setMessage(`Error al registrar el pago: ${error.message}`);
             setIsError(true);
         } finally {
             setIsSaving(false);
@@ -166,11 +139,13 @@ const CreatePaymentPage = () => {
 
     const handleClearScreen = async () => {
         // Recargamos todo de nuevo
-        setCustomPrices([]);
-        setProducts([]);
         setSelectedClientId("");
         setSelectedClient("");
-        setSelectedProductIds([]);
+        setSelectedMethodId("");
+        setMonto("");
+        setFechaPago("");
+        setComprobanteExterno("");
+        setObservaciones("");
         setMessage(false);
     }
 
@@ -178,37 +153,36 @@ const CreatePaymentPage = () => {
     if (isLoading) return <div className="p-10 text-center animate-pulse text-gray-400">Cargando protocolo de recepción...</div>;
 
     return (
-        <div className="max-w-5xl mx-auto pb-10 px-4 animate-fade-in space-y-6">
-            <div className="bg-white shadow-xl rounded-2xl overflow-hidden border border-gray-100">
-                
+        <div className="pay-page animate-fade-in">
+            <div className="pay-card">
+
                 {/* Header Institucional */}
-                <div className="bg-slate-800 p-6 text-white flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="pay-header">
                     <div>
-                        <h1 className="text-xl font-bold uppercase tracking-tight">Registrar Pago</h1>
-                        <p className="text-slate-400 text-xs mt-1 uppercase font-mono">Módulo Administrativo y Contable</p>
+                        <h1 className="pay-header-title">Registrar Pago</h1>
+                        <p className="pay-header-subtitle">Módulo Administrativo y Contable</p>
                     </div>
-                    <div className="flex gap-3">
-                        <span className="text-xs bg-slate-700 px-3 py-1.5 rounded-md font-mono text-blue-400 font-bold border border-slate-600">
+                    <div className="pay-header-badges">
+                        <span className="pay-info-badge pay-info-badge--date">
                             Fecha: {new Date().toLocaleDateString('es-AR')}
                         </span>
-                        <span className="text-xs bg-slate-700 px-3 py-1.5 rounded-md font-mono text-emerald-400 font-bold border border-slate-600">
+                        <span className="pay-info-badge pay-info-badge--id">
                             N° Pago: #AUTOGENERADO
                         </span>
                     </div>
                 </div>
 
-                <div className="p-8 space-y-8">
-                    
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="pay-body">
+                    <div className="pay-section">
+                        <div className="pay-grid">
                             <div>
-                                <label className="block text-[12px] font-bold text-gray-500 uppercase tracking-widest mb-1">Cliente Asociado *</label>
-                                <select 
-                                    name="id_cliente" 
+                                <label className="pay-field-label">Cliente Asociado *</label>
+                                <select
+                                    name="id_cliente"
                                     value={selectedClientId} // Controlamos el select con React
                                     onChange={handleClientChange} // Disparamos la función al cambiar
                                     required
-                                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-bold text-gray-700 text-sm"
+                                    className="pay-select"
                                 >
                                     <option value="">Seleccione el cliente para asignarle el pago...</option>
                                     {clients.map((client) => (
@@ -219,21 +193,21 @@ const CreatePaymentPage = () => {
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-[12px] font-bold text-gray-500 uppercase tracking-widest mb-1">Datos del cliente</label>
+                                <label className="pay-field-label">Datos del cliente</label>
                                 {selectedClient ? (
-                                    <div>
-                                        <div className="pl-2 block text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-1"> 
-                                            <span className="text-emerald-600">Cliente:</span> {selectedClient.nombre}
+                                    <div className="pay-client-info">
+                                        <div className="pay-client-field">
+                                            <span className="pay-client-field-label">Cliente:</span> {selectedClient.nombre}
                                         </div>
-                                        <div className="pl-2 block text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-1"> 
-                                            <span className="text-emerald-600">CUIT:</span> {selectedClient.cuit}
+                                        <div className="pay-client-field">
+                                            <span className="pay-client-field-label">CUIT:</span> {selectedClient.cuit}
                                         </div>
-                                        <div className="pl-2 block text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-1"> 
-                                            <span className="text-emerald-600">Domicilio:</span> {selectedClient.direccion || 'No especificado'}
+                                        <div className="pay-client-field">
+                                            <span className="pay-client-field-label">Domicilio:</span> {selectedClient.direccion || 'No especificado'}
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="items-center h-full pl-2 block text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                    <div className="pay-client-placeholder">
                                         Esperando selección de cliente...
                                     </div>
                                 )}
@@ -242,92 +216,106 @@ const CreatePaymentPage = () => {
                     </div>
 
                     {/* DATOS DEL PAGO*/}
-                    <div>
-                        <div>
-                            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Monto *</label>
-                            <input 
-                                type="number" 
-                                name="monto" 
-                                // value={receiptMeta.fecha_recepcion} 
-                                // onChange={handleReceiptChange} 
-                                required 
-                                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-mono"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-[12px] font-bold text-gray-500 uppercase tracking-widest mb-1">Método de Pago *</label>
-                            <select 
-                                name="id_cliente" 
-                                value={selectedClientId} // Controlamos el select con React
-                                onChange={handleClientChange} // Disparamos la función al cambiar
-                                required
-                                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-bold text-gray-700 text-sm"
-                            >
-                                <option value="">Seleccione el método de pago...</option>
-                                {clients.map((client) => (
-                                    <option key={client.id_cliente} value={client.id_cliente}>
-                                        {client.nombre} ({client.cuit})
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Fecha de Pago</label>
-                            <input 
-                                type="date" 
-                                name="fecha_recepcion" 
-                                // value={receiptMeta.fecha_recepcion} 
-                                // onChange={handleReceiptChange} 
-                                required 
-                                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-mono"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Identificacion de comprobante (externo)</label>
-                            <input 
-                                type="text"
-                                name="comprobante_externo"
-                                //value={currentItem.observaciones}
-                                //onChange={handleItemChange}
-                                className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Observaciones sobre el pago</label>
-                            <input 
-                                type="text"
-                                name="observaciones"
-                                //value={currentItem.observaciones}
-                                //onChange={handleItemChange}
-                                placeholder="Ej. Entregado por pepito, retirado de oficinas por Juan, etc."
-                                className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500"
-                            />
+                    <div className="pay-section">
+                        <div className="pay-grid-3">
+                            <div>
+                                <label className="pay-field-label">Monto *</label>
+                                <input
+                                    type="text"
+                                    inputMode="decimal"
+                                    name="monto"
+                                    value={monto}
+                                    onChange={handleMontoChange}
+                                    placeholder="0.00"
+                                    required
+                                    className="pay-input"
+                                />
+                            </div>
+                            <div>
+                                <label className="pay-field-label">Método de Pago *</label>
+                                <select
+                                    name="id_cliente"
+                                    value={selectedMethodId} // Controlamos el select con React
+                                    onChange={handlePaymentMethodChange} // Disparamos la función al cambiar
+                                    required
+                                    className="pay-select"
+                                >
+                                    <option value="">Seleccione el método de pago...</option>
+                                    {paymentMethods.map((method) => (
+                                        <option key={method.id_medio_pago} value={method.id_medio_pago}>
+                                            {method.nombre}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="pay-field-label">Fecha de recepción del pago</label>
+                                <input
+                                    type="date"
+                                    name="fecha_pago"
+                                    value={fechaPago}
+                                    onChange={handleFechaPagoChange}
+                                    className="pay-input"
+                                />
+                                <span className="pay-field-hint">Cargar solo si el pago fue recibido</span>
+                            </div>
                         </div>
                     </div>
 
+                    <div className="pay-section">
+                        <div className="pay-grid">
+                            <div>
+                                <label className="pay-field-label">Identificacion de comprobante (externo)</label>
+                                <input
+                                    type="text"
+                                    name="comprobante_externo"
+                                    value={comprobanteExterno}
+                                    onChange={handleComprobanteExternoChange}
+                                    className="pay-text-input"
+                                />
+                            </div>
+                            <div>
+                                <label className="pay-field-label">Observaciones sobre el pago</label>
+                                <input
+                                    type="text"
+                                    name="observaciones"
+                                    value={observaciones}
+                                    onChange={handleObservacionesChange}
+                                    placeholder="Ej. Entregado por pepito, retirado de oficinas por Juan, etc."
+                                    className="pay-text-input"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    
+                    <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl">
+                        <p className="text-[10px] text-blue-600 leading-relaxed uppercase font-bold text-center">
+                            Aviso: Por seguridad todos los pagos se generan en borrador. Puede cambiar su estado al modificarlos.
+                        </p>
+                    </div>
+
                     {message && (
-                        <div className={`flex-1 mt-5 mx-5 p-3 rounded-xl text-s font-bold text-center animate-fade-in 
-                            ${isError ? 'bg-red-100 text-red-800 border border-red-100' : 'bg-emerald-100 text-emerald-800 border border-emerald-100'}`}>
+                        <div className={`pay-message animate-fade-in ${isError ? 'pay-message--error' : 'pay-message--success'}`}>
                             {message}
                         </div>
                     )}
 
                     {/* BOTONERA DE ACCIONES */}
-                    <div className="pt-6 border-t border-gray-100 flex flex-col sm:flex-row gap-4 items-center justify-end">
-                        <button 
-                            type="button" 
+                    <div className="pay-actions">
+                        <button
+                            type="button"
                             onClick={() => navigate(-1)}
-                            className="text-[10px] font-bold text-gray-400 hover:text-gray-600 uppercase tracking-widest transition-colors mr-auto"
+                            className="pay-btn-back"
                         >
                             Cancelar
                         </button>
-                        
-                        <button 
+
+                        <button
                             type="button"
                             disabled={isSaving}
-                            onClick={() => handleSaveIntent(false)}
-                            className={`w-full sm:w-auto px-6 py-3.5 rounded-xl font-black text-[11px] uppercase tracking-widest text-slate-700 border-2 border-slate-200 transition-all
-                                ${isSaving ? 'opacity-50 cursor-not-allowed' : 'bg-white hover:bg-slate-50 hover:border-slate-300 active:scale-95'}`}
+                            onClick={() => handleSave(false)}
+                            className={`pay-btn-draft ${isSaving ? 'pay-btn-draft--disabled' : ''}`}
                         >
                             Crear Pago en Borrador
                         </button>
@@ -335,17 +323,6 @@ const CreatePaymentPage = () => {
 
                 </div>
             </div>
-            <ConfirmationModal 
-                isOpen={isConfirmOpen}
-                onClose={() => setIsConfirmOpen(false)}
-                onConfirm={() => {
-                    setIsConfirmOpen(false);
-                    executeSave(true);
-                }}
-                title="¿Confirmar Cierre de Orden?"
-                message="Esta acción guarda las válvulas en su estado final y cierra la orden de reparación. Una vez cerrada, el remito no admitirá modificaciones."
-                isDanger={false}
-            />
         </div>
     );
 };
