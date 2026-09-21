@@ -1,4 +1,4 @@
-/* const ReceiptService = require('../src/services/receipt.service');
+const ReceiptService = require('../src/services/receipt.service');
 const Receipt = require('../src/models/Receipt');
 const Product = require('../src/models/Product');
 const { pool: db } = require('../src/config/db.config'); // Importamos el objeto real
@@ -80,4 +80,4 @@ describe('ReceiptService - Pruebas Unitarias de Lógica de Negocio', () => {
         await expect(ReceiptService.updateReceipt(1, { descripcion: 'test' }))
             .rejects.toThrow('Inmutabilidad Contable');
     });
-}); */
+});

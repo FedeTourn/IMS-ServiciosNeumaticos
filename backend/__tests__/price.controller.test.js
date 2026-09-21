@@ -1,8 +1,3 @@
-/**
- * @file price.controller.test.js
- * @description Pruebas de integración de caja negra para los endpoints de Precios.
- */
-
 const request = require('supertest');
 const express = require('express');
 const priceRoutes = require('../src/routes/price.routes');

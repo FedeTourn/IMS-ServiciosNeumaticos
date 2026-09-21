@@ -26,8 +26,9 @@ exports.validateCreateReceipt = async (req, res, next) => {
     }
 
     // Validación interna de los atributos mínimos de cada producto
+    // Nota: `modelo` referencia el id numérico de ModeloProducto, pero también se acepta como string.
     for (const [index, product] of productsList.entries()) {
-        if (!product.modelo || product.modelo.trim() === '') {
+        if (product.modelo === undefined || product.modelo === null || String(product.modelo).trim() === '') {
             return res.status(400).json({
                 success: false,
                 message: `Error en elemento [${index}]: El campo 'modelo' de la válvula es obligatorio.`

@@ -9,7 +9,7 @@ El objetivo de este requerimiento es permitir la captura y persistencia formal d
 * **Model (`Payment.js`):** Gestiona la persistencia sobre la tabla relacional `Pago`. Implementa el método `create(paymentData, connection)`, diseñado para soportar transacciones atómicas mediante la inyección explícita de la conexión (`connection`) a fin de garantizar propiedades ACID en operaciones compuestas.
 
 
-* **Service (`payment.service.js`):** Orquesta la lógica del negocio mediante el método `createPayment(paymentData)`. Valida la existencia del cliente, la validez del medio de pago y la consistencia del importe monetario. Establece el estado operativo correspondiente del registro de pago previo a su inserción en la capa de datos.
+* **Service (`payment.service.js`):** Orquesta la lógica del negocio mediante el método `createPayment(paymentData)`. Valida la existencia del cliente, la validez del medio de pago y la consistencia del importe monetario. Por razones de seguridad, establece siempre el estado operativo inicial "Borrador" para el registro de pago, sin excepción, previo a su inserción en la capa de datos.
 
 
 * **Controller (`payment.controller.js`):** Expone el endpoint `POST /api/payments` a través de Express.js. Intercepta el payload de la petición HTTP (`req.body`), ejecuta una validación sintáctica preliminar, delega la ejecución a la capa de servicios y efectúa el mapeo semántico de errores a códigos de estado HTTP estandarizados (`201 Created`, `400 Bad Request`, `404 Not Found`, `500 Internal Server Error`).
@@ -34,6 +34,9 @@ El objetivo de este requerimiento es permitir la captura y persistencia formal d
 
 
 * **Inmutabilidad y Trazabilidad:** Todo registro de pago debe asociarse a su correspondiente medio de pago y fecha de emisión para alimentar de forma consistente el libro de movimientos y el balance contable del cliente.
+
+
+* **Estado Inicial "Borrador" Obligatorio (Regla de Seguridad):** Dado que los registros de pago no admiten eliminación física ni lógica dentro del sistema, todo pago debe crearse siempre en estado "Borrador", independientemente de la naturaleza del medio de pago seleccionado (inmediato o diferido). El estado operativo definitivo (`Aceptado`, `Pendiente de acreditación`, `Rechazado`) solo puede asignarse mediante una edición posterior y explícita del registro, lo que permite corregir errores de carga sin necesidad de borrar información.
 
 
 
@@ -81,7 +84,10 @@ El objetivo de este requerimiento es permitir la captura y persistencia formal d
 * **Tarea 2.3 (Validación de Importe):** Validar que el campo `monto` sea mayor a cero (`monto > 0`). En caso contrario, arrojar una excepción de validación (`HTTP 400`).
 
 
-* **Tarea 2.4 (Persistencia):** Consolidar los atributos de auditoría y delegar la inserción a `Payment.create`, retornando el objeto resultante.
+* **Tarea 2.4 (Regla de Negocio Crítica - Estado Inicial):** Resolver el estado operativo inicial del pago como "Borrador" en todos los casos, sin excepción, con independencia del medio de pago seleccionado, dado que los pagos no son eliminables del sistema.
+
+
+* **Tarea 2.5 (Persistencia):** Consolidar los atributos de auditoría y delegar la inserción a `Payment.create`, retornando el objeto resultante.
 
 
 
@@ -130,7 +136,39 @@ El objetivo de este requerimiento es permitir la captura y persistencia formal d
 
 
 
-1. **Afectación Prematura de Saldo (Riesgo de Consistencia Contable):** Un pago recién registrado no debe consolidar saldo de forma irreversible sin validar su estado inicial. Si el pago se genera como "Borrador" o "Pendiente de acreditación", la capa de servicios debe aislarlo del balance computable para evitar saldos distorsionados en la cuenta corriente del cliente.
+1. **Afectación Prematura de Saldo (Riesgo de Consistencia Contable):** Un pago recién registrado no debe consolidar saldo de forma irreversible. Dado que todo pago nace como "Borrador", la capa de servicios debe aislarlo del balance computable para evitar saldos distorsionados en la cuenta corriente del cliente hasta que sea editado y confirmado en un estado operativo definitivo.
 
 
 2. **Dependencia de Transaccionalidad en Métodos de Pago Diferidos:** Si a futuro el registro del pago dispara la emisión simultánea de un recibo o la afectación de documentos, el método del modelo debe conservar la capacidad de recibir un objeto `connection` externo para no comprometer la atomicidad relacional en MySQL.
+
+
+
+---
+
+### Estrategia de Tests (Propuesta — Backend)
+
+Siguiendo las dos modalidades de prueba ya establecidas en `backend/__tests__/` (pruebas unitarias de servicio con mocks vía `jest.mock`, y pruebas de integración con `supertest` contra la base de datos real `DB_NAME_TEST`), se proponen los siguientes archivos y casos para el módulo de pagos. **Esta sección es solo documentación de la propuesta; los tests no se implementan en esta etapa.**
+
+* **`payment.service.test.js` (unitario, mockeando `Payment` y `Client` con `jest.mock`):**
+  * `createPayment` debe resolver siempre el `id_estado_pago` correspondiente a "Borrador", tanto para medios de pago inmediatos como diferidos (`medio.es_diferido` en `true` o `false`), verificando que `Payment.create` sea invocado con ese estado sin importar el medio.
+  * `createPayment` debe lanzar `404` si `Client.findById` no encuentra al cliente, o si el cliente existe pero `is_active` es `false`, sin invocar `Payment.create`.
+  * `createPayment` debe lanzar `404` si `Payment.findMethodById` no encuentra el medio de pago indicado.
+  * `createPayment` debe lanzar `400` si `monto` es `0`, negativo, `NaN` o está ausente.
+  * `createPayment` debe lanzar `400` si falta `id_cliente`, `id_medio_pago` o `fecha_pago`.
+  * `createPayment` debe lanzar `500` si el catálogo de estados (`Payment.findAllStates`) no tiene configurado el estado "Borrador" (catálogo mal seeded).
+  * `getAllPaymentStates` y `getAllPaymentMethods` deben delegar directamente en `Payment.findAllStates` / `Payment.findAllMethods` y retornar su resultado sin transformarlo.
+  * `validatePaymentStatusAssignment` debe lanzar `409` si se intenta asignar el estado "Aceptado" a un medio diferido, y debe resolver sin error para el resto de combinaciones válidas (incluido "Borrador", que siempre es una asignación permitida).
+
+* **`payment.controller.test.js` (integración REST con `supertest`, mockeando `PaymentService`):**
+  * `POST /api/payments` debe retornar `201` y el `data` devuelto por `PaymentService.createPayment` cuando el payload es válido.
+  * `POST /api/payments` debe retornar `400` si falta `id_cliente`, `id_medio_pago`, `monto` o `fecha_pago`, sin invocar al servicio.
+  * `POST /api/payments` debe propagar el `statusCode` de la excepción del servicio (`404`, `400`, `409`) en la respuesta HTTP.
+  * `GET /api/payments/methods` y `GET /api/payments/states` deben retornar `200` con el arreglo devuelto por el servicio correspondiente.
+
+* **`payment.api.test.js` (integración end-to-end contra `DB_NAME_TEST`, sin mocks):**
+  * `beforeAll` trunca `Pago`, `Cliente`, `EstadoPago` y `MedioPago`, y siembra un cliente activo, un estado "Borrador" y al menos dos medios de pago (uno con `es_diferido = 0` y otro con `es_diferido = 1`).
+  * Registrar un pago con un medio de pago **inmediato** (`es_diferido = 0`) y verificar en la fila insertada que `id_estado_pago` corresponde a "Borrador" (no "Aceptado").
+  * Registrar un pago con un medio de pago **diferido** (`es_diferido = 1`) y verificar igualmente que `id_estado_pago` corresponde a "Borrador" (no "Pendiente de acreditación").
+  * Verificar que un pago con `id_cliente` inexistente retorna `404` y no inserta fila en `Pago`.
+  * Verificar que un pago con `monto <= 0` retorna `400` y no inserta fila en `Pago`.
+  * Verificar que la respuesta `201` incluye `estado_pago_nombre: 'Borrador'` en el DTO devuelto.

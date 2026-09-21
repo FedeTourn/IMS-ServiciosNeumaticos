@@ -1,8 +1,3 @@
-/**
- * @file auth.service.test.js
- * @description Pruebas unitarias aisladas para la lógica de autenticación.
- */
-
 const AuthService = require('../src/services/auth.service');
 const User = require('../src/models/User');
 const bcrypt = require('bcrypt');

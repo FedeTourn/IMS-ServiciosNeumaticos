@@ -1,8 +1,3 @@
-/**
- * @file price.service.test.js
- * @description Pruebas unitarias para la lógica de negocio de Precios por Categoría.
- */
-
 const PriceService = require('../src/services/price.service');
 const PriceCategory = require('../src/models/PriceCategory');
 const { pool: db } = require('../src/config/db.config');

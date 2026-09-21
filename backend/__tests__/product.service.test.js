@@ -19,16 +19,18 @@ describe('Unit Test: ProductService.updateProductState', () => {
         // PREPARACIÓN (Arrange): Simulamos que la DB nos devuelve una válvula en estado 4 (ENTREGADO)
         Product.findById.mockResolvedValue({
             id_producto: 99,
-            estado: 4, 
+            estado: 4,
             estado_nombre: 'Entregado'
         });
+        // El servicio consulta las transiciones permitidas en el DiccionarioEstado: ENTREGADO no tiene ninguna.
+        Product.findAllowedDestinations.mockResolvedValue([]);
 
         // ACCIÓN Y ASERCIÓN (Act & Assert)
         // Intentamos pasarla a estado 2 (EN_REPARACION). Esto debe fallar según tus reglas.
         await expect(ProductService.updateProductState(99, 2, 'Intento ilegal'))
             .rejects
-            .toEqual({ status: 403, message: "Transition not allowed: Cannot move from '${product.estado_nombre}' to '${(await Product.findById(new_state_id)).estado_nombre}'." });
-        
+            .toEqual({ status: 403, message: "Transición no permitida: No se puede pasar del estado 'Entregado' al estado destino con ID 2." });
+
         // Verificamos que el servicio NUNCA haya intentado llamar al UPDATE de la base de datos
         expect(Product.update).not.toHaveBeenCalled();
     });
@@ -37,8 +39,10 @@ describe('Unit Test: ProductService.updateProductState', () => {
         // PREPARACIÓN (Arrange)
         // Simulamos una válvula RECIBIDA (1)
         Product.findById.mockResolvedValue({ id_producto: 100, estado: 1 });
+        // Simulamos que EN_REPARACION (2) es un destino permitido desde RECIBIDO
+        Product.findAllowedDestinations.mockResolvedValue([2, 3]);
         // Simulamos que el update afecta a 1 fila
-        Product.update.mockResolvedValue(1); 
+        Product.update.mockResolvedValue(1);
 
         // ACCIÓN (Act)
         // Pasamos a EN_REPARACION (2)
@@ -57,6 +61,7 @@ describe('ProductService - Lógica Compleja', () => {
     it('debería lanzar error 403 al intentar una transición prohibida', async () => {
         // Simulamos producto en estado 4 (ENTREGADO) que no tiene transiciones permitidas
         Product.findById.mockResolvedValue({ id_producto: 1, estado: 4, estado_nombre: 'Entregado' });
+        Product.findAllowedDestinations.mockResolvedValue([]);
 
         await expect(ProductService.updateProductState(1, 2, 'Cualquier observacion'))
             .rejects

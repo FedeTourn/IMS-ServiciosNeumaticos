@@ -77,9 +77,10 @@ class PaymentService {
 
     /**
      * Orquesta la creación de un nuevo registro de pago: valida la existencia y vigencia del
-     * cliente, la validez del medio de pago y la consistencia del importe, resuelve
-     * el estado operativo inicial según la naturaleza (diferida o inmediata) del medio de pago
-     * y delega la persistencia a la capa de datos.
+     * cliente, la validez del medio de pago y la consistencia del importe, y delega la
+     * persistencia a la capa de datos. Por seguridad, todo pago se crea en estado "Borrador"
+     * sin excepción (los pagos no son eliminables), aislado del balance computable del cliente
+     * hasta que sea editado y confirmado explícitamente.
      * @param {Object} paymentData - Datos del pago provenientes del controlador.
      * @param {number} paymentData.id_cliente - Identificador del cliente asociado al pago.
      * @param {number} paymentData.id_medio_pago - Identificador del medio de pago utilizado.
@@ -121,23 +122,16 @@ class PaymentService {
             throw error;
         }
 
-        // Resolución del estado operativo inicial: los medios diferidos (ej. cheque) nacen
-        // "Pendiente de acreditación" para aislarlos del balance computable del cliente;
-        // el resto se registra directamente como "Aceptado".
-        const nombreEstadoInicial = medio.es_diferido
-            ? ESTADOS_PAGO.PENDIENTE_ACREDITACION
-            : ESTADOS_PAGO.ACEPTADO;
-
+        // Regla de negocio: por seguridad, todo pago nace en estado "Borrador" sin excepción,
+        // dado que los pagos no pueden eliminarse. Su confirmación (Aceptado/Pendiente de
+        // acreditación/Rechazado) requiere una edición posterior explícita.
         const estados = await Payment.findAllStates();
-        const estadoInicial = estados.find(e => e.nombre === nombreEstadoInicial);
+        const estadoInicial = estados.find(e => e.nombre === ESTADOS_PAGO.BORRADOR);
         if (!estadoInicial) {
-            const error = new Error(`El catálogo de estados de pago no posee configurado el estado "${nombreEstadoInicial}".`);
+            const error = new Error(`El catálogo de estados de pago no posee configurado el estado "${ESTADOS_PAGO.BORRADOR}".`);
             error.statusCode = 500;
             throw error;
         }
-
-        // Validación para garantizar que el estado resuelto sea una asignación permitida para el medio elegido.
-        await PaymentService.validatePaymentStatusAssignment(id_medio_pago, estadoInicial.id_estado_pago);
 
         const dataToPersist = {
             id_cliente,

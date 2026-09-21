@@ -1,8 +1,3 @@
-/**
- * @file user.service.test.js
- * @description Pruebas unitarias para la gestión de usuarios y roles.
- */
-
 const UserService = require('../src/services/user.service');
 const User = require('../src/models/User');
 const Role = require('../src/models/Role');
