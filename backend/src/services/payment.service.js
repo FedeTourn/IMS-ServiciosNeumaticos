@@ -15,6 +15,136 @@ const ESTADOS_PAGO = {
 class PaymentService {
 
     /**
+     * Valida la consistencia sintáctica de los criterios numéricos y temporales de búsqueda de pagos.
+     * Rechaza identificadores no enteros, importes negativos, fechas mal formadas o inexistentes
+     * (ej. 2026-02-31) y rangos incoherentes (extremo inferior superior al extremo superior).
+     * @param {Object} filters - Criterios de búsqueda ya tipados por el controlador.
+     * @throws {Error} Excepción HTTP 400 ante cualquier inconsistencia detectada.
+     */
+    static validateSearchFilters(filters) {
+        const identificadores = ['id_pago', 'id_cliente', 'id_estado_pago', 'id_medio_pago'];
+        const importes = ['monto', 'monto_min', 'monto_max'];
+        const fechas = ['fecha_desde', 'fecha_hasta', 'creacion_desde', 'creacion_hasta', 'actualizacion_desde', 'actualizacion_hasta'];
+
+        // Pares de campos que conforman un rango y deben respetar el orden desde <= hasta
+        const rangos = [
+            ['monto_min', 'monto_max'],
+            ['fecha_desde', 'fecha_hasta'],
+            ['creacion_desde', 'creacion_hasta'],
+            ['actualizacion_desde', 'actualizacion_hasta']
+        ];
+
+        // Validación de identificadores: enteros estrictamente positivos
+        for (const campo of identificadores) {
+            const valor = filters[campo];
+            if (valor === null || valor === undefined) continue;
+
+            if (!Number.isInteger(valor) || valor <= 0) {
+                const error = new Error(`El criterio de búsqueda '${campo}' debe ser un identificador numérico entero y positivo.`);
+                error.statusCode = 400;
+                throw error;
+            }
+        }
+
+        // Validación de importes: valores numéricos finitos y nunca negativos
+        for (const campo of importes) {
+            const valor = filters[campo];
+            if (valor === null || valor === undefined) continue;
+
+            if (!Number.isFinite(valor) || valor < 0) {
+                const error = new Error(`El criterio de búsqueda '${campo}' debe ser un importe numérico no negativo.`);
+                error.statusCode = 400;
+                throw error;
+            }
+        }
+
+        // Validación de fechas: formato YYYY-MM-DD correspondiente a una fecha real de calendario
+        for (const campo of fechas) {
+            const valor = filters[campo];
+            if (!valor) continue;
+
+            const fecha = new Date(`${valor}T00:00:00Z`);
+            const esFormatoValido = /^\d{4}-\d{2}-\d{2}$/.test(valor);
+            const esFechaReal = !isNaN(fecha.getTime()) && fecha.toISOString().slice(0, 10) === valor;
+
+            if (!esFormatoValido || !esFechaReal) {
+                const error = new Error(`El criterio de búsqueda '${campo}' debe expresar una fecha válida en formato YYYY-MM-DD.`);
+                error.statusCode = 400;
+                throw error;
+            }
+        }
+
+        // Validación de coherencia operativa de los rangos declarados
+        for (const [desde, hasta] of rangos) {
+            const limiteInferior = filters[desde];
+            const limiteSuperior = filters[hasta];
+            if (limiteInferior === null || limiteInferior === undefined) continue;
+            if (limiteSuperior === null || limiteSuperior === undefined) continue;
+
+            if (limiteInferior > limiteSuperior) {
+                const error = new Error(`El límite '${desde}' no puede ser posterior o superior al límite '${hasta}'.`);
+                error.statusCode = 400;
+                throw error;
+            }
+        }
+    }
+
+    /**
+     * Recupera y procesa el historial de pagos registrados aplicando criterios de filtrado
+     * acumulativos (lógica AND): valida la consistencia de los parámetros recibidos, descarta los
+     * criterios no informados para que su omisión no invalide a los demás, y normaliza la salida
+     * hacia una colección de DTOs planos (importes a dos decimales y fechas en formato ISO).
+     * Resuelve el Requerimiento 31.1 de consulta y auditoría de pagos.
+     * @param {Object} [filters={}] - Criterios opcionales de búsqueda provenientes del controlador.
+     * @param {number|null} [filters.id_pago] - Número interno del pago.
+     * @param {number|null} [filters.id_cliente] - Identificador del cliente asociado.
+     * @param {number|null} [filters.id_estado_pago] - Identificador del estado de pago.
+     * @param {number|null} [filters.id_medio_pago] - Identificador del medio de pago.
+     * @param {number|null} [filters.monto] - Importe exacto del pago.
+     * @param {number|null} [filters.monto_min] - Límite inferior del rango de importes.
+     * @param {number|null} [filters.monto_max] - Límite superior del rango de importes.
+     * @param {string|null} [filters.fecha_desde] - Límite inferior de la fecha de cobro (YYYY-MM-DD).
+     * @param {string|null} [filters.fecha_hasta] - Límite superior de la fecha de cobro (YYYY-MM-DD).
+     * @param {string|null} [filters.numero_comprobante] - Comprobante externo (coincidencia parcial).
+     * @param {string|null} [filters.creacion_desde] - Límite inferior de la fecha de creación.
+     * @param {string|null} [filters.creacion_hasta] - Límite superior de la fecha de creación.
+     * @param {string|null} [filters.actualizacion_desde] - Límite inferior de la última actualización.
+     * @param {string|null} [filters.actualizacion_hasta] - Límite superior de la última actualización.
+     * @returns {Promise<Array<Object>>} Listado de pagos normalizados, del más reciente al más antiguo.
+     * @throws {Error} Excepción HTTP 400 ante criterios inconsistentes, o errores propagados de la capa de datos.
+     */
+    static async getPayments(filters = {}) {
+
+        // Validación de dominio previa a la consulta (Fail-Fast)
+        this.validateSearchFilters(filters);
+
+        // Depuración de criterios no informados, para no arrastrar claves vacías a la capa de datos
+        const queryCriteria = {};
+        Object.entries(filters).forEach(([campo, valor]) => {
+            if (valor === null || valor === undefined || valor === '') return;
+            queryCriteria[campo] = valor;
+        });
+
+        try {
+            const payments = await Payment.findAll(queryCriteria);
+
+            // Normalización hacia un DTO plano optimizado para el consumo del cliente web
+            return payments.map(payment => ({
+                ...payment,
+                monto: Number(payment.monto).toFixed(2),
+                fecha_pago: payment.fecha_pago ? new Date(payment.fecha_pago).toISOString() : null,
+                fecha_creacion: payment.fecha_creacion ? new Date(payment.fecha_creacion).toISOString() : null,
+                fecha_actualizacion: payment.fecha_actualizacion ? new Date(payment.fecha_actualizacion).toISOString() : null
+            }));
+
+        } catch (error) {
+            console.error(`[PaymentService Error] Falla en subproceso getPayments: ${error.message}`);
+            // Propagación limpia hacia el controlador REST
+            throw error;
+        }
+    }
+
+    /**
      * Obtiene el catálogo completo de estados de pago parametrizados en el sistema.
      * Resuelve el Requerimiento 32.1 de exposición de catálogos.
      * @returns {Promise<Array<Object>>} Listado de estados de pago disponibles.

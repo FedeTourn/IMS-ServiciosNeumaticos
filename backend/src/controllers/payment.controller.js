@@ -57,6 +57,67 @@ exports.handleCreatePayment = async (req, res) => {
 };
 
 /**
+ * Obtiene el historial de pagos registrados aplicando criterios de filtrado dinámicos y combinables.
+ * Mapea los parámetros de consulta provenientes de la URL (Query Params).
+ */
+exports.handleGetPayments = async (req, res) => {
+    try {
+        // Extraer los criterios de filtrado del query string
+        const {
+            id_pago,
+            id_cliente,
+            id_estado_pago,
+            id_medio_pago,
+            monto,
+            monto_min,
+            monto_max,
+            fecha_desde,
+            fecha_hasta,
+            numero_comprobante,
+            creacion_desde,
+            creacion_hasta,
+            actualizacion_desde,
+            actualizacion_hasta
+        } = req.query;
+
+        // Construimos el objeto de filtros para la capa de servicio
+        const filters = {
+            id_pago: id_pago ? parseInt(id_pago, 10) : null,
+            id_cliente: id_cliente ? parseInt(id_cliente, 10) : null,
+            id_estado_pago: id_estado_pago ? parseInt(id_estado_pago, 10) : null,
+            id_medio_pago: id_medio_pago ? parseInt(id_medio_pago, 10) : null,
+            monto: monto ? Number(monto) : null,
+            monto_min: monto_min ? Number(monto_min) : null,
+            monto_max: monto_max ? Number(monto_max) : null,
+            fecha_desde: fecha_desde ? String(fecha_desde) : null,
+            fecha_hasta: fecha_hasta ? String(fecha_hasta) : null,
+            numero_comprobante: numero_comprobante ? String(numero_comprobante).trim() : null,
+            creacion_desde: creacion_desde ? String(creacion_desde) : null,
+            creacion_hasta: creacion_hasta ? String(creacion_hasta) : null,
+            actualizacion_desde: actualizacion_desde ? String(actualizacion_desde) : null,
+            actualizacion_hasta: actualizacion_hasta ? String(actualizacion_hasta) : null
+        };
+
+        const result = await PaymentService.getPayments(filters);
+
+        return res.status(200).json({
+            success: true,
+            data: result
+        });
+
+    } catch (error) {
+        console.error(`[PaymentController Error] Falla al resolver GET /api/payment: ${error.message}`);
+
+        // Mapeo semántico de excepciones de validación (400) y errores técnicos (500)
+        const statusCode = error.statusCode || 500;
+        return res.status(statusCode).json({
+            success: false,
+            message: error.message || 'Error interno en el servidor al recuperar el listado de pagos.'
+        });
+    }
+};
+
+/**
  * Obtiene el catálogo completo de medios de pago parametrizados.
  */
 exports.getPaymentMethods = async (req, res) => {
