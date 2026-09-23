@@ -109,9 +109,24 @@ exports.findMethodById = async (idMedioPago) => {
  * @param {string|null} [filters.creacion_hasta] - Límite superior de `fecha_creacion` (YYYY-MM-DD).
  * @param {string|null} [filters.actualizacion_desde] - Límite inferior de `fecha_actualizacion` (YYYY-MM-DD).
  * @param {string|null} [filters.actualizacion_hasta] - Límite superior de `fecha_actualizacion` (YYYY-MM-DD).
+ * @param {string|null} [filters.sort_by] - Concepto de ordenamiento ya validado por el Service.
+ * @param {string|null} [filters.sort_order] - Sentido del ordenamiento ('ASC' o 'DESC').
  * @returns {Promise<Array<Object>>} Colección de pagos coincidentes con sus entidades relacionadas.
  */
 exports.findAll = async (filters = {}) => {
+
+    // Traducción de conceptos de ordenamiento a columnas reales, para no exponer el esquema
+    // físico a la capa de presentación ni interpolar texto arbitrario en la sentencia SQL.
+    const SORT_COLUMN_MAP = {
+        id_pago: 'P.id_pago',
+        cliente_nombre: 'C.nombre',
+        monto: 'P.monto',
+        medio_pago_nombre: 'MP.nombre',
+        estado_pago_nombre: 'EP.nombre',
+        fecha_pago: 'P.fecha_pago',
+        fecha_creacion: 'P.fecha_creacion',
+        fecha_actualizacion: 'P.fecha_actualizacion'
+    };
 
     const {
         id_pago,
@@ -127,7 +142,9 @@ exports.findAll = async (filters = {}) => {
         creacion_desde,
         creacion_hasta,
         actualizacion_desde,
-        actualizacion_hasta
+        actualizacion_hasta,
+        sort_by,
+        sort_order
     } = filters;
 
     const conditions = [];
@@ -234,8 +251,12 @@ exports.findAll = async (filters = {}) => {
         query += ` WHERE ` + conditions.join(' AND ');
     }
 
-    // Ordenamiento descendente por defecto para priorizar los registros más recientes
-    query += ` ORDER BY P.fecha_pago DESC, P.id_pago DESC;`;
+    // Ordenamiento descendente por defecto sobre la fecha de cobro, para priorizar los registros
+    // más recientes. El número interno oficia siempre de criterio de desempate determinista.
+    const sorter = SORT_COLUMN_MAP[sort_by] || SORT_COLUMN_MAP.fecha_pago;
+    const sortDirection = (sort_order === 'ASC') ? 'ASC' : 'DESC';
+
+    query += ` ORDER BY ${sorter} ${sortDirection}, P.id_pago DESC;`;
 
     try {
         const [rows] = await db.query(query, values);

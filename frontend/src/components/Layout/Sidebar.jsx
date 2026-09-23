@@ -9,6 +9,7 @@ const menuItems = [
     { name: 'Consultar Ordenes', path: '/ordenes-reparacion', icon: '📝' },
     { name: 'Consultar Stock', path: '/consultar-stock', icon: '🛒' },
     { name: 'Estados de Cuenta', path: '/estados-cuenta', icon: '💰' },
+    { name: 'Pagos', path: '/pagos', icon: '💰' },
     { name: 'Clientes', path: '/clientes', icon: '👥' },
     { name: 'Configuración', path: '/configuracion', icon: '⚙️' },
 ];

@@ -57,7 +57,8 @@ exports.handleCreatePayment = async (req, res) => {
 };
 
 /**
- * Obtiene el historial de pagos registrados aplicando criterios de filtrado dinámicos y combinables.
+ * Obtiene el historial de pagos registrados aplicando criterios de filtrado dinámicos y combinables,
+ * junto con el ordenamiento solicitado por la grilla de datos.
  * Mapea los parámetros de consulta provenientes de la URL (Query Params).
  */
 exports.handleGetPayments = async (req, res) => {
@@ -77,7 +78,9 @@ exports.handleGetPayments = async (req, res) => {
             creacion_desde,
             creacion_hasta,
             actualizacion_desde,
-            actualizacion_hasta
+            actualizacion_hasta,
+            sort_by,
+            sort_order
         } = req.query;
 
         // Construimos el objeto de filtros para la capa de servicio
@@ -95,7 +98,9 @@ exports.handleGetPayments = async (req, res) => {
             creacion_desde: creacion_desde ? String(creacion_desde) : null,
             creacion_hasta: creacion_hasta ? String(creacion_hasta) : null,
             actualizacion_desde: actualizacion_desde ? String(actualizacion_desde) : null,
-            actualizacion_hasta: actualizacion_hasta ? String(actualizacion_hasta) : null
+            actualizacion_hasta: actualizacion_hasta ? String(actualizacion_hasta) : null,
+            sort_by: sort_by ? String(sort_by) : null,
+            sort_order: sort_order ? String(sort_order) : null
         };
 
         const result = await PaymentService.getPayments(filters);

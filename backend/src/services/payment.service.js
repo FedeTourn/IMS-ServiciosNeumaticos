@@ -110,6 +110,8 @@ class PaymentService {
      * @param {string|null} [filters.creacion_hasta] - Límite superior de la fecha de creación.
      * @param {string|null} [filters.actualizacion_desde] - Límite inferior de la última actualización.
      * @param {string|null} [filters.actualizacion_hasta] - Límite superior de la última actualización.
+     * @param {string} [filters.sort_by='fecha_pago'] - Concepto base para ordenar la grilla de datos.
+     * @param {string} [filters.sort_order='DESC'] - Sentido del ordenamiento ('ASC' o 'DESC').
      * @returns {Promise<Array<Object>>} Listado de pagos normalizados, del más reciente al más antiguo.
      * @throws {Error} Excepción HTTP 400 ante criterios inconsistentes, o errores propagados de la capa de datos.
      */
@@ -118,12 +120,35 @@ class PaymentService {
         // Validación de dominio previa a la consulta (Fail-Fast)
         this.validateSearchFilters(filters);
 
+        const { sort_by = null, sort_order = 'DESC' } = filters;
+
+        const allowedSortColumns = [
+            'id_pago',
+            'cliente_nombre',
+            'monto',
+            'medio_pago_nombre',
+            'estado_pago_nombre',
+            'fecha_pago',
+            'fecha_creacion',
+            'fecha_actualizacion'
+        ];
+        const allowedSortOrders = ['ASC', 'DESC'];
+
+        // Validación de Lista Blanca (Whitelisting) para sanitizar el ordenamiento
+        const validatedSortBy = allowedSortColumns.includes(sort_by) ? sort_by : 'fecha_pago';
+        // Se previene un posible error si sort_order viene como null o undefined evaluando con fallback
+        const validatedSortOrder = allowedSortOrders.includes(sort_order?.toUpperCase()) ? sort_order.toUpperCase() : 'DESC';
+
         // Depuración de criterios no informados, para no arrastrar claves vacías a la capa de datos
         const queryCriteria = {};
         Object.entries(filters).forEach(([campo, valor]) => {
             if (valor === null || valor === undefined || valor === '') return;
             queryCriteria[campo] = valor;
         });
+
+        // El ordenamiento ya saneado prevalece sobre lo recibido desde la capa de presentación
+        queryCriteria.sort_by = validatedSortBy;
+        queryCriteria.sort_order = validatedSortOrder;
 
         try {
             const payments = await Payment.findAll(queryCriteria);
