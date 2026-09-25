@@ -209,8 +209,10 @@ const PaymentsPage = () => {
     };
 
     const getSortIndicator = (columnKey) => {
-        if (filters.sort_by !== columnKey) return <span className="text-gray-300">↕</span>;
-        return filters.sort_order === 'ASC' ? <span className="text-emerald-500">▲</span> : <span className="text-emerald-500">▼</span>;
+        if (filters.sort_by !== columnKey) return <span className="pay-list-sort-indicator">↕</span>;
+        return filters.sort_order === 'ASC'
+            ? <span className="pay-list-sort-indicator--active">▲</span>
+            : <span className="pay-list-sort-indicator--active">▼</span>;
     };
 
     const formatDate = (isoString) => {
@@ -234,36 +236,32 @@ const PaymentsPage = () => {
     // Límite superior efectivo del deslizador mientras no se haya derivado el tope real
     const topeEfectivo = montoTope ?? TOPE_MONTO_POR_DEFECTO;
 
-    // Clases compartidas por los campos de texto del calendario, para que no desentonen
-    // con los inputs nativos del resto del panel.
-    const datePickerClasses = "w-full border border-gray-300 rounded-lg p-2 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono";
-
     return (
-        <div className="max-w-7xl mx-auto pb-10 px-4 animate-fade-in space-y-6">
-            <div className='bg-white p-6 rounded-xl shadow-sm border border-gray-100'>
+        <div className="pay-list-page animate-fade-in">
+            <div className="pay-list-panel">
                 {/* --- CABECERA Y ACCIONES --- */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b">
+                <div className="pay-list-header">
                     <div>
-                        <h1 className="text-xl font-bold text-gray-800">Gestión de Pagos</h1>
-                        <p className="text-sm text-gray-500">Historial de Pagos recibidos.</p>
+                        <h1 className="pay-list-header-title">Gestión de Pagos</h1>
+                        <p className="pay-list-header-subtitle">Historial de Pagos recibidos.</p>
                     </div>
 
                     <button
                         onClick={() => navigate('/crear-pago')}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 transition-all shadow-md active:scale-95 text-sm">
+                        className="pay-list-btn-create">
                         Registrar Nuevo Pago
                     </button>
                 </div>
 
                 {/* Panel de Filtros y Barras de Búsqueda */}
-                <div className='pt-4'>
-                    <div className="flex items-center justify-between">
+                <div className="pay-list-filters">
+                    <div className="pay-list-filters-bar">
                         <button
                             type="button"
                             onClick={() => setShowFilters(prev => !prev)}
-                            className="flex items-center gap-2 text-xs font-black uppercase text-gray-400 tracking-widest hover:text-gray-600 transition-colors"
+                            className="pay-list-filters-toggle"
                         >
-                            <span className="text-sm">{showFilters ? '−' : '+'}</span>
+                            <span className="pay-list-filters-toggle-icon">{showFilters ? '−' : '+'}</span>
                             Filtros de Búsqueda
                         </button>
 
@@ -271,7 +269,7 @@ const PaymentsPage = () => {
                             <button
                                 type="button"
                                 onClick={handleClearFilters}
-                                className="text-xs font-bold text-gray-500 hover:text-emerald-700 transition-colors"
+                                className="pay-list-filters-clear"
                             >
                                 Limpiar filtros
                             </button>
@@ -279,28 +277,28 @@ const PaymentsPage = () => {
                     </div>
 
                     {showFilters && (
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-3">
+                        <div className="pay-list-filters-grid">
                             {/* Búsqueda por Nro interno de Pago */}
-                            <div className="flex flex-col space-y-1">
-                                <label className="text-xs font-semibold text-gray-600">N° de Pago Interno</label>
+                            <div className="pay-list-filter-field">
+                                <label className="pay-list-filter-label">N° de Pago Interno</label>
                                 <input
                                     type="text"
                                     placeholder="Ej. 151"
                                     value={filters.id_pago}
                                     name="id_pago"
                                     onChange={handleFilterChange}
-                                    className="border border-gray-300 rounded-lg p-2 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                                    className="pay-list-filter-input"
                                 />
                             </div>
 
                             {/* Filtro por Cliente */}
-                            <div className="flex flex-col space-y-1">
-                                <label className="text-xs font-semibold text-gray-600">Cliente</label>
+                            <div className="pay-list-filter-field">
+                                <label className="pay-list-filter-label">Cliente</label>
                                 <select
                                     value={filters.id_cliente}
                                     name="id_cliente"
                                     onChange={handleFilterChange}
-                                    className="border border-gray-300 rounded-lg p-2 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="pay-list-filter-select"
                                 >
                                     <option value="">Todos los clientes</option>
                                     {clients.map(c =>
@@ -313,13 +311,13 @@ const PaymentsPage = () => {
                             </div>
 
                             {/* Filtro por Medio de pago */}
-                            <div className="flex flex-col space-y-1">
-                                <label className="text-xs font-semibold text-gray-600">Medio de Pago</label>
+                            <div className="pay-list-filter-field">
+                                <label className="pay-list-filter-label">Medio de Pago</label>
                                 <select
                                     value={filters.id_medio_pago}
                                     name="id_medio_pago"
                                     onChange={handleFilterChange}
-                                    className="border border-gray-300 rounded-lg p-2 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="pay-list-filter-select"
                                 >
                                     <option value="">Todos los medios de pago</option>
                                     {paymentMethods.map(mp =>
@@ -332,13 +330,13 @@ const PaymentsPage = () => {
                             </div>
 
                             {/* Filtro por Estado de pago */}
-                            <div className="flex flex-col space-y-1">
-                                <label className="text-xs font-semibold text-gray-600">Estado</label>
+                            <div className="pay-list-filter-field">
+                                <label className="pay-list-filter-label">Estado</label>
                                 <select
                                     value={filters.id_estado_pago}
                                     name="id_estado_pago"
                                     onChange={handleFilterChange}
-                                    className="border border-gray-300 rounded-lg p-2 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="pay-list-filter-select"
                                 >
                                     <option value="">Todos los estados</option>
                                     {paymentStates.map(ep =>
@@ -351,21 +349,21 @@ const PaymentsPage = () => {
                             </div>
 
                             {/* Comprobante externo (coincidencia parcial) */}
-                            <div className="flex flex-col space-y-1">
-                                <label className="text-xs font-semibold text-gray-600">N° de Comprobante</label>
+                            <div className="pay-list-filter-field">
+                                <label className="pay-list-filter-label">N° de Comprobante</label>
                                 <input
                                     type="text"
                                     placeholder="Ej. 0001-00012345"
                                     name="numero_comprobante"
                                     value={filters.numero_comprobante}
                                     onChange={handleFilterChange}
-                                    className="border border-gray-300 rounded-lg p-2 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                                    className="pay-list-filter-input"
                                 />
                             </div>
 
                             {/* Rango de Fecha de Recepción del cobro, resuelto en un único calendario */}
-                            <div className="flex flex-col space-y-1">
-                                <label className="text-xs font-semibold text-gray-600">Fecha de Recepción</label>
+                            <div className="pay-list-filter-field">
+                                <label className="pay-list-filter-label">Fecha de Recepción</label>
                                 <DatePicker
                                     selectsRange
                                     locale="es"
@@ -375,14 +373,14 @@ const PaymentsPage = () => {
                                     onChange={handleDateRangeChange('fecha_desde', 'fecha_hasta')}
                                     isClearable
                                     placeholderText="Todo el período"
-                                    className={datePickerClasses}
-                                    wrapperClassName="w-full"
+                                    className="pay-list-filter-datepicker"
+                                    wrapperClassName="pay-list-filter-datepicker-wrapper"
                                 />
                             </div>
 
                             {/* Rango de Fecha de Creación del registro, resuelto en un único calendario */}
-                            <div className="flex flex-col space-y-1">
-                                <label className="text-xs font-semibold text-gray-600">Fecha de Creación</label>
+                            <div className="pay-list-filter-field">
+                                <label className="pay-list-filter-label">Fecha de Creación</label>
                                 <DatePicker
                                     selectsRange
                                     locale="es"
@@ -392,14 +390,14 @@ const PaymentsPage = () => {
                                     onChange={handleDateRangeChange('creacion_desde', 'creacion_hasta')}
                                     isClearable
                                     placeholderText="Todo el período"
-                                    className={datePickerClasses}
-                                    wrapperClassName="w-full"
+                                    className="pay-list-filter-datepicker"
+                                    wrapperClassName="pay-list-filter-datepicker-wrapper"
                                 />
                             </div>
 
                             {/* Rango de Importes, resuelto en un único deslizador de doble control */}
-                            <div className="flex flex-col space-y-1">
-                                <label className="text-xs font-semibold text-gray-600">Monto ($)</label>
+                            <div className="pay-list-filter-field">
+                                <label className="pay-list-filter-label">Monto ($)</label>
                                 <AmountRangeSlider
                                     min={0}
                                     max={topeEfectivo}
@@ -417,89 +415,89 @@ const PaymentsPage = () => {
 
 
             {/* Contenedor de la Tabla Principal */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="pay-list-table-card">
 
                 {/*Manejo de errores*/}
                 {error && (
-                    <div className="p-4 m-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="pay-list-message--error">
                         {error}
                     </div>
                 )}
 
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200 text-sm">
+                <div className="pay-list-table-wrapper">
+                    <table className="pay-list-table">
                         {/*Nº Pago interno, Fecha, Cliente, Medio de pago, Monto, Estado (integrando el componente `PaymentStatusBadge`), Acciones. */}
-                        <thead className="bg-gray-50 text-gray-500 text-xs font-bold uppercase tracking-wider">
+                        <thead className="pay-list-table-head">
                             <tr>
-                                <th className="px-4 py-3.5 text-left cursor-pointer select-none hover:text-gray-700 transition-colors" onClick={() => handleSort('id_pago')}>
+                                <th className="pay-list-table-th" onClick={() => handleSort('id_pago')}>
                                     N° Pago {getSortIndicator('id_pago')}
                                 </th>
-                                <th className="px-4 py-3.5 text-left cursor-pointer select-none hover:text-gray-700 transition-colors" onClick={() => handleSort('cliente_nombre')}>
+                                <th className="pay-list-table-th" onClick={() => handleSort('cliente_nombre')}>
                                     Cliente {getSortIndicator('cliente_nombre')}
                                 </th>
-                                <th className="px-4 py-3.5 text-left cursor-pointer select-none hover:text-gray-700 transition-colors" onClick={() => handleSort('monto')}>
+                                <th className="pay-list-table-th" onClick={() => handleSort('monto')}>
                                     Monto ($) {getSortIndicator('monto')}
                                 </th>
-                                <th className="px-4 py-3.5 text-center cursor-pointer select-none hover:text-gray-700 transition-colors" onClick={() => handleSort('medio_pago_nombre')}>
+                                <th className="pay-list-table-th--center" onClick={() => handleSort('medio_pago_nombre')}>
                                     Medio de Pago {getSortIndicator('medio_pago_nombre')}
                                 </th>
-                                <th className="px-4 py-3.5 text-center cursor-pointer select-none hover:text-gray-700 transition-colors" onClick={() => handleSort('estado_pago_nombre')}>
+                                <th className="pay-list-table-th--center" onClick={() => handleSort('estado_pago_nombre')}>
                                     Estado {getSortIndicator('estado_pago_nombre')}
                                 </th>
-                                <th className="px-4 py-3.5 text-left cursor-pointer select-none hover:text-gray-700 transition-colors" onClick={() => handleSort('fecha_creacion')}>
+                                <th className="pay-list-table-th" onClick={() => handleSort('fecha_creacion')}>
                                     Fecha Creación {getSortIndicator('fecha_creacion')}
                                 </th>
-                                <th className="px-4 py-3.5 text-left cursor-pointer select-none hover:text-gray-700 transition-colors" onClick={() => handleSort('fecha_pago')}>
+                                <th className="pay-list-table-th" onClick={() => handleSort('fecha_pago')}>
                                     Fecha Recepción {getSortIndicator('fecha_pago')}
                                 </th>
-                                <th className="px-4 py-4 text-center">
+                                <th className="pay-list-table-th--actions">
                                     Acciones
                                 </th>
                             </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200 text-gray-700 font-medium">
+                        <tbody className="pay-list-table-body">
 
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan="8" className="px-6 py-8 text-center text-gray-400 animate-pulse">
+                                    <td colSpan="8" className="pay-list-table-loading">
                                         Cargando Pagos ...
                                     </td>
                                 </tr>
                             ) : payments.length === 0 ? (
                                 <tr>
-                                    <td colSpan="8" className="px-4 py-8 text-center text-gray-400 font-medium border-2 border-dashed border-gray-100">
+                                    <td colSpan="8" className="pay-list-table-empty">
                                         No se encontraron pagos que coincidan con los filtros seleccionados.
                                     </td>
                                 </tr>
                             ) : (
                                 payments.map((pago) => (
-                                    <tr key={pago.id_pago} className="hover:bg-slate-50 transition-colors">
-                                        <td className="px-6 py-4 whitespace-nowrap font-mono text-blue-600 font-bold">
+                                    <tr key={pago.id_pago} className="pay-list-table-row">
+                                        <td className="pay-list-cell-id">
                                             #PAGO-{pago.id_pago.toString().padStart(4, '0')}
                                         </td>
-                                        <td className="px-6 py-3 font-bold text-slate-700">
+                                        <td className="pay-list-cell-client">
                                             {pago.cliente_nombre}
                                         </td>
-                                        <td className="px-6 py-3 font-mono font-black text-left text-slate-800">
+                                        <td className="pay-list-cell-amount">
                                             {formatCurrency(pago.monto)}
                                         </td>
-                                        <td className="px-6 py-3 text-center text-slate-600">
+                                        <td className="pay-list-cell-method">
                                             {pago.medio_pago_nombre}
                                         </td>
-                                        <td className="px-6 py-3 text-center">
+                                        <td className="pay-list-cell-status">
                                             <PaymentStatusBadge status={pago.estado_pago_nombre} />
                                         </td>
-                                        <td className="px-6 py-3 font-mono text-slate-600">
+                                        <td className="pay-list-cell-date">
                                             {formatDate(pago.fecha_creacion)}
                                         </td>
-                                        <td className="px-6 py-3 font-mono text-slate-600">
+                                        <td className="pay-list-cell-date">
                                             {formatDate(pago.fecha_pago)}
                                         </td>
-                                        <td className="px-6 py-3 text-center flex justify-center gap-3">
+                                        <td className="pay-list-cell-actions">
                                             <button
                                                 type="button"
                                                 onClick={() => navigate(`/pagos/${pago.id_pago}`)}
-                                                className="px-4 py-1.5 text-xs font-bold text-slate-600 hover:text-white hover:bg-blue-600 border border-slate-200 rounded-lg transition-all"
+                                                className="pay-list-btn-detail"
                                             >
                                                 Ver Detalle
                                             </button>
@@ -512,8 +510,8 @@ const PaymentsPage = () => {
                 </div>
 
                 {/* Pie de tabla */}
-                <div className="p-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
-                    <span className="text-xs text-gray-500 font-medium">
+                <div className="pay-list-footer">
+                    <span className="pay-list-footer-text">
                         Mostrando {payments.length} pago{payments.length !== 1 && 's'} listado{payments.length !== 1 && 's'}
                     </span>
                 </div>
