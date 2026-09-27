@@ -268,6 +268,48 @@ exports.findAll = async (filters = {}) => {
 };
 
 /**
+ * Busca un pago puntual por su número interno, hidratado con las entidades relacionadas
+ * (cliente, estado y medio de pago), de modo que la capa de servicio pueda evaluar el nombre
+ * del estado vigente y la bandera de acreditación diferida sin consultas adicionales.
+ * @param {number} idPago - Identificador único del pago.
+ * @returns {Promise<Object|null>} Registro del pago con sus entidades relacionadas o null si no existe.
+ */
+exports.findById = async (idPago) => {
+    const query = `
+        SELECT
+            P.id_pago,
+            P.id_cliente,
+            C.nombre AS cliente_nombre,
+            C.cuit AS cliente_cuit,
+            P.id_estado_pago,
+            EP.nombre AS estado_pago_nombre,
+            P.id_medio_pago,
+            MP.nombre AS medio_pago_nombre,
+            MP.es_diferido,
+            P.monto,
+            P.fecha_pago,
+            P.numero_comprobante,
+            P.observaciones,
+            P.fecha_creacion,
+            P.fecha_actualizacion
+        FROM Pago P
+        INNER JOIN Cliente C ON P.id_cliente = C.id_cliente
+        INNER JOIN EstadoPago EP ON P.id_estado_pago = EP.id_estado_pago
+        INNER JOIN MedioPago MP ON P.id_medio_pago = MP.id_medio_pago
+        WHERE P.id_pago = ?
+        LIMIT 1;
+    `;
+
+    try {
+        const [rows] = await db.query(query, [idPago]);
+        return rows.length > 0 ? rows[0] : null;
+    } catch (error) {
+        console.error("Error en Payment.findById:", error);
+        throw new Error("Error en la capa de datos al buscar el pago.");
+    }
+};
+
+/**
  * Inserta un nuevo registro de pago en la tabla Pago. Soporta la inyección explícita de una
  * conexión transaccional para garantizar atomicidad en operaciones compuestas; en su ausencia,
  * utiliza el pool general de conexiones.
@@ -305,5 +347,80 @@ exports.create = async (paymentData, connection = null) => {
     } catch (error) {
         console.error("Error en Payment.create:", error);
         throw new Error("Error en la capa de datos al registrar el pago.");
+    }
+};
+
+/**
+ * Actualiza las columnas mutables autorizadas de un pago existente. No inspecciona qué campos
+ * cambiaron: recibe el registro completo ya resuelto por el Service. El estado vigente exigido
+ * forma parte de la cláusula WHERE para que la propia sentencia impida alterar un pago que fue
+ * formalizado de manera concurrente. Soporta la inyección explícita de una conexión transaccional.
+ * @param {number} idPago - Identificador del pago a modificar.
+ * @param {Object} paymentData - Datos completos a persistir.
+ * @param {number} paymentData.id_estado_pago - Identificador del estado destino del pago.
+ * @param {number} paymentData.id_medio_pago - Identificador del medio de pago.
+ * @param {number} paymentData.monto - Importe del pago (estrictamente positivo).
+ * @param {Date|string} paymentData.fecha_pago - Fecha y hora de la transacción.
+ * @param {string|null} paymentData.numero_comprobante - Número de comprobante de respaldo.
+ * @param {string|null} paymentData.observaciones - Observaciones adicionales.
+ * @param {number} idEstadoActual - Estado que el pago debe conservar para admitir la mutación.
+ * @param {Object} [connection=null] - Conexión transaccional inyectada por el Service (opcional).
+ * @returns {Promise<number>} Cantidad de filas afectadas por la actualización.
+ */
+exports.update = async (idPago, paymentData, idEstadoActual, connection = null) => {
+    const executor = connection || db;
+
+    const query = `
+        UPDATE Pago SET
+            monto = ?,
+            id_medio_pago = ?,
+            id_estado_pago = ?,
+            fecha_pago = ?,
+            numero_comprobante = ?,
+            observaciones = ?
+        WHERE id_pago = ? AND id_estado_pago = ?;
+    `;
+
+    try {
+        const [result] = await executor.execute(query, [
+            paymentData.monto,
+            paymentData.id_medio_pago,
+            paymentData.id_estado_pago,
+            paymentData.fecha_pago,
+            paymentData.numero_comprobante ?? null,
+            paymentData.observaciones ?? null,
+            idPago,
+            idEstadoActual
+        ]);
+        return result.affectedRows;
+    } catch (error) {
+        console.error("Error en Payment.update:", error);
+        throw new Error("Error en la capa de datos al modificar el pago.");
+    }
+};
+
+/**
+ * Ejecuta la baja de un pago. El estado vigente exigido forma parte de la cláusula WHERE para que
+ * la propia sentencia impida eliminar un pago que fue formalizado de manera concurrente.
+ * Soporta la inyección explícita de una conexión transaccional.
+ * @param {number} idPago - Identificador del pago a eliminar.
+ * @param {number} idEstadoActual - Estado que el pago debe conservar para admitir la baja.
+ * @param {Object} [connection=null] - Conexión transaccional inyectada por el Service (opcional).
+ * @returns {Promise<number>} Cantidad de filas afectadas por la eliminación.
+ */
+exports.delete = async (idPago, idEstadoActual, connection = null) => {
+    const executor = connection || db;
+
+    const query = `
+        DELETE FROM Pago
+        WHERE id_pago = ? AND id_estado_pago = ?;
+    `;
+
+    try {
+        const [result] = await executor.execute(query, [idPago, idEstadoActual]);
+        return result.affectedRows;
+    } catch (error) {
+        console.error("Error en Payment.delete:", error);
+        throw new Error("Error en la capa de datos al eliminar el pago.");
     }
 };

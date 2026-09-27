@@ -307,6 +307,150 @@ class PaymentService {
         };
     }
 
+    /**
+     * Orquesta la modificación de un pago existente. Solo admite la mutación mientras el registro
+     * permanece en estado "Borrador": alcanzado cualquier estado definitivo, el pago se vuelve
+     * inmutable para preservar la consistencia contable del cliente. Valida el importe, la
+     * existencia del medio de pago y la correspondencia entre el medio de cobro resultante y el
+     * estado solicitado, consolidando el registro completo a persistir a partir del pago vigente.
+     * Resuelve el Requerimiento 32 de modificación de pagos.
+     * @param {number|string} id - Identificador del pago a modificar.
+     * @param {Object} updateData - Campos mutables provenientes del controlador.
+     * @param {number|string} [updateData.monto] - Nuevo importe del pago (estrictamente positivo).
+     * @param {number} [updateData.id_medio_pago] - Nuevo medio de pago utilizado.
+     * @param {number} [updateData.id_estado_pago] - Estado operativo destino del pago.
+     * @param {Date|string} [updateData.fecha_pago] - Nueva fecha y hora de la transacción.
+     * @param {string|null} [updateData.numero_comprobante] - Nuevo comprobante de respaldo.
+     * @param {string|null} [updateData.observaciones] - Nuevas observaciones del pago.
+     * @returns {Promise<Object>} El pago actualizado y normalizado, con sus entidades relacionadas.
+     * @throws {Error} Excepción HTTP 404 si el pago o las entidades referidas no existen, 400 ante
+     * datos inconsistentes, o 409 si el pago ya no es mutable.
+     */
+    static async updatePayment(id, updateData) {
+        const pagoVigente = await Payment.findById(id);
+        if (!pagoVigente) {
+            const error = new Error(`No se encontró un pago registrado bajo el identificador #${id}.`);
+            error.statusCode = 404;
+            throw error;
+        }
+
+        // Regla de negocio: Inmutabilidad fuera del estado "Borrador" (Fail-Fast)
+        if (pagoVigente.estado_pago_nombre !== ESTADOS_PAGO.BORRADOR) {
+            const error = new Error(`El pago #${id} se encuentra en estado "${pagoVigente.estado_pago_nombre}" y ya no admite modificaciones.`);
+            error.statusCode = 409;
+            throw error;
+        }
+
+        // El cliente asociado se omite deliberadamente: un pago no puede reasignarse a otro cliente
+        const { monto, id_medio_pago, id_estado_pago, fecha_pago, numero_comprobante, observaciones } = updateData;
+
+        // Cada campo se evalúa contra undefined para distinguir un criterio ausente de un valor
+        // vacío enviado a propósito, que debe llegar a la base de datos como tal.
+        let montoResuelto = Number(pagoVigente.monto);
+        if (monto !== undefined) {
+            const montoNumerico = Number(monto);
+            if (!monto || Number.isNaN(montoNumerico) || montoNumerico <= 0) {
+                const error = new Error('El importe del pago debe ser un número positivo.');
+                error.statusCode = 400;
+                throw error;
+            }
+            montoResuelto = montoNumerico;
+        }
+
+        let fechaResuelta = pagoVigente.fecha_pago;
+        if (fecha_pago !== undefined) {
+            if (!fecha_pago) {
+                const error = new Error('La fecha de pago no puede quedar vacía.');
+                error.statusCode = 400;
+                throw error;
+            }
+            fechaResuelta = fecha_pago;
+        }
+
+        // Validación de la existencia del medio de pago informado
+        let idMedioResuelto = pagoVigente.id_medio_pago;
+        if (id_medio_pago !== undefined) {
+            const medio = await Payment.findMethodById(id_medio_pago);
+            if (!medio) {
+                const error = new Error(`No se encontró un medio de pago registrado bajo el identificador #${id_medio_pago}.`);
+                error.statusCode = 404;
+                throw error;
+            }
+            idMedioResuelto = medio.id_medio_pago;
+        }
+
+        // Regla de negocio: un medio de acreditación diferida no puede quedar "Aceptado" de forma
+        // directa. La guarda se evalúa sobre el medio de cobro resultante de esta edición.
+        let idEstadoResuelto = pagoVigente.id_estado_pago;
+        if (id_estado_pago !== undefined) {
+            const estadoValidado = await this.validatePaymentStatusAssignment(idMedioResuelto, id_estado_pago);
+            idEstadoResuelto = estadoValidado.id_estado_pago;
+        }
+
+        const dataToPersist = {
+            monto: montoResuelto,
+            id_medio_pago: idMedioResuelto,
+            id_estado_pago: idEstadoResuelto,
+            fecha_pago: fechaResuelta,
+            numero_comprobante: numero_comprobante !== undefined ? numero_comprobante : pagoVigente.numero_comprobante,
+            observaciones: observaciones !== undefined ? observaciones : pagoVigente.observaciones
+        };
+
+        // El estado vigente oficia de guarda dentro de la propia sentencia SQL: si otro operador
+        // formalizó el pago entre la lectura y la escritura, ninguna fila resulta afectada.
+        const affectedRows = await Payment.update(id, dataToPersist, pagoVigente.id_estado_pago);
+        if (affectedRows === 0) {
+            const error = new Error(`El pago #${id} fue formalizado por otra operación y ya no admite modificaciones.`);
+            error.statusCode = 409;
+            throw error;
+        }
+
+        const pagoActualizado = await Payment.findById(id);
+
+        // Normalización hacia un DTO plano optimizado para el consumo del cliente web
+        return {
+            ...pagoActualizado,
+            monto: Number(pagoActualizado.monto).toFixed(2),
+            fecha_pago: pagoActualizado.fecha_pago ? new Date(pagoActualizado.fecha_pago).toISOString() : null,
+            fecha_creacion: pagoActualizado.fecha_creacion ? new Date(pagoActualizado.fecha_creacion).toISOString() : null,
+            fecha_actualizacion: pagoActualizado.fecha_actualizacion ? new Date(pagoActualizado.fecha_actualizacion).toISOString() : null
+        };
+    }
+
+    /**
+     * Orquesta la baja de un pago. La eliminación se admite únicamente mientras el registro
+     * permanece en estado "Borrador", dado que un borrador nunca impactó el saldo consolidado del
+     * cliente y su descarte no deja inconsistencias contables.
+     * Resuelve el Requerimiento 32 de descarte de pagos.
+     * @param {number|string} id - Identificador del pago a eliminar.
+     * @returns {Promise<Object>} Identificador del pago dado de baja.
+     * @throws {Error} Excepción HTTP 404 si el pago no existe, o 409 si ya no admite la baja.
+     */
+    static async deletePayment(id) {
+        const pagoVigente = await Payment.findById(id);
+        if (!pagoVigente) {
+            const error = new Error(`No se encontró un pago registrado bajo el identificador #${id}.`);
+            error.statusCode = 404;
+            throw error;
+        }
+
+        // Regla de negocio: Baja acotada al estado "Borrador" (Fail-Fast)
+        if (pagoVigente.estado_pago_nombre !== ESTADOS_PAGO.BORRADOR) {
+            const error = new Error(`El pago #${id} se encuentra en estado "${pagoVigente.estado_pago_nombre}" y ya no admite ser eliminado.`);
+            error.statusCode = 409;
+            throw error;
+        }
+
+        const affectedRows = await Payment.delete(id, pagoVigente.id_estado_pago);
+        if (affectedRows === 0) {
+            const error = new Error(`El pago #${id} fue formalizado por otra operación y ya no admite ser eliminado.`);
+            error.statusCode = 409;
+            throw error;
+        }
+
+        return { id_pago: pagoVigente.id_pago };
+    }
+
 }
 
 module.exports = PaymentService;

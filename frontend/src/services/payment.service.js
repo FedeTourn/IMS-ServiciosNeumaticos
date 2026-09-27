@@ -40,6 +40,63 @@ export const apiCreatePayment = async (paymentData) => {
     }
 };
 
+/**
+ * Envía los campos modificados de un pago en estado "Borrador". Los pagos que ya alcanzaron un
+ * estado definitivo son rechazados por el backend con un conflicto de negocio.
+ * @param {number|string} id - Identificador del pago a modificar.
+ * @param {Object} paymentData - Campos mutables del pago (importe, medio, estado, fecha, comprobante y observaciones).
+ * @returns {Promise<Object>} Registro de pago actualizado, hidratado con cliente, estado y medio de pago.
+ * @throws {Error} Excepción enriquecida con el código de estado HTTP para su manejo en la UI.
+ */
+export const apiUpdatePayment = async (id, paymentData) => {
+    try {
+        const response = await fetch(`${API_URL}/${id}`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(paymentData)
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+            const error = new Error(data.message || 'Error al modificar el pago.');
+            error.statusCode = response.status;
+            throw error;
+        }
+
+        return data.data;
+    } catch (error) {
+        console.error('[PaymentService Front Error] Falla de comunicación con el endpoint PUT /api/payment:', error.message);
+        throw error;
+    }
+};
+
+/**
+ * Solicita la baja definitiva de un pago en estado "Borrador".
+ * @param {number|string} id - Identificador del pago a eliminar.
+ * @returns {Promise<string>} Mensaje de confirmación devuelto por el backend.
+ * @throws {Error} Excepción enriquecida con el código de estado HTTP para su manejo en la UI.
+ */
+export const apiDeletePayment = async (id) => {
+    try {
+        const response = await fetch(`${API_URL}/${id}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+            const error = new Error(data.message || 'Error al eliminar el pago.');
+            error.statusCode = response.status;
+            throw error;
+        }
+
+        return data.message;
+    } catch (error) {
+        console.error('[PaymentService Front Error] Falla de comunicación con el endpoint DELETE /api/payment:', error.message);
+        throw error;
+    }
+};
+
 
 /**
  * Recupera el historial de pagos registrados aplicando criterios de filtrado acumulativos (AND).
@@ -135,6 +192,26 @@ export const fetchPayments = async (filters = {}) => {
         console.error('[PaymentService Front Error] Falla de comunicación con el endpoint GET /api/payment:', error.message);
         throw error;
     }
+};
+
+/**
+ * Recupera un pago puntual por su número interno para hidratar la vista de modificación.
+ * Se resuelve sobre la consulta multicriterio filtrando por identificador, dado que el backend
+ * expone la lectura de pagos como una única operación de listado.
+ * @param {number|string} id - Número interno del pago a recuperar.
+ * @returns {Promise<Object>} Pago hidratado con cliente, estado y medio de pago.
+ * @throws {Error} Excepción con código 404 si el identificador no corresponde a ningún pago.
+ */
+export const fetchPaymentById = async (id) => {
+    const payments = await fetchPayments({ id_pago: id });
+
+    if (!payments || payments.length === 0) {
+        const error = new Error(`No se encontró un pago registrado bajo el identificador #${id}.`);
+        error.statusCode = 404;
+        throw error;
+    }
+
+    return payments[0];
 };
 
 /**

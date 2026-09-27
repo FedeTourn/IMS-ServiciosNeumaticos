@@ -14,4 +14,10 @@ router.get('/', paymentController.handleGetPayments);
 // POST /api/payment
 router.post('/', paymentController.handleCreatePayment);
 
+// PUT /api/payment/:id
+router.put('/:id', paymentController.handleUpdatePayment);
+
+// DELETE /api/payment/:id
+router.delete('/:id', paymentController.handleDeletePayment);
+
 module.exports = router;

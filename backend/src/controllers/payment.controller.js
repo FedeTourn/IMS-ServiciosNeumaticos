@@ -57,6 +57,88 @@ exports.handleCreatePayment = async (req, res) => {
 };
 
 /**
+ * Endpoint encargado de procesar la modificación de un pago existente.
+ * Valida la forma del identificador y del payload, y delega la orquestación de negocio al servicio,
+ * que resuelve la inmutabilidad del registro según su estado operativo.
+ * @param {Object} req - Objeto de petición Express.
+ * @param {Object} res - Objeto de respuesta Express.
+ */
+exports.handleUpdatePayment = async (req, res) => {
+    try {
+        const idPago = parseInt(req.params.id, 10);
+
+        if (Number.isNaN(idPago) || idPago <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: "El identificador del pago debe ser un número entero y positivo."
+            });
+        }
+
+        // Campos que la capa de negocio admite mutar sobre un pago en Borrador
+        const camposMutables = ['monto', 'id_medio_pago', 'id_estado_pago', 'fecha_pago', 'numero_comprobante', 'observaciones'];
+        const payload = req.body || {};
+
+        if (!camposMutables.some(campo => payload[campo] !== undefined)) {
+            return res.status(400).json({
+                success: false,
+                message: "Debe informarse al menos un campo modificable del pago."
+            });
+        }
+
+        const result = await PaymentService.updatePayment(idPago, payload);
+
+        return res.status(200).json({
+            success: true,
+            data: result
+        });
+
+    } catch (error) {
+        console.error(`[PaymentController Error] Falla al despachar endpoint de modificación de pago: ${error.message}`);
+
+        const statusCode = error.statusCode || 500;
+        return res.status(statusCode).json({
+            success: false,
+            message: error.message || 'Ocurrió un error interno en el servidor al modificar el pago.'
+        });
+    }
+};
+
+/**
+ * Endpoint encargado de procesar la baja de un pago en estado Borrador.
+ * Valida la forma del identificador y delega la guarda de negocio al servicio.
+ * @param {Object} req - Objeto de petición Express.
+ * @param {Object} res - Objeto de respuesta Express.
+ */
+exports.handleDeletePayment = async (req, res) => {
+    try {
+        const idPago = parseInt(req.params.id, 10);
+
+        if (Number.isNaN(idPago) || idPago <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: "El identificador del pago debe ser un número entero y positivo."
+            });
+        }
+
+        const result = await PaymentService.deletePayment(idPago);
+
+        return res.status(200).json({
+            success: true,
+            message: `El pago #${result.id_pago} fue eliminado correctamente.`
+        });
+
+    } catch (error) {
+        console.error(`[PaymentController Error] Falla al despachar endpoint de baja de pago: ${error.message}`);
+
+        const statusCode = error.statusCode || 500;
+        return res.status(statusCode).json({
+            success: false,
+            message: error.message || 'Ocurrió un error interno en el servidor al eliminar el pago.'
+        });
+    }
+};
+
+/**
  * Obtiene el historial de pagos registrados aplicando criterios de filtrado dinámicos y combinables,
  * junto con el ordenamiento solicitado por la grilla de datos.
  * Mapea los parámetros de consulta provenientes de la URL (Query Params).
