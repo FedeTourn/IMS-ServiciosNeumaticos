@@ -2,13 +2,15 @@ const PaymentService = require('../services/payment.service');
 
 /**
  * Endpoint encargado de procesar el alta de un nuevo registro de pago.
- * Valida la forma básica del payload y delega la orquestación de negocio al servicio.
+ * Valida la forma básica del payload y delega la orquestación de negocio al servicio. La
+ * obligatoriedad condicional del banco, el comprobante y el vencimiento no se evalúa aquí:
+ * depende de la naturaleza del medio de cobro y es una regla de negocio del servicio.
  * @param {Object} req - Objeto de petición Express.
  * @param {Object} res - Objeto de respuesta Express.
  */
 exports.handleCreatePayment = async (req, res) => {
     try {
-        const { id_cliente, id_medio_pago, monto, fecha_pago } = req.body;
+        const { id_cliente, id_medio_pago, monto, fecha_recepcion } = req.body;
 
         if (!id_cliente) {
             return res.status(400).json({
@@ -31,10 +33,10 @@ exports.handleCreatePayment = async (req, res) => {
             });
         }
 
-        if (!fecha_pago) {
+        if (!fecha_recepcion) {
             return res.status(400).json({
                 success: false,
-                message: "El campo 'fecha_pago' es obligatorio."
+                message: "El campo 'fecha_recepcion' es obligatorio."
             });
         }
 
@@ -75,7 +77,7 @@ exports.handleUpdatePayment = async (req, res) => {
         }
 
         // Campos que la capa de negocio admite mutar sobre un pago en Borrador
-        const camposMutables = ['monto', 'id_medio_pago', 'id_estado_pago', 'fecha_pago', 'numero_comprobante', 'observaciones'];
+        const camposMutables = ['monto', 'id_medio_pago', 'id_banco', 'id_estado_pago', 'fecha_recepcion', 'fecha_vencimiento', 'numero_comprobante', 'observaciones'];
         const payload = req.body || {};
 
         if (!camposMutables.some(campo => payload[campo] !== undefined)) {
@@ -151,11 +153,14 @@ exports.handleGetPayments = async (req, res) => {
             id_cliente,
             id_estado_pago,
             id_medio_pago,
+            id_banco,
             monto,
             monto_min,
             monto_max,
             fecha_desde,
             fecha_hasta,
+            vencimiento_desde,
+            vencimiento_hasta,
             numero_comprobante,
             creacion_desde,
             creacion_hasta,
@@ -171,11 +176,14 @@ exports.handleGetPayments = async (req, res) => {
             id_cliente: id_cliente ? parseInt(id_cliente, 10) : null,
             id_estado_pago: id_estado_pago ? parseInt(id_estado_pago, 10) : null,
             id_medio_pago: id_medio_pago ? parseInt(id_medio_pago, 10) : null,
+            id_banco: id_banco ? parseInt(id_banco, 10) : null,
             monto: monto ? Number(monto) : null,
             monto_min: monto_min ? Number(monto_min) : null,
             monto_max: monto_max ? Number(monto_max) : null,
             fecha_desde: fecha_desde ? String(fecha_desde) : null,
             fecha_hasta: fecha_hasta ? String(fecha_hasta) : null,
+            vencimiento_desde: vencimiento_desde ? String(vencimiento_desde) : null,
+            vencimiento_hasta: vencimiento_hasta ? String(vencimiento_hasta) : null,
             numero_comprobante: numero_comprobante ? String(numero_comprobante).trim() : null,
             creacion_desde: creacion_desde ? String(creacion_desde) : null,
             creacion_hasta: creacion_hasta ? String(creacion_hasta) : null,
@@ -238,6 +246,60 @@ exports.getPaymentStates = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Error interno del servidor al recuperar el catálogo de estados de pago.'
+        });
+    }
+};
+
+/**
+ * Obtiene el catálogo completo de entidades bancarias.
+ */
+exports.getBanks = async (req, res) => {
+    try {
+        const banks = await PaymentService.getBanks();
+        return res.status(200).json({
+            success: true,
+            data: banks
+        });
+    } catch (error) {
+        console.error('[PaymentController Error] Falla al recuperar bancos:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor al recuperar el catálogo de bancos.'
+        });
+    }
+};
+
+/**
+ * Endpoint encargado de procesar el alta de una nueva entidad bancaria desde el formulario de pagos.
+ * Valida la presencia del nombre y delega la normalización y el control de duplicados al servicio.
+ * @param {Object} req - Objeto de petición Express.
+ * @param {Object} res - Objeto de respuesta Express.
+ */
+exports.handleCreateBank = async (req, res) => {
+    try {
+        const { nombre } = req.body;
+
+        if (!nombre) {
+            return res.status(400).json({
+                success: false,
+                message: "El campo 'nombre' es obligatorio."
+            });
+        }
+
+        const result = await PaymentService.createBank(req.body);
+
+        return res.status(201).json({
+            success: true,
+            data: result
+        });
+
+    } catch (error) {
+        console.error(`[PaymentController Error] Falla al despachar endpoint de alta de banco: ${error.message}`);
+
+        const statusCode = error.statusCode || 500;
+        return res.status(statusCode).json({
+            success: false,
+            message: error.message || 'Ocurrió un error interno en el servidor al registrar el banco.'
         });
     }
 };

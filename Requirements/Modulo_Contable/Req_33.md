@@ -70,7 +70,7 @@ El objetivo central de este requerimiento es resolver la consolidación del esta
 * `id_cliente`
 * `'CREDITO' AS tipo_movimiento`
 * `monto`
-* `fecha_pago AS fecha_movimiento`
+* `fecha_recepcion AS fecha_movimiento` — la fecha en que el taller recibió el cobro, que es la que ubica el movimiento en el libro; no debe usarse en su lugar la fecha de creación del registro ni, en los cheques, la fecha de vencimiento
 * `NULL AS id_orden_reparacion`
 * `id_pago`
 * `id_estado_pago AS id_estado`
@@ -79,7 +79,7 @@ El objetivo central de este requerimiento es resolver la consolidación del esta
 
 
 
-* **Tarea 0.2:** Verificar la existencia de índices relacionales en `OrdenReparacion(id_cliente, fecha_creacion, id_estado_orden)` y `Pago(id_cliente, fecha_pago, id_estado_pago)` para garantizar que la ejecución del plan de la vista utilice índices compuestos y evite escaneos de tabla completos.
+* **Tarea 0.2:** Verificar la existencia de índices relacionales en `OrdenReparacion(id_cliente, fecha_creacion, id_estado_orden)` y `Pago(id_cliente, fecha_recepcion, id_estado_pago)` para garantizar que la ejecución del plan de la vista utilice índices compuestos y evite escaneos de tabla completos.
 
 
 

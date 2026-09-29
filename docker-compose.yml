@@ -20,6 +20,8 @@ services:
     depends_on:
       - mysql-taller
     env_file: ./backend/.env
+    environment:
+      - TZ=America/Argentina/Buenos_Aires
 
   # Frontend (Web)
   ims-frontend:

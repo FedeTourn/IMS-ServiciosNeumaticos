@@ -8,6 +8,12 @@ router.get('/methods', paymentController.getPaymentMethods);
 // GET /api/payment/states
 router.get('/states', paymentController.getPaymentStates);
 
+// GET /api/payment/banks
+router.get('/banks', paymentController.getBanks);
+
+// POST /api/payment/banks
+router.post('/banks', paymentController.handleCreateBank);
+
 // GET /api/payment (consulta multicriterio por query params)
 router.get('/', paymentController.handleGetPayments);
 

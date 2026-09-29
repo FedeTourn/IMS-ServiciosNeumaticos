@@ -16,6 +16,22 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Table structure for table `Banco`
+--
+
+DROP TABLE IF EXISTS `Banco`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `Banco` (
+  `id_banco` int NOT NULL AUTO_INCREMENT,
+  `nombre` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `fecha_creacion` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id_banco`),
+  UNIQUE KEY `nombre` (`nombre`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `CategoriaCliente`
 --
 
@@ -225,19 +241,23 @@ CREATE TABLE `Pago` (
   `id_estado_pago` int NOT NULL,
   `id_medio_pago` int NOT NULL,
   `monto` decimal(10,2) NOT NULL,
-  `fecha_pago` datetime NOT NULL,
+  `fecha_recepcion` date NOT NULL,
   `numero_comprobante` varchar(100) DEFAULT NULL,
   `observaciones` text,
   `fecha_creacion` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `fecha_actualizacion` timestamp NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+  `id_banco` int DEFAULT NULL,
+  `fecha_vencimiento` date DEFAULT NULL,
   PRIMARY KEY (`id_pago`),
   KEY `fk_pago_cliente` (`id_cliente`),
   KEY `fk_pago_estado` (`id_estado_pago`),
   KEY `fk_pago_medio` (`id_medio_pago`),
+  KEY `fk_pago_banco` (`id_banco`),
+  CONSTRAINT `fk_pago_banco` FOREIGN KEY (`id_banco`) REFERENCES `Banco` (`id_banco`) ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT `fk_pago_cliente` FOREIGN KEY (`id_cliente`) REFERENCES `Cliente` (`id_cliente`) ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT `fk_pago_estado` FOREIGN KEY (`id_estado_pago`) REFERENCES `EstadoPago` (`id_estado_pago`) ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT `fk_pago_medio` FOREIGN KEY (`id_medio_pago`) REFERENCES `MedioPago` (`id_medio_pago`) ON DELETE RESTRICT ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -380,4 +400,4 @@ CREATE TABLE `Usuario` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-20 21:19:52
+-- Dump completed on 2026-09-28 21:39:12

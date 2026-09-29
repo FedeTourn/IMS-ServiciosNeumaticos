@@ -2,18 +2,22 @@
 
 ### Resumen del Requerimiento
 
-El objetivo central es permitir la edición y el descarte de un pago registrado previamente por un cliente dentro del módulo administrativo y contable. La funcionalidad debe operar con una política de defensa estricta basada en el ciclo de vida del comprobante: si el pago se encuentra en estado "Borrador", el usuario puede ajustar libremente el importe, el medio de cobro, la fecha, los datos de respaldo y el estado operativo, o bien descartar el registro por completo. Si el pago ya abandonó el estado "Borrador" ("Pendiente de acreditación", "Aceptado" o "Rechazado"), el sistema debe adoptar una postura defensiva, bloqueando cualquier intento de edición o baja para proteger la integridad del saldo y la consistencia contable del cliente.
+El objetivo central es permitir la edición y el descarte de un pago registrado previamente por un cliente dentro del módulo administrativo y contable. La funcionalidad debe operar con una política de defensa estricta basada en el ciclo de vida del comprobante: si el pago se encuentra en estado "Borrador", el usuario puede ajustar libremente el importe, el medio de cobro, el banco emisor, la fecha de recepción del cobro, la fecha de vencimiento, los datos de respaldo y el estado operativo, o bien descartar el registro por completo. Si el pago ya abandonó el estado "Borrador" ("Pendiente de acreditación", "Aceptado" o "Rechazado"), el sistema debe adoptar una postura defensiva, bloqueando cualquier intento de edición o baja para proteger la integridad del saldo y la consistencia contable del cliente.
 
 Todo pago nace en el sistema en estado "Borrador", con independencia del medio de cobro utilizado. Por lo tanto, esta modificación es también el mecanismo por el cual el registro adquiere su **estado operativo definitivo**: "Pendiente de acreditación", "Aceptado" o "Rechazado". Al asignar ese estado debe respetarse la naturaleza del instrumento de cobro: un medio con acreditación diferida (marcado con `es_diferido = true` en el catálogo de medios de pago, por ejemplo un cheque) no puede pasar directamente a "Aceptado", porque los fondos aún no están acreditados; debe atravesar "Pendiente de acreditación" o permanecer en "Borrador". La resolución posterior de un cobro diferido ya "Pendiente de acreditación" hacia "Aceptado" o "Rechazado" constituye un flujo de transición propio y queda fuera del alcance de este requerimiento.
 
 El ciclo de vida completo del pago, tipificado en la tabla maestra `EstadoPago`, comprende únicamente los estados "Borrador", "Pendiente de acreditación", "Aceptado" y "Rechazado". De ellos, solo "Aceptado" computa sobre el saldo consolidado de la cuenta corriente del cliente.
 
+La edición también puede alterar la naturaleza del instrumento de cobro, y con ella la exigibilidad de los datos que identifican un cheque. Los pagos con medio diferido (`es_diferido = 1` en el catálogo de medios, condición que hoy satisface únicamente el cheque) requieren obligatoriamente banco emisor, número de comprobante externo —el número impreso del cheque— y fecha de vencimiento, mientras que los pagos con medio inmediato no admiten banco ni vencimiento y tratan el comprobante como optativo. Cambiar el medio de cobro de un pago en "Borrador" reabre esa validación por completo: pasar de efectivo a cheque exige completar los tres datos, y pasar de cheque a efectivo obliga a descartarlos.
+
+Asimismo, el registro maneja tres fechas de naturaleza distinta que la edición debe mantener separadas: `fecha_creacion`, marca de auditoría estampada por el motor y no editable; `fecha_recepcion`, la fecha en que el taller recibió el cobro, editable y obligatoria para todo pago; y `fecha_vencimiento`, la fecha desde la cual el cheque puede presentarse al cobro en el banco, editable y exigible solo en los medios diferidos.
+
 ### Backend (Capa de Datos, Servicio y Exposición)
 
-* **Model (`Payment.js`):** La capa de acceso a datos sobre MySQL debe incorporar el método `findById(id)`, que recupera el registro de `Pago` hidratado mediante `INNER JOIN` hacia `Cliente`, `EstadoPago` y `MedioPago`, de modo que la capa de servicio pueda evaluar el nombre del estado actual y la bandera `es_diferido` del medio de cobro sin consultas adicionales. Debe además exponer `update(id, updateData, ...)` con una cláusula `SET` fija sobre las columnas mutables autorizadas —recibiendo desde la capa de servicio el registro completo ya resuelto, tal como lo hacen los métodos de actualización del resto de los modelos del proyecto— y `delete(id, ...)`. Ambos métodos de mutación admiten de forma opcional una conexión (`connection`) para operar dentro de un contexto transaccional y, en su ausencia, recaen sobre el pool general de conexiones. No se estampa manualmente la fecha de última mutación: la columna `fecha_actualizacion` de la tabla `Pago` se actualiza sola por `ON UPDATE CURRENT_TIMESTAMP`.
+* **Model (`Payment.js`):** La capa de acceso a datos sobre MySQL debe incorporar el método `findById(id)`, que recupera el registro de `Pago` hidratado mediante `INNER JOIN` hacia `Cliente`, `EstadoPago` y `MedioPago`, y `LEFT JOIN` hacia `Banco` —necesariamente externo, dado que `id_banco` es nulo en los cobros inmediatos y un cruzamiento interno devolvería `null` para esos pagos—, de modo que la capa de servicio pueda evaluar el nombre del estado actual y la bandera `es_diferido` del medio de cobro, y la interfaz mostrar el nombre del banco emisor, sin consultas adicionales. Debe además exponer `update(id, updateData, ...)` con una cláusula `SET` fija sobre las columnas mutables autorizadas —recibiendo desde la capa de servicio el registro completo ya resuelto, tal como lo hacen los métodos de actualización del resto de los modelos del proyecto— y `delete(id, ...)`. Ambos métodos de mutación admiten de forma opcional una conexión (`connection`) para operar dentro de un contexto transaccional y, en su ausencia, recaen sobre el pool general de conexiones. No se estampa manualmente la fecha de última mutación: la columna `fecha_actualizacion` de la tabla `Pago` se actualiza sola por `ON UPDATE CURRENT_TIMESTAMP`.
 
 
-* **Service (`payment.service.js`):** A través de los métodos estáticos `updatePayment(id, updateData)` y `deletePayment(id)` de la clase `PaymentService`, esta capa orquesta la operación y centraliza las reglas de negocio. Su principal responsabilidad es consultar previamente la entidad mediante `Payment.findById(id)` e implementar una cláusula de guarda (Fail-Fast): si el pago no existe, interrumpe el flujo; si el nombre del estado actual es distinto de "Borrador", aborta inmediatamente arrojando una excepción de negocio semántica para impedir la alteración contable. Asimismo valida que el importe modificado permanezca estrictamente positivo (`monto > 0`), que el medio de pago informado exista en el catálogo, y que la combinación resultante entre medio de cobro y estado solicitado sea legítima (un medio diferido no puede quedar "Aceptado"). Los estados se referencian siempre por su nombre semántico a través del diccionario de constantes `ESTADOS_PAGO` definido en el módulo, resolviendo sus identificadores contra el catálogo en tiempo de ejecución, nunca por número fijo.
+* **Service (`payment.service.js`):** A través de los métodos estáticos `updatePayment(id, updateData)` y `deletePayment(id)` de la clase `PaymentService`, esta capa orquesta la operación y centraliza las reglas de negocio. Su principal responsabilidad es consultar previamente la entidad mediante `Payment.findById(id)` e implementar una cláusula de guarda (Fail-Fast): si el pago no existe, interrumpe el flujo; si el nombre del estado actual es distinto de "Borrador", aborta inmediatamente arrojando una excepción de negocio semántica para impedir la alteración contable. Asimismo valida que el importe modificado permanezca estrictamente positivo (`monto > 0`), que el medio de pago informado exista en el catálogo, que la combinación resultante entre medio de cobro y estado solicitado sea legítima (un medio diferido no puede quedar "Aceptado"), y que el registro resultante de la edición sea coherente con la naturaleza del instrumento: banco emisor, número de comprobante y fecha de vencimiento presentes y válidos si el medio resultante es diferido, y banco y vencimiento en `null` si es inmediato. Los estados se referencian siempre por su nombre semántico a través del diccionario de constantes `ESTADOS_PAGO` definido en el módulo, resolviendo sus identificadores contra el catálogo en tiempo de ejecución, nunca por número fijo.
 
 
 * **Controller (`payment.controller.js`):** Debe exponer los endpoints `PUT /api/payment/:id` y `DELETE /api/payment/:id` construidos sobre Express.js, respetando el prefijo bajo el que está montado el enrutador de pagos en `app.js` (`/api/payment`, en singular). Su tarea es atrapar las peticiones HTTP, validar la sintaxis básica del parámetro de ruta (`id`) y del cuerpo (`req.body`), delegar el procesamiento a la capa de servicios y devolver la respuesta con el sobre JSON uniforme del módulo (`{ success, data }` o `{ success, message }`) junto al código semántico correspondiente (`200 OK`, `400 Bad Request`, `404 Not Found`, `409 Conflict`, `500 Internal Server Error`), propagando el `statusCode` que adjunta la excepción de negocio.
@@ -25,7 +29,7 @@ El ciclo de vida completo del pago, tipificado en la tabla maestra `EstadoPago`,
 * **Integración API (`payment.service.js`):** Se deben implementar las funciones cliente asíncronas `apiUpdatePayment(id, paymentData)` y `apiDeletePayment(id)` para despachar las peticiones HTTP (PUT y DELETE respectivamente) hacia `${API_URL}/:id` reutilizando el helper `getAuthHeaders()` del archivo, resolviendo las promesas, controlando `!response.ok` y elevando errores enriquecidos con `error.statusCode` para su manejo diferenciado en la interfaz.
 
 
-* **UI (`UpdatePaymentPage.jsx`):** Página de edición desarrollada en React.js y estilizada con clases de utilidad de TailwindCSS, alcanzable desde el botón de detalle de cada fila de la grilla de pagos mediante la ruta `/pagos/:id_pago`. Debe responder al ciclo de vida del pago: si el registro no está en "Borrador", renderiza los datos en modo solo lectura con un aviso explícito de bloqueo contable y sin botones de guardado ni de descarte; si está en "Borrador", despliega el formulario editable (importe, medio de cobro, estado, fecha, número de comprobante y observaciones, con los selectores poblados desde los catálogos de medios y estados) y habilita el descarte definitivo mediante un diálogo modal de confirmación. El estado operativo se identifica visualmente en todo momento con el componente de badge de estado de pago.
+* **UI (`UpdatePaymentPage.jsx`):** Página de edición desarrollada en React.js y estilizada con clases de utilidad de TailwindCSS, alcanzable desde el botón de detalle de cada fila de la grilla de pagos mediante la ruta `/pagos/:id_pago`. Debe responder al ciclo de vida del pago: si el registro no está en "Borrador", renderiza los datos en modo solo lectura con un aviso explícito de bloqueo contable y sin botones de guardado ni de descarte; si está en "Borrador", despliega el formulario editable (importe, medio de cobro, banco emisor, estado, fecha de recepción, fecha de vencimiento, número de comprobante y observaciones, con los selectores poblados desde los catálogos de medios, estados y bancos) y habilita el descarte definitivo mediante un diálogo modal de confirmación. Los controles de banco emisor y de fecha de vencimiento aparecen únicamente cuando el medio de cobro seleccionado es diferido, y el banco se elige con el mismo control de búsqueda con alta asistida que utiliza la página de registro de pagos: un *combobox* que filtra el catálogo mientras el usuario escribe pero solo persiste identificadores efectivamente seleccionados de la lista, acompañado de la acción "Agregar nuevo banco" que abre un modal de alta sin abandonar la edición. El estado operativo se identifica visualmente en todo momento con el componente de badge de estado de pago.
 
 
 
@@ -40,13 +44,19 @@ El ciclo de vida completo del pago, tipificado en la tabla maestra `EstadoPago`,
 * **Correspondencia con Cobros Diferidos:** Si el medio de pago resultante de la edición posee `es_diferido = true`, no puede asignarse el estado "Aceptado"; el destino legítimo es "Pendiente de acreditación" o la permanencia en "Borrador". La validación aplica tanto si se cambia el estado como si se cambia el medio de pago, y se resuelve con `HTTP 409 Conflict`.
 
 
+* **Revalidación de los Datos del Instrumento ante el Cambio de Medio:** La coherencia entre el medio de cobro y los datos propios del cheque debe evaluarse sobre el **registro resultante de la edición**, no sobre el vigente. Si el medio resultante es diferido, se exigen banco emisor, número de comprobante no vacío y fecha de vencimiento: su ausencia se rechaza con `HTTP 400`, y un banco fuera del catálogo de la tabla `Banco` con `HTTP 404`. Si el medio resultante es inmediato, informar banco o vencimiento se rechaza con `HTTP 400`, y ambos se persisten como `null` cuando la edición convierte un cheque en un cobro inmediato, de modo que no queden datos huérfanos de un instrumento que ya no existe.
+
+
+* **Consistencia Temporal del Vencimiento:** Cuando el medio resultante es diferido, la fecha de vencimiento debe corresponder a una fecha real de calendario en formato `YYYY-MM-DD` y no puede ser anterior a la fecha de recepción del cobro resultante de la edición; ambas inconsistencias se rechazan con `HTTP 400`. No se valida su relación con la fecha actual, ya que la corrección de un cheque ya vencido es una operatoria legítima.
+
+
 * **Consistencia de Estados del Autómata:** Solo son asignables los estados predefinidos en la tabla maestra `EstadoPago` ("Borrador", "Pendiente de acreditación", "Aceptado" y "Rechazado"). Se rechaza con `HTTP 404` cualquier identificador de estado fuera de catálogo.
 
 
 * **Consistencia Monetaria en Modificación:** En caso de alterarse el importe monetario, el nuevo valor debe ser un escalar numérico mayor a cero (`monto > 0`).
 
 
-* **Restricción de Cliente:** Al modificar un pago, el identificador del cliente (`id_cliente`) no puede ser transferido ni reasignado hacia otro cliente; la mutación se acota a importe, medio de pago, estado, fecha, observaciones y número de comprobante.
+* **Restricción de Cliente:** Al modificar un pago, el identificador del cliente (`id_cliente`) no puede ser transferido ni reasignado hacia otro cliente; la mutación se acota a importe, medio de pago, banco emisor, estado, fecha de recepción, fecha de vencimiento, observaciones y número de comprobante. Tampoco es mutable la fecha de creación, que es una marca de auditoría estampada por el motor.
 
 
 * **Baja Acotada al Borrador:** La eliminación física del registro se admite **únicamente** mientras el pago permanece en estado "Borrador". Un borrador nunca impactó el saldo consolidado del cliente, por lo que su descarte no deja huecos ni inconsistencias contables. Alcanzado cualquier estado definitivo, el pago deja de ser eliminable de forma física o lógica y las correcciones dejan de estar disponibles, precisamente para preservar la trazabilidad del libro de movimientos.
@@ -59,16 +69,16 @@ El ciclo de vida completo del pago, tipificado en la tabla maestra `EstadoPago`,
 
 #### 0. Base de Datos
 
-* *(Sin tareas nuevas)*. Se utiliza la estructura relacional existente de las tablas `Pago`, `EstadoPago` y `MedioPago` con sus índices de claves foráneas (`fk_pago_cliente`, `fk_pago_estado`, `fk_pago_medio`). La columna `fecha_actualizacion` ya está declarada como `timestamp NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP`, por lo que la trazabilidad de la última mutación se obtiene sin trabajo adicional en la capa de datos.
+* *(Sin tareas nuevas)*. Se utiliza la estructura relacional existente de las tablas `Pago`, `EstadoPago`, `MedioPago` y `Banco` con sus índices de claves foráneas (`fk_pago_cliente`, `fk_pago_estado`, `fk_pago_medio`, `fk_pago_banco`). Las columnas `id_banco` y `fecha_vencimiento` son nulables por definición, ya que solo se informan cuando el medio de cobro es diferido, y la fecha de recepción reside en la columna `fecha_recepcion`. La columna `fecha_actualizacion` ya está declarada como `timestamp NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP`, por lo que la trazabilidad de la última mutación se obtiene sin trabajo adicional en la capa de datos.
 
 
 
 #### 1. Capa de Datos (`backend/src/models/Payment.js`)
 
-* **Tarea 1.1:** Implementar el método `findById(id)` con una consulta relacional que cruce mediante `INNER JOIN` las tablas `Cliente`, `EstadoPago` y `MedioPago`, filtrando por `WHERE P.id_pago = ? LIMIT 1`, y retornando el registro hidratado (incluyendo `cliente_nombre`, `estado_pago_nombre`, `medio_pago_nombre` y `es_diferido`) o `null` si no existe. Se lo nombra `findById` para distinguirlo de los métodos `findStateById` y `findMethodById`, que operan sobre las tablas maestras.
+* **Tarea 1.1:** Implementar el método `findById(id)` con una consulta relacional que cruce mediante `INNER JOIN` las tablas `Cliente`, `EstadoPago` y `MedioPago`, y mediante `LEFT JOIN` la tabla `Banco`, filtrando por `WHERE P.id_pago = ? LIMIT 1`, y retornando el registro hidratado (incluyendo `cliente_nombre`, `estado_pago_nombre`, `medio_pago_nombre`, `es_diferido` y `banco_nombre`) o `null` si no existe. Se lo nombra `findById` para distinguirlo de los métodos `findStateById` y `findMethodById`, que operan sobre las tablas maestras.
 
 
-* **Tarea 1.2:** Implementar el método `update(id, updateData, idEstadoActual, connection = null)` con una sentencia parametrizada de cláusula `SET` fija sobre las columnas mutables autorizadas (`monto`, `id_medio_pago`, `id_estado_pago`, `fecha_pago`, `numero_comprobante`, `observaciones`), acotada por `WHERE id_pago = ? AND id_estado_pago = ?`, operando de manera agnóstica sobre la conexión inyectada o el pool general y retornando las filas afectadas (`affectedRows`). El método no inspecciona qué campos cambiaron: recibe el registro completo ya resuelto por la capa de servicio, de modo que la lista de columnas actualizables quede declarada de forma explícita y auditable en una única sentencia, en línea con los métodos de actualización de los demás modelos del proyecto.
+* **Tarea 1.2:** Implementar el método `update(id, updateData, idEstadoActual, connection = null)` con una sentencia parametrizada de cláusula `SET` fija sobre las columnas mutables autorizadas (`monto`, `id_medio_pago`, `id_banco`, `id_estado_pago`, `fecha_recepcion`, `fecha_vencimiento`, `numero_comprobante`, `observaciones`), acotada por `WHERE id_pago = ? AND id_estado_pago = ?`, operando de manera agnóstica sobre la conexión inyectada o el pool general y retornando las filas afectadas (`affectedRows`). El método no inspecciona qué campos cambiaron: recibe el registro completo ya resuelto por la capa de servicio, de modo que la lista de columnas actualizables quede declarada de forma explícita y auditable en una única sentencia, en línea con los métodos de actualización de los demás modelos del proyecto.
 
 
 * **Tarea 1.3:** Implementar el método `delete(id, idEstadoActual, connection = null)` ejecutando la baja sobre la tabla `Pago` mediante `DELETE FROM Pago WHERE id_pago = ? AND id_estado_pago = ?` y retornando las filas afectadas (`affectedRows`).
@@ -95,16 +105,24 @@ El ciclo de vida completo del pago, tipificado en la tabla maestra `EstadoPago`,
 * **Tarea 2.5 (Regla de Negocio Crítica - Correspondencia Diferida):** Si se informa un nuevo `id_estado_pago`, resolverlo contra el catálogo (`Payment.findStateById`) elevando `HTTP 404` si no existe, y validar la combinación con el medio de cobro resultante de la edición (el nuevo si se cambió, el vigente si no): cuando el medio posee `es_diferido = true` y el estado solicitado es "Aceptado", abortar con `HTTP 409 Conflict` indicando que el instrumento debe atravesar "Pendiente de acreditación".
 
 
-* **Tarea 2.6 (Consolidación del Registro a Persistir):** Fusionar el registro vigente recuperado por `Payment.findById` con los campos efectivamente informados, campo por campo, para construir el objeto completo que espera el modelo. La presencia de cada campo se evalúa contra `undefined`, de modo que un valor vacío enviado deliberadamente (por ejemplo, para borrar las observaciones o el número de comprobante) se distinga de un campo ausente y se persista como `null` en lugar de conservar el valor anterior.
+* **Tarea 2.6 (Consolidación del Registro a Persistir):** Fusionar el registro vigente recuperado por `Payment.findById` con los campos efectivamente informados, campo por campo, para construir el objeto completo que espera el modelo. La presencia de cada campo se evalúa contra `undefined`, de modo que un valor vacío enviado deliberadamente (por ejemplo, para borrar las observaciones o el número de comprobante) se distinga de un campo ausente y se persista como `null` en lugar de conservar el valor anterior. La fusión alcanza también a `id_banco` y `fecha_vencimiento`, cuyo valor resultante se evalúa en las dos tareas siguientes contra la naturaleza del medio de cobro resultante.
 
 
-* **Tarea 2.7 (Persistencia):** Delegar en `Payment.update(id, dataToPersist, idEstadoVigente, ...)` pasando como guarda de la cláusula `WHERE` el identificador de estado del registro ya leído, que la guarda de mutación verificó que corresponde a "Borrador". No se requiere una consulta adicional al catálogo de estados: el identificador proviene del propio pago, hidratado con el nombre de su estado por el cruzamiento relacional. Si `affectedRows` resulta `0`, interpretar que el pago fue formalizado concurrentemente y elevar `HTTP 409 Conflict`. Retornar el registro actualizado releído con `Payment.findById(id)`, normalizado con el mismo criterio de DTO plano que el resto del módulo (importe a dos decimales y fechas en formato ISO).
+* **Tarea 2.7 (Regla de Negocio Crítica - Coherencia del Instrumento Resultante):** Sobre el registro ya fusionado, y tomando la bandera `es_diferido` del medio de cobro resultante de la edición —el nuevo si se cambió, el vigente si no—, validar de forma conjunta los tres datos propios del cheque:
+* si el medio resultante es diferido, elevar `HTTP 400` ante la ausencia de `id_banco`, ante un `numero_comprobante` ausente, vacío o compuesto solo por espacios, o ante la ausencia de `fecha_vencimiento`; y verificar mediante `Payment.findBankById` que el banco pertenezca al catálogo, elevando `HTTP 404` en caso contrario;
+* si el medio resultante es inmediato, elevar `HTTP 400` cuando se informen `id_banco` o `fecha_vencimiento` de forma explícita en la edición, y fijar ambos atributos en `null` en el objeto a persistir cuando provienen del registro vigente, de modo que la conversión de un cheque en un cobro inmediato limpie los datos del instrumento anterior.
 
 
-* **Tarea 2.8:** Implementar el método estático `deletePayment(id)`.
+* **Tarea 2.8 (Validación Temporal del Vencimiento):** Cuando el medio resultante es diferido, verificar que `fecha_vencimiento` respete el formato `YYYY-MM-DD`, corresponda a una fecha real de calendario y no sea anterior a la `fecha_recepcion` resultante de la edición; ante cualquiera de esas inconsistencias, elevar `HTTP 400` identificando el criterio conflictivo.
 
 
-* **Tarea 2.9 (Regla de Negocio Crítica - Guarda de Baja):** Consultar el pago mediante `Payment.findById(id)`; si no existe, elevar `HTTP 404`. Si el nombre del estado no es estrictamente "Borrador", abortar la eliminación con `HTTP 409 Conflict`. En caso afirmativo, delegar en `Payment.delete(id, ...)` con la guarda de estado y tratar `affectedRows === 0` como conflicto de concurrencia (`HTTP 409`).
+* **Tarea 2.9 (Persistencia):** Delegar en `Payment.update(id, dataToPersist, idEstadoVigente, ...)` pasando como guarda de la cláusula `WHERE` el identificador de estado del registro ya leído, que la guarda de mutación verificó que corresponde a "Borrador". No se requiere una consulta adicional al catálogo de estados: el identificador proviene del propio pago, hidratado con el nombre de su estado por el cruzamiento relacional. Si `affectedRows` resulta `0`, interpretar que el pago fue formalizado concurrentemente y elevar `HTTP 409 Conflict`. Retornar el registro actualizado releído con `Payment.findById(id)`, normalizado con el mismo criterio de DTO plano que el resto del módulo (importe a dos decimales y fechas en formato ISO).
+
+
+* **Tarea 2.10:** Implementar el método estático `deletePayment(id)`.
+
+
+* **Tarea 2.11 (Regla de Negocio Crítica - Guarda de Baja):** Consultar el pago mediante `Payment.findById(id)`; si no existe, elevar `HTTP 404`. Si el nombre del estado no es estrictamente "Borrador", abortar la eliminación con `HTTP 409 Conflict`. En caso afirmativo, delegar en `Payment.delete(id, ...)` con la guarda de estado y tratar `affectedRows === 0` como conflicto de concurrencia (`HTTP 409`).
 
 
 
@@ -128,13 +146,16 @@ El ciclo de vida completo del pago, tipificado en la tabla maestra `EstadoPago`,
 * **Tarea 4.2:** Implementar la función asíncrona `apiDeletePayment(id)` consumiendo mediante `fetch` el endpoint `DELETE /api/payment/:id`, controlando `!response.ok` y propagando el `statusCode` en la excepción.
 
 
-* **Tarea 4.3:** Implementar la función asíncrona de lectura puntual `fetchPaymentById(id)`, requerida por la página de edición para hidratar el formulario a partir del identificador de la URL, resolviéndola contra la consulta de pagos filtrada por número interno y tomando el único elemento del resultado.
+* **Tarea 4.3:** Implementar la función asíncrona de lectura puntual `fetchPaymentById(id)`, requerida por la página de edición para hidratar el formulario a partir del identificador de la URL, resolviéndola contra la consulta de pagos filtrada por número interno y tomando el único elemento del resultado. El registro recuperado incluye `id_banco`, `banco_nombre` y `fecha_vencimiento`, nulos cuando el pago corresponde a un medio inmediato.
+
+
+* **Tarea 4.4:** Reutilizar sin duplicar las funciones `fetchBanks()` y `apiCreateBank(bankData)` ya implementadas en este mismo archivo para el registro de pagos, que alimentan el control de selección de banco y su modal de alta también en la página de edición.
 
 
 
 #### 5. Capa de Presentación (`frontend/src/pages/Payments/UpdatePaymentPage.jsx` y `App.js`)
 
-* **Tarea 5.1:** Crear la página `UpdatePaymentPage.jsx` estilizada con TailwindCSS, siguiendo la estructura de las páginas de modificación ya existentes en el proyecto (`UpdateReceiptPage.jsx`, `UpdateRepairOrderPage.jsx`): lectura del identificador con `useParams`, carga inicial del pago y de los catálogos de medios y estados mediante `useEffect`, y formulario con los campos mutables (importe, medio de cobro, estado, fecha, número de comprobante y observaciones).
+* **Tarea 5.1:** Crear la página `UpdatePaymentPage.jsx` estilizada con TailwindCSS, siguiendo la estructura de las páginas de modificación ya existentes en el proyecto (`UpdateReceiptPage.jsx`, `UpdateRepairOrderPage.jsx`): lectura del identificador con `useParams`, carga inicial del pago y de los catálogos de medios, estados y bancos mediante `useEffect`, y formulario con los campos mutables (importe, medio de cobro, banco emisor, estado, fecha de recepción, fecha de vencimiento, número de comprobante y observaciones).
 
 
 * **Tarea 5.2:** Registrar la ruta `/pagos/:id_pago` en `App.js` dentro del bloque de PAGOS, de modo que el botón de detalle ya presente en cada fila de la grilla de pagos resuelva contra la nueva página de edición.
@@ -149,7 +170,13 @@ El ciclo de vida completo del pago, tipificado en la tabla maestra `EstadoPago`,
 * **Tarea 5.5:** Reflejar en la interfaz la regla de cobros diferidos: al seleccionar un medio con `es_diferido = true`, advertir visualmente que el registro no puede pasar directamente a "Aceptado" y ofrecer "Pendiente de acreditación" como destino, evitando que el operador reciba el `409` del backend como única retroalimentación.
 
 
-* **Tarea 5.6:** Gestionar el estado de guardado (`isSaving`) para prevenir envíos duplicados, capturar y mostrar los errores del servidor, y refrescar la grilla tras una modificación o descarte exitoso.
+* **Tarea 5.6 (Condicionalidad de los Datos del Cheque en la Edición):** Derivar del medio de cobro seleccionado su bandera `es_diferido` y mostrar el control de banco emisor y el selector de fecha de vencimiento solo cuando sea verdadera, rotulándolos como obligatorios junto con el número de comprobante externo. Al cambiar la selección de un medio diferido a uno inmediato, limpiar el banco y el vencimiento cargados para que la edición los persista como `null`; al cambiar en sentido inverso, exigir los tres datos antes de habilitar el guardado. Validar en la interfaz que el vencimiento no sea anterior a la fecha de recepción, anticipando el rechazo del backend.
+
+
+* **Tarea 5.7 (Selección y Alta de Bancos en la Edición):** Reutilizar el mismo control de búsqueda con alta asistida de la página de registro de pagos: *combobox* con filtrado incremental normalizado (sin distinción de caja ni de acentos) que solo fija el `id_banco` ante una selección efectiva de la lista, y acción secundaria "Agregar nuevo banco" visible de forma permanente que abre el modal de alta precargado con el texto de búsqueda, incorpora el banco creado al catálogo en memoria y lo deja seleccionado sin perder los cambios pendientes del formulario. Al hidratar el formulario, preseleccionar el banco vigente del pago a partir de `id_banco` y mostrar su nombre en el control.
+
+
+* **Tarea 5.8:** Gestionar el estado de guardado (`isSaving`) para prevenir envíos duplicados, capturar y mostrar los errores del servidor, y refrescar la grilla tras una modificación o descarte exitoso.
 
 
 
@@ -174,7 +201,7 @@ El ciclo de vida completo del pago, tipificado en la tabla maestra `EstadoPago`,
 
 ##### Nota de Mejora Futura: Construcción Dinámica de la Cláusula `SET`
 
-La actualización se implementa con una cláusula `SET` fija que reescribe las seis columnas mutables en cada operación, recibiendo desde la capa de servicio el registro completo ya fusionado. Se adopta este esquema por uniformidad con los métodos de actualización preexistentes del proyecto (`Client.update`, `Receipt.updateReceipt`, `RepairOrder.update`) y porque la interfaz de edición envía siempre el formulario completo, con lo cual "actualizar solo lo que cambió" no representaría una diferencia efectiva.
+La actualización se implementa con una cláusula `SET` fija que reescribe las ocho columnas mutables en cada operación, recibiendo desde la capa de servicio el registro completo ya fusionado. Se adopta este esquema por uniformidad con los métodos de actualización preexistentes del proyecto (`Client.update`, `Receipt.updateReceipt`, `RepairOrder.update`) y porque la interfaz de edición envía siempre el formulario completo, con lo cual "actualizar solo lo que cambió" no representaría una diferencia efectiva.
 
 Queda documentada como mejora posible la alternativa de **armar la cláusula `SET` de forma dinámica**, acumulando únicamente las asignaciones de los campos efectivamente informados con sentencias preparadas, al modo en que este mismo modelo ya construye la cláusula `WHERE` dinámica de la consulta multicriterio. Sus ventajas son dos:
 
@@ -187,7 +214,7 @@ El costo es una mayor complejidad en la capa de datos (una rama condicional por 
 
 ---
 
-### Estrategia de Tests (Propuesta — Backend)
+### Estrategia de Tests (Backend)
 
 Siguiendo las dos modalidades de prueba establecidas en `backend/__tests__/` (pruebas unitarias de servicio con mocks vía `jest.mock`, y pruebas de integración con `supertest` contra la base de datos real `DB_NAME_TEST`), se proponen los siguientes casos, que extienden los archivos de prueba del módulo de pagos.
 
@@ -198,6 +225,10 @@ Siguiendo las dos modalidades de prueba establecidas en `backend/__tests__/` (pr
   * `updatePayment` debe descartar `id_cliente` del payload persistido aunque se lo envíe explícitamente.
   * `updatePayment` debe lanzar `409` al intentar asignar "Aceptado" cuando el medio de cobro resultante es diferido, y resolver sin error cuando el destino es "Pendiente de acreditación".
   * `updatePayment` debe lanzar `409` si `Payment.update` retorna `affectedRows === 0` (formalización concurrente).
+  * `updatePayment` debe lanzar `400` si la edición deja al pago con un medio diferido y sin `id_banco`, sin `numero_comprobante` (o con uno vacío) o sin `fecha_vencimiento`, sin invocar `Payment.update`.
+  * `updatePayment` debe lanzar `404` si el `id_banco` resultante no pertenece al catálogo (`Payment.findBankById` devuelve `null`).
+  * `updatePayment` debe lanzar `400` si la edición informa `id_banco` o `fecha_vencimiento` sobre un medio inmediato, y debe persistir ambos en `null` cuando el cambio de medio convierte un cheque en un cobro inmediato.
+  * `updatePayment` debe lanzar `400` si la `fecha_vencimiento` resultante no es una fecha real de calendario o es anterior a la `fecha_recepcion` resultante.
   * `deletePayment` debe lanzar `404` si el pago no existe y `409` si su estado no es "Borrador", invocando `Payment.delete` solo en el caso permitido.
 
 * **`payment.controller.test.js` (integración REST con `supertest`, mockeando `PaymentService`):**
@@ -208,6 +239,9 @@ Siguiendo las dos modalidades de prueba establecidas en `backend/__tests__/` (pr
 
 * **`payment.api.test.js` (integración end-to-end contra `DB_NAME_TEST`, sin mocks):**
   * Modificar el importe y el número de comprobante de un pago en "Borrador" y verificar en la fila persistida los nuevos valores y que `fecha_actualizacion` quedó estampada.
+  * Convertir un pago en "Borrador" de medio inmediato a medio diferido informando banco, comprobante y vencimiento, y verificar las tres columnas persistidas; repetir la conversión omitiendo alguno de los tres datos y verificar `400` con la fila intacta.
+  * Convertir un pago en "Borrador" de medio diferido a medio inmediato y verificar que `id_banco` y `fecha_vencimiento` quedaron en `NULL` en la fila persistida.
+  * Modificar la fecha de recepción de un cheque dejándola posterior a su vencimiento debe retornar `400` y no alterar la fila.
   * Promover un pago en "Borrador" con medio inmediato (`es_diferido = 0`) al estado "Aceptado" y verificar la fila resultante.
   * Verificar que promover a "Aceptado" un pago con medio diferido (`es_diferido = 1`) retorna `409` y no altera la fila.
   * Verificar que modificar o eliminar un pago en estado "Aceptado" retorna `409` y deja la fila intacta.
