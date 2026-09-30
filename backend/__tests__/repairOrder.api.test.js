@@ -17,7 +17,7 @@ describe('Módulo de Órdenes de Reparación - Pruebas de Integración', () => {
            
             await db.execute("INSERT INTO EstadoOrdenReparacion (id_estado_orden, nombre) VALUES (1, 'Abierta'), (2, 'Cerrada')");
             await db.execute("INSERT INTO Cliente (id_cliente, nombre, cuit) VALUES (1, 'Cliente Test', '30-123'), (2, 'Servicios Hidráulicos SRL', '30-222')");
-            await db.execute("INSERT INTO Producto (id_producto, id_cliente, estado, modelo) VALUES (10, 1, 1, 2), (11, 1, 6, 3)");
+            await db.execute("INSERT INTO Producto (id_producto, id_cliente, estado, modelo) VALUES (10, 1, 1, 1), (11, 1, 6, 2)");
            
         }
     });
@@ -152,7 +152,7 @@ describe('Módulo de Órdenes de Reparación - Pruebas de Integración', () => {
             if (process.env.NODE_ENV === 'test') {
                 // Válvulas adicionales para los escenarios de edición
                 await db.execute(
-                    "INSERT INTO Producto (id_producto, id_cliente, estado, modelo) VALUES (12, 1, 1, 2), (13, 1, 6, 3), (14, 1, 6, 3)"
+                    "INSERT INTO Producto (id_producto, id_cliente, estado, modelo) VALUES (12, 1, 1, 2), (13, 1, 6, 1), (14, 1, 6, 1)"
                 );
 
                 const ordenAbiertaRes = await request(app)
