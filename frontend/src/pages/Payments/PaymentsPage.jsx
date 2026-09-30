@@ -6,25 +6,25 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { fetchClients } from '../../services/client.service';
 import PaymentStatusBadge from '../../components/common/PaymentStatusBadge';
 import AmountRangeSlider from '../../components/common/AmountRangeSlider';
-import { fetchPayments, fetchPaymentMethods, fetchPaymentStates } from '../../services/payment.service';
+import { fetchPayments, fetchPaymentMethods, fetchPaymentStates, fetchBanks } from '../../services/payment.service';
 
 // Calendarios en español para toda la página
 registerLocale('es', es);
 
 // Criterios de búsqueda en su estado neutro, reutilizados por la carga inicial y por la limpieza del panel.
 const FILTROS_INICIALES = {
-    id_pago: '',
     id_cliente: '',
     id_medio_pago: '',
+    id_banco: '',
     id_estado_pago: '',
     numero_comprobante: '',
     monto_min: '',
     monto_max: '',
     fecha_desde: '',
     fecha_hasta: '',
-    creacion_desde: '',
-    creacion_hasta: '',
-    sort_by: 'fecha_pago',
+    vencimiento_desde: '',
+    vencimiento_hasta: '',
+    sort_by: 'fecha_recepcion',
     sort_order: 'DESC'
 };
 
@@ -77,6 +77,7 @@ const PaymentsPage = () => {
     const [clients, setClients] = useState([]);
     const [paymentMethods, setPaymentMethods] = useState([]);
     const [paymentStates, setPaymentStates] = useState([]);
+    const [banks, setBanks] = useState([]);
 
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
@@ -123,6 +124,18 @@ const PaymentsPage = () => {
             }
         };
         loadPaymentStates();
+    }, []);
+
+    useEffect(() => {
+        const loadBanks = async () => {
+            try {
+                const data = await fetchBanks();
+                setBanks(data);
+            } catch (err) {
+                console.error("[PaymentsPage] Error al cargar bancos:", err);
+            }
+        };
+        loadBanks();
     }, []);
 
     // Carga nuevamente los pagos cada vez que los filtros cambien. La consulta se despacha con un
@@ -278,19 +291,6 @@ const PaymentsPage = () => {
 
                     {showFilters && (
                         <div className="pay-list-filters-grid">
-                            {/* Búsqueda por Nro interno de Pago */}
-                            <div className="pay-list-filter-field">
-                                <label className="pay-list-filter-label">N° de Pago Interno</label>
-                                <input
-                                    type="text"
-                                    placeholder="Ej. 151"
-                                    value={filters.id_pago}
-                                    name="id_pago"
-                                    onChange={handleFilterChange}
-                                    className="pay-list-filter-input"
-                                />
-                            </div>
-
                             {/* Filtro por Cliente */}
                             <div className="pay-list-filter-field">
                                 <label className="pay-list-filter-label">Cliente</label>
@@ -323,6 +323,25 @@ const PaymentsPage = () => {
                                     {paymentMethods.map(mp =>
                                         <option key={mp.id_medio_pago} value={mp.id_medio_pago}>
                                             {mp.nombre}
+                                        </option>
+                                    )}
+
+                                </select>
+                            </div>
+
+                            {/* Filtro por Banco emisor del cheque */}
+                            <div className="pay-list-filter-field">
+                                <label className="pay-list-filter-label">Banco Emisor</label>
+                                <select
+                                    value={filters.id_banco}
+                                    name="id_banco"
+                                    onChange={handleFilterChange}
+                                    className="pay-list-filter-select"
+                                >
+                                    <option value="">Todos los bancos</option>
+                                    {banks.map(b =>
+                                        <option key={b.id_banco} value={b.id_banco}>
+                                            {b.nombre}
                                         </option>
                                     )}
 
@@ -378,16 +397,16 @@ const PaymentsPage = () => {
                                 />
                             </div>
 
-                            {/* Rango de Fecha de Creación del registro, resuelto en un único calendario */}
+                            {/* Rango de Fecha de Vencimiento del cheque, resuelto en un único calendario */}
                             <div className="pay-list-filter-field">
-                                <label className="pay-list-filter-label">Fecha de Creación</label>
+                                <label className="pay-list-filter-label">Fecha de Vencimiento</label>
                                 <DatePicker
                                     selectsRange
                                     locale="es"
                                     dateFormat="dd/MM/yyyy"
-                                    startDate={fromBackendDate(filters.creacion_desde)}
-                                    endDate={fromBackendDate(filters.creacion_hasta)}
-                                    onChange={handleDateRangeChange('creacion_desde', 'creacion_hasta')}
+                                    startDate={fromBackendDate(filters.vencimiento_desde)}
+                                    endDate={fromBackendDate(filters.vencimiento_hasta)}
+                                    onChange={handleDateRangeChange('vencimiento_desde', 'vencimiento_hasta')}
                                     isClearable
                                     placeholderText="Todo el período"
                                     className="pay-list-filter-datepicker"
@@ -426,29 +445,31 @@ const PaymentsPage = () => {
 
                 <div className="pay-list-table-wrapper">
                     <table className="pay-list-table">
-                        {/*Nº Pago interno, Fecha, Cliente, Medio de pago, Monto, Estado (integrando el componente `PaymentStatusBadge`), Acciones. */}
                         <thead className="pay-list-table-head">
                             <tr>
-                                <th className="pay-list-table-th" onClick={() => handleSort('id_pago')}>
-                                    N° Pago {getSortIndicator('id_pago')}
+                                <th className="pay-list-table-th--center" onClick={() => handleSort('medio_pago_nombre')}>
+                                    Medio de Pago {getSortIndicator('medio_pago_nombre')}
                                 </th>
-                                <th className="pay-list-table-th" onClick={() => handleSort('cliente_nombre')}>
-                                    Cliente {getSortIndicator('cliente_nombre')}
+                                <th className="pay-list-table-th" onClick={() => handleSort('fecha_recepcion')}>
+                                    Fecha Recepción {getSortIndicator('fecha_recepcion')}
+                                </th>
+                                <th className="pay-list-table-th--center" onClick={() => handleSort('banco_nombre')}>
+                                    Banco Emisor {getSortIndicator('banco_nombre')}
+                                </th>
+                                <th className="pay-list-table-th" onClick={() => handleSort('fecha_vencimiento')}>
+                                    Fecha Vencimiento {getSortIndicator('fecha_vencimiento')}
+                                </th>
+                                <th className="pay-list-table-th" onClick={() => handleSort('numero_comprobante')}>
+                                    Comprobante Externo {getSortIndicator('numero_comprobante')}
                                 </th>
                                 <th className="pay-list-table-th" onClick={() => handleSort('monto')}>
                                     Monto ($) {getSortIndicator('monto')}
                                 </th>
-                                <th className="pay-list-table-th--center" onClick={() => handleSort('medio_pago_nombre')}>
-                                    Medio de Pago {getSortIndicator('medio_pago_nombre')}
+                                <th className="pay-list-table-th" onClick={() => handleSort('cliente_nombre')}>
+                                    Cliente {getSortIndicator('cliente_nombre')}
                                 </th>
                                 <th className="pay-list-table-th--center" onClick={() => handleSort('estado_pago_nombre')}>
                                     Estado {getSortIndicator('estado_pago_nombre')}
-                                </th>
-                                <th className="pay-list-table-th" onClick={() => handleSort('fecha_creacion')}>
-                                    Fecha Creación {getSortIndicator('fecha_creacion')}
-                                </th>
-                                <th className="pay-list-table-th" onClick={() => handleSort('fecha_pago')}>
-                                    Fecha Recepción {getSortIndicator('fecha_pago')}
                                 </th>
                                 <th className="pay-list-table-th--actions">
                                     Acciones
@@ -459,39 +480,42 @@ const PaymentsPage = () => {
 
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan="8" className="pay-list-table-loading">
+                                    <td colSpan="9" className="pay-list-table-loading">
                                         Cargando Pagos ...
                                     </td>
                                 </tr>
                             ) : payments.length === 0 ? (
                                 <tr>
-                                    <td colSpan="8" className="pay-list-table-empty">
+                                    <td colSpan="9" className="pay-list-table-empty">
                                         No se encontraron pagos que coincidan con los filtros seleccionados.
                                     </td>
                                 </tr>
                             ) : (
                                 payments.map((pago) => (
                                     <tr key={pago.id_pago} className="pay-list-table-row">
-                                        <td className="pay-list-cell-id">
-                                            #PAGO-{pago.id_pago.toString().padStart(4, '0')}
+                                        <td className="pay-list-cell-method">
+                                            {pago.medio_pago_nombre}
                                         </td>
-                                        <td className="pay-list-cell-client">
-                                            {pago.cliente_nombre}
+                                        <td className="pay-list-cell-date">
+                                            {formatDate(pago.fecha_recepcion)}
+                                        </td>
+                                        <td className="pay-list-cell-bank">
+                                            {pago.banco_nombre || '-'}
+                                        </td>
+                                        <td className="pay-list-cell-date">
+                                            {pago.fecha_vencimiento ? formatDate(pago.fecha_vencimiento) : '-'}
+                                        </td>
+                                        <td className="pay-list-cell-voucher">
+                                            {pago.numero_comprobante || '-'}
                                         </td>
                                         <td className="pay-list-cell-amount">
                                             {formatCurrency(pago.monto)}
                                         </td>
-                                        <td className="pay-list-cell-method">
-                                            {pago.medio_pago_nombre}
+                                        <td className="pay-list-cell-client">
+                                            {pago.cliente_nombre}
                                         </td>
                                         <td className="pay-list-cell-status">
                                             <PaymentStatusBadge status={pago.estado_pago_nombre} />
-                                        </td>
-                                        <td className="pay-list-cell-date">
-                                            {formatDate(pago.fecha_creacion)}
-                                        </td>
-                                        <td className="pay-list-cell-date">
-                                            {formatDate(pago.fecha_pago)}
                                         </td>
                                         <td className="pay-list-cell-actions">
                                             <button

@@ -44,7 +44,7 @@ export const apiCreatePayment = async (paymentData) => {
  * Envía los campos modificados de un pago en estado "Borrador". Los pagos que ya alcanzaron un
  * estado definitivo son rechazados por el backend con un conflicto de negocio.
  * @param {number|string} id - Identificador del pago a modificar.
- * @param {Object} paymentData - Campos mutables del pago (importe, medio, estado, fecha, comprobante y observaciones).
+ * @param {Object} paymentData - Campos mutables del pago (importe, medio, estado, banco, fechas de recepción y vencimiento, comprobante y observaciones).
  * @returns {Promise<Object>} Registro de pago actualizado, hidratado con cliente, estado y medio de pago.
  * @throws {Error} Excepción enriquecida con el código de estado HTTP para su manejo en la UI.
  */
@@ -108,17 +108,20 @@ export const apiDeletePayment = async (id) => {
  * @param {string|number} [filters.id_cliente] - Identificador del cliente asociado.
  * @param {string|number} [filters.id_estado_pago] - Identificador del estado de pago.
  * @param {string|number} [filters.id_medio_pago] - Identificador del medio de pago.
+ * @param {string|number} [filters.id_banco] - Identificador del banco emisor del cheque.
  * @param {string|number} [filters.monto] - Importe exacto del pago.
  * @param {string|number} [filters.monto_min] - Límite inferior del rango de importes.
  * @param {string|number} [filters.monto_max] - Límite superior del rango de importes.
- * @param {string} [filters.fecha_desde] - Límite inferior de la fecha de cobro (YYYY-MM-DD).
- * @param {string} [filters.fecha_hasta] - Límite superior de la fecha de cobro (YYYY-MM-DD).
+ * @param {string} [filters.fecha_desde] - Límite inferior de la fecha de recepción (YYYY-MM-DD).
+ * @param {string} [filters.fecha_hasta] - Límite superior de la fecha de recepción (YYYY-MM-DD).
+ * @param {string} [filters.vencimiento_desde] - Límite inferior de la fecha de vencimiento (YYYY-MM-DD).
+ * @param {string} [filters.vencimiento_hasta] - Límite superior de la fecha de vencimiento (YYYY-MM-DD).
  * @param {string} [filters.numero_comprobante] - Comprobante externo (coincidencia parcial).
  * @param {string} [filters.creacion_desde] - Límite inferior de la fecha de creación (YYYY-MM-DD).
  * @param {string} [filters.creacion_hasta] - Límite superior de la fecha de creación (YYYY-MM-DD).
  * @param {string} [filters.sort_by] - Columna por la cual ordenar la grilla de datos.
  * @param {string} [filters.sort_order] - Dirección del ordenamiento ('ASC' o 'DESC').
- * @returns {Promise<Array<Object>>} Listado de pagos hidratados con cliente, estado y medio de pago.
+ * @returns {Promise<Array<Object>>} Listado de pagos hidratados con cliente, estado, medio de pago y banco emisor.
  * @throws {Error} Excepción enriquecida con el código de estado HTTP para su manejo en la UI.
  */
 export const fetchPayments = async (filters = {}) => {
@@ -139,6 +142,9 @@ export const fetchPayments = async (filters = {}) => {
         if (filters.id_medio_pago) {
             queryParams.append('id_medio_pago', filters.id_medio_pago);
         }
+        if (filters.id_banco) {
+            queryParams.append('id_banco', filters.id_banco);
+        }
         if (filters.monto && String(filters.monto).trim() !== '') {
             queryParams.append('monto', String(filters.monto).trim());
         }
@@ -153,6 +159,12 @@ export const fetchPayments = async (filters = {}) => {
         }
         if (filters.fecha_hasta) {
             queryParams.append('fecha_hasta', filters.fecha_hasta);
+        }
+        if (filters.vencimiento_desde) {
+            queryParams.append('vencimiento_desde', filters.vencimiento_desde);
+        }
+        if (filters.vencimiento_hasta) {
+            queryParams.append('vencimiento_hasta', filters.vencimiento_hasta);
         }
         if (filters.numero_comprobante && filters.numero_comprobante.trim() !== '') {
             queryParams.append('numero_comprobante', filters.numero_comprobante.trim());
@@ -260,6 +272,60 @@ export const fetchPaymentStates = async () => {
         return data.data;
     } catch (error) {
         console.error('[PaymentService Front Error] Falla de comunicación con el endpoint GET /api/payment/states:', error.message);
+        throw error;
+    }
+};
+
+/**
+ * Obtiene el catálogo completo de bancos emisores, ordenado alfabéticamente por nombre.
+ * @returns {Promise<Array<Object>>} Listado de bancos disponibles.
+ */
+export const fetchBanks = async () => {
+    try {
+        const response = await fetch(`${API_URL}/banks`, {
+            method: 'GET',
+            headers: getAuthHeaders(),
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+            const error = new Error(data.message || 'Error al recuperar el catálogo de bancos.');
+            error.statusCode = response.status;
+            throw error;
+        }
+
+        return data.data;
+    } catch (error) {
+        console.error('[PaymentService Front Error] Falla de comunicación con el endpoint GET /api/payment/banks:', error.message);
+        throw error;
+    }
+};
+
+/**
+ * Envía el nombre de una nueva entidad bancaria para incorporarla al catálogo desde el formulario de pagos.
+ * @param {Object} bankData - Datos del banco a registrar.
+ * @param {string} bankData.nombre - Nombre de la entidad bancaria.
+ * @returns {Promise<Object>} Banco creado, con su identificador y nombre normalizado.
+ * @throws {Error} Excepción enriquecida con el código de estado HTTP (409 ante un nombre duplicado) para su manejo en la UI.
+ */
+export const apiCreateBank = async (bankData) => {
+    try {
+        const response = await fetch(`${API_URL}/banks`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(bankData)
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+            const error = new Error(data.message || 'Error al registrar el banco.');
+            error.statusCode = response.status;
+            throw error;
+        }
+
+        return data.data;
+    } catch (error) {
+        console.error('[PaymentService Front Error] Falla de comunicación con el endpoint POST /api/payment/banks:', error.message);
         throw error;
     }
 };

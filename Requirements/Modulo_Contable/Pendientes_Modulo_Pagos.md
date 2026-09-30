@@ -20,9 +20,9 @@ Este documento enumera lo que falta implementar para completar esos cambios, ord
 | Modelo (`backend/src/models/Payment.js`) | ✅ Completa |
 | Servicio (`backend/src/services/payment.service.js`) | ✅ Completa |
 | Controlador y rutas (`payment.controller.js`, `payment.routes.js`) | ✅ Completa |
-| Integración frontend (`frontend/src/services/payment.service.js`) | ⏳ Pendiente |
+| Integración frontend (`frontend/src/services/payment.service.js`) | ✅ Completa |
 | Presentación (`frontend/src/pages/Payments/`) | ⏳ Pendiente |
-| Tests del backend (`backend/__tests__/payment.*.test.js`) | ⏳ Pendiente |
+| Tests del backend (`backend/__tests__/payment.*.test.js`) | ✅ Completa |
 
 Endpoints del backend ya disponibles tras los cambios:
 
@@ -36,10 +36,10 @@ Endpoints del backend ya disponibles tras los cambios:
 
 ### 1. Capa de Integración Frontend (`frontend/src/services/payment.service.js`)
 
-* [ ] **Requerimiento 31:** Implementar `fetchBanks()`, que consulta `GET /api/payment/banks` con las cabeceras de `getAuthHeaders()` y retorna la colección, con la misma estructura que `fetchPaymentMethods` y `fetchPaymentStates`.
-* [ ] **Requerimiento 31:** Implementar `apiCreateBank(bankData)`, que despacha `POST /api/payment/banks`, propaga el `statusCode` en la excepción (en particular el `409` de nombre duplicado, que la interfaz debe distinguir de un error genérico) y retorna el banco creado.
-* [ ] **Requerimiento 31.1:** En `fetchPayments(filters)`, serializar `id_banco`, `vencimiento_desde` y `vencimiento_hasta` con el mismo tratamiento que los demás criterios, y actualizar el JSDoc (`fecha_desde`/`fecha_hasta` describen ahora la fecha de recepción).
-* [ ] **Requerimiento 32:** `apiUpdatePayment` y `fetchPaymentById` no requieren cambios en su forma; solo cambian los campos que transportan.
+* [x] **Requerimiento 31:** Implementar `fetchBanks()`, que consulta `GET /api/payment/banks` con las cabeceras de `getAuthHeaders()` y retorna la colección, con la misma estructura que `fetchPaymentMethods` y `fetchPaymentStates`.
+* [x] **Requerimiento 31:** Implementar `apiCreateBank(bankData)`, que despacha `POST /api/payment/banks`, propaga el `statusCode` en la excepción (en particular el `409` de nombre duplicado, que la interfaz debe distinguir de un error genérico) y retorna el banco creado.
+* [x] **Requerimiento 31.1:** En `fetchPayments(filters)`, serializar `id_banco`, `vencimiento_desde` y `vencimiento_hasta` con el mismo tratamiento que los demás criterios, y actualizar el JSDoc (`fecha_desde`/`fecha_hasta` describen ahora la fecha de recepción).
+* [x] **Requerimiento 32:** `apiUpdatePayment` y `fetchPaymentById` no requieren cambios en su forma; solo cambian los campos que transportan.
 
 ---
 
@@ -49,28 +49,29 @@ Endpoints del backend ya disponibles tras los cambios:
 
 El control de búsqueda con alta asistida debe comportarse igual en el registro y en la modificación de pagos. Para no duplicarlo, se propone implementarlo una única vez como componente reutilizable en `frontend/src/components/common/`, junto a `ConfirmationModal.jsx` y `AmountRangeSlider.jsx`. Queda a confirmar antes de implementarlo.
 
-* [ ] *Combobox* con filtrado incremental sobre el catálogo en memoria, normalizando el texto y los nombres (recorte de espacios, minúsculas y supresión de acentos) para que la coincidencia parcial no dependa de la caja ni de la acentuación.
-* [ ] Solo una selección efectiva de la lista, por clic o por teclado, fija `id_banco`. Si el usuario sale del campo sin elegir, el texto visible vuelve al nombre del banco seleccionado o se vacía.
-* [ ] Acción secundaria "Agregar nuevo banco", visible siempre, que abre un modal con un único campo de nombre precargado con el texto de búsqueda.
-* [ ] El modal lista los bancos con nombre semejante y exige confirmación explícita cuando existen, ofreciendo seleccionarlos en lugar de crear un duplicado.
-* [ ] El modal tiene su propia bandera contra el doble envío y muestra dentro de sí el mensaje de banco ya existente cuando el backend responde `409`.
-* [ ] Confirmada el alta, el banco creado se agrega al catálogo en memoria y queda seleccionado, sin perder los datos ya cargados del formulario.
+* [x] *Combobox* con filtrado incremental sobre el catálogo en memoria, normalizando el texto y los nombres (recorte de espacios, minúsculas y supresión de acentos) para que la coincidencia parcial no dependa de la caja ni de la acentuación.
+* [x] Solo una selección efectiva de la lista, por clic o por teclado, fija `id_banco`. Si el usuario sale del campo sin elegir, el texto visible vuelve al nombre del banco seleccionado o se vacía.
+* [x] Acción secundaria "Agregar nuevo banco", visible siempre, que abre un modal con un único campo de nombre precargado con el texto de búsqueda.
+* [x] El modal lista los bancos con nombre semejante y exige confirmación explícita cuando existen, ofreciendo seleccionarlos en lugar de crear un duplicado.
+* [x] El modal tiene su propia bandera contra el doble envío y muestra dentro de sí el mensaje de banco ya existente cuando el backend responde `409`.
+* [x] Confirmada el alta, el banco creado se agrega al catálogo en memoria y queda seleccionado, sin perder los datos ya cargados del formulario.
 
 #### 2.2. Registro de pagos (`CreatePaymentPage.jsx`), Requerimiento 31
 
-* [ ] Renombrar el campo `fecha_pago` a `fecha_recepcion` en el estado, el control y el payload.
-* [ ] Cargar el catálogo de bancos con `fetchBanks` en el `useEffect` inicial, junto con los clientes y los medios de pago.
-* [ ] Derivar `es_diferido` del medio seleccionado y mostrar el selector de banco y el campo de vencimiento solo cuando sea verdadero, rotulándolos como obligatorios. En ese caso, la etiqueta del comprobante externo pasa de optativa a obligatoria.
-* [ ] Al pasar de un medio diferido a uno inmediato, limpiar el banco y el vencimiento para que no viajen en el payload.
-* [ ] Bloquear el envío mientras un medio diferido no tenga banco, comprobante y vencimiento, y validar junto al campo que el vencimiento no sea anterior a la fecha de recepción.
-* [ ] Incluir `id_banco` y `fecha_vencimiento` en el payload solo cuando el medio es diferido.
+* [x] Renombrar el campo `fecha_pago` a `fecha_recepcion` en el estado, el control y el payload.
+* [x] Cargar el catálogo de bancos con `fetchBanks` en el `useEffect` inicial, junto con los clientes y los medios de pago.
+* [x] Derivar `es_diferido` del medio seleccionado y mostrar el selector de banco y el campo de vencimiento solo cuando sea verdadero, rotulándolos como obligatorios. En ese caso, la etiqueta del comprobante externo pasa de optativa a obligatoria.
+* [x] Al pasar de un medio diferido a uno inmediato, limpiar el banco y el vencimiento para que no viajen en el payload.
+* [x] Bloquear el envío mientras un medio diferido no tenga banco, comprobante y vencimiento, y validar junto al campo que el vencimiento no sea anterior a la fecha de recepción.
+* [x] Incluir `id_banco` y `fecha_vencimiento` en el payload solo cuando el medio es diferido.
 
 #### 2.3. Lista de pagos (`PaymentsPage.jsx`), Requerimiento 31.1
 
-* [ ] Cambiar el ordenamiento por defecto (`sort_by`) y el concepto de la columna "Fecha Recepción" de `fecha_pago` a `fecha_recepcion`, y mostrar `pago.fecha_recepcion` en la celda.
-* [ ] Agregar las columnas Banco Emisor, Comprobante Externo y Fecha de Vencimiento, todas ordenables y con un guion cuando el dato no está informado (caso normal en los cobros inmediatos).
-* [ ] Agregar al panel de filtros un selector de bancos poblado con `fetchBanks` y un calendario de rango para el vencimiento (`vencimiento_desde` / `vencimiento_hasta`).
-* [ ] Incluir ambos filtros en la acción de limpieza.
+* [x] Cambiar el ordenamiento por defecto (`sort_by`) y el concepto de la columna "Fecha Recepción" de `fecha_pago` a `fecha_recepcion`, y mostrar `pago.fecha_recepcion` en la celda.
+* [x] Agregar las columnas Banco Emisor, Comprobante Externo y Fecha de Vencimiento, todas ordenables y con un guion cuando el dato no está informado (caso normal en los cobros inmediatos).
+* [x] Agregar al panel de filtros un selector de bancos poblado con `fetchBanks` y un calendario de rango para el vencimiento (`vencimiento_desde` / `vencimiento_hasta`).
+* [x] Incluir ambos filtros en la acción de limpieza.
+* [x] Reducir la grilla a las columnas Medio de Pago, Fecha de Recepción, Banco Emisor, Fecha de Vencimiento, Comprobante Externo, Monto, Cliente, Estado y Acciones, en ese orden, y retirar del panel los filtros de número interno y fecha de creación (el backend y la integración los conservan).
 
 #### 2.4. Modificación de pagos (`UpdatePaymentPage.jsx`), Requerimiento 32
 
@@ -96,7 +97,7 @@ Los tests existentes todavía envían `fecha_pago` y deben actualizarse antes de
 
 #### 3.1. Registro de pagos, Requerimiento 31
 
-* [ ] **Servicio:** renombrar `fecha_pago` a `fecha_recepcion` en los casos existentes y agregar los casos del cheque:
+* [x] **Servicio:** renombrar `fecha_pago` a `fecha_recepcion` en los casos existentes y agregar los casos del cheque:
   * `400` si el medio es diferido y falta el banco, el comprobante (ausente, vacío o solo espacios) o el vencimiento;
   * `400` si el vencimiento no es una fecha real o es anterior a la recepción;
   * `400` si el medio es inmediato y se informa banco o vencimiento;
@@ -104,46 +105,45 @@ Los tests existentes todavía envían `fecha_pago` y deben actualizarse antes de
   * persistencia de banco y vencimiento en `null` en los medios inmediatos;
   * aceptación de un vencimiento ya pasado, siempre que no sea anterior a la recepción;
   * persistencia del comprobante recortado.
-* [ ] **Servicio (`createBank`):** `400` ante un nombre vacío, solo espacios o de más de 50 caracteres; `409` ante un homónimo; normalización de espacios antes de insertar.
-* [ ] **Controlador:** `400` ante la falta de `id_cliente`, `id_medio_pago` o `fecha_recepcion` (hoy solo se cubre `monto`); `POST /api/payment/banks` (`201`, `400` sin nombre sin invocar al servicio, propagación del `409`); `GET /api/payment/banks` (`200`).
-* [ ] **Integración:** sembrar `Banco` en el `beforeAll`; verificar las columnas persistidas para medios inmediatos y diferidos; verificar que cada rechazo no inserta filas; alta de banco con `409` al repetir el nombre con distinta caja.
+* [x] **Servicio (`createBank`):** `400` ante un nombre vacío, solo espacios o de más de 50 caracteres; `409` ante un homónimo; normalización de espacios antes de insertar.
+* [x] **Controlador:** `400` ante la falta de `id_cliente`, `id_medio_pago` o `fecha_recepcion` (hoy solo se cubre `monto`); `POST /api/payment/banks` (`201`, `400` sin nombre sin invocar al servicio, propagación del `409`); `GET /api/payment/banks` (`200`).
+* [x] **Integración:** sembrar `Banco` en el `beforeAll`; verificar las columnas persistidas para medios inmediatos y diferidos; verificar que cada rechazo no inserta filas; alta de banco con `409` al repetir el nombre con distinta caja.
 
 #### 3.2. Lista de pagos, Requerimiento 31.1
 
 No existen tests de la consulta, por lo que deben escribirse completos:
 
-* [ ] **Servicio:** depuración de criterios vacíos, ordenamiento por defecto `fecha_recepcion DESC` ante un concepto fuera de la lista blanca, normalización del DTO (con banco y vencimiento en `null` para cobros inmediatos), traslado de `id_banco` y `400` ante identificadores, importes, fechas o rangos inválidos (incluido `vencimiento_desde` posterior a `vencimiento_hasta`).
-* [ ] **Controlador:** `200` con la colección, tipado de los parámetros de la query string y propagación del `400` y del `500`.
-* [ ] **Integración:** consulta sin filtros que incluya los pagos sin banco, filtro por banco, filtro por rango de vencimiento, ordenamiento por vencimiento, combinación de criterios, búsqueda parcial por comprobante, rangos de importes y fechas, ordenamiento por un concepto inexistente y consulta sin coincidencias.
+* [x] **Servicio:** depuración de criterios vacíos, ordenamiento por defecto `fecha_recepcion DESC` ante un concepto fuera de la lista blanca, normalización del DTO (con banco y vencimiento en `null` para cobros inmediatos), traslado de `id_banco` y `400` ante identificadores, importes, fechas o rangos inválidos (incluido `vencimiento_desde` posterior a `vencimiento_hasta`).
+* [x] **Controlador:** `200` con la colección, tipado de los parámetros de la query string y propagación del `400` y del `500`.
+* [x] **Integración:** consulta sin filtros que incluya los pagos sin banco, filtro por banco, filtro por rango de vencimiento, ordenamiento por vencimiento, combinación de criterios, búsqueda parcial por comprobante, rangos de importes y fechas, ordenamiento por un concepto inexistente y consulta sin coincidencias.
 
 #### 3.3. Modificación y baja de pagos, Requerimiento 32
 
 No existen tests de la modificación ni de la baja, por lo que deben escribirse completos:
 
-* [ ] **Servicio:** `404` si el pago no existe; `409` fuera de "Borrador"; `400` ante un importe inválido; descarte de `id_cliente`; `409` al asignar "Aceptado" a un medio diferido; `409` ante `affectedRows === 0`; reglas del cheque sobre el registro resultante de la edición (incluida la limpieza de banco y vencimiento al pasar de cheque a medio inmediato); baja solo en "Borrador".
-* [ ] **Controlador:** `PUT` con `200`, `400` ante un `id` no numérico o un cuerpo vacío, y propagación de errores; `DELETE` con `200` y propagación de errores.
-* [ ] **Integración:** modificación de importe y comprobante con `fecha_actualizacion` estampada; conversión de medio inmediato a diferido (con y sin los tres datos); conversión de diferido a inmediato con banco y vencimiento en `NULL`; recepción posterior al vencimiento rechazada; promoción a "Aceptado" según el medio; inmutabilidad y baja según el estado.
+* [x] **Servicio:** `404` si el pago no existe; `409` fuera de "Borrador"; `400` ante un importe inválido; descarte de `id_cliente`; `409` al asignar "Aceptado" a un medio diferido; `409` ante `affectedRows === 0`; reglas del cheque sobre el registro resultante de la edición (incluida la limpieza de banco y vencimiento al pasar de cheque a medio inmediato); baja solo en "Borrador".
+* [x] **Controlador:** `PUT` con `200`, `400` ante un `id` no numérico o un cuerpo vacío, y propagación de errores; `DELETE` con `200` y propagación de errores.
+* [x] **Integración:** modificación de importe y comprobante con `fecha_actualizacion` estampada; conversión de medio inmediato a diferido (con y sin los tres datos); conversión de diferido a inmediato con banco y vencimiento en `NULL`; recepción posterior al vencimiento rechazada; promoción a "Aceptado" según el medio; inmutabilidad y baja según el estado.
 
 #### 3.4. Estados de pago, Requerimiento 32.1
 
 La implementación está completa; solo faltan casos de test:
 
-* [ ] **Controlador:** `500` con el sobre de error uniforme en `GET /api/payment/methods` y `GET /api/payment/states` cuando el servicio falla.
-* [ ] **Integración:** `GET /api/payment/states` devuelve los cuatro estados ordenados por identificador, y `GET /api/payment/methods` refleja fielmente `es_diferido`.
+* [x] **Controlador:** `500` con el sobre de error uniforme en `GET /api/payment/methods` y `GET /api/payment/states` cuando el servicio falla.
+* [x] **Integración:** `GET /api/payment/states` devuelve los cuatro estados ordenados por identificador, y `GET /api/payment/methods` refleja fielmente `es_diferido`.
 
 ---
 
 ### 4. Entorno
 
-* [ ] Recrear el contenedor del backend (`docker compose up -d --build ims-backend`) para que tome la zona horaria `TZ=America/Argentina/Buenos_Aires` agregada en `docker-compose.yml`. Sin ella, las columnas `DATE` se mostrarían un día antes en el navegador.
-* [ ] Recrear la base de test `DB_NAME_TEST` con el esquema vigente antes de ejecutar la suite.
+* [x] Recrear la base de test `DB_NAME_TEST` con el esquema vigente antes de ejecutar la suite.
 
 ---
 
-### 5. Decisiones abiertas
+### 5. Decisiones tomadas
 
 * **Alta concurrente de un mismo banco:** si dos altas simultáneas del mismo nombre superan la validación del servicio, la restricción `UNIQUE` impide el duplicado, pero `Payment.createBank` convierte el error de la base en un error genérico y la segunda respuesta es `500` en lugar de `409`. Puede resolverse detectando `ER_DUP_ENTRY` en el modelo. Es un escenario improbable en la operatoria del taller.
-* **Componente compartido de selección de banco:** confirmar su ubicación en `frontend/src/components/common/` (punto 2.1) antes de implementar las páginas.
+* **Componente compartido de selección de banco:** se debe ubicar en `frontend/src/components/common/` (punto 2.1) antes de implementar las páginas.
 
 ---
 

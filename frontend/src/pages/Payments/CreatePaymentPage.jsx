@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchClients } from '../../services/client.service';
 //import StatusBadge from '../../components/common/StatusBadge';
-import { fetchPaymentMethods, apiCreatePayment } from '../../services/payment.service';
+import { fetchPaymentMethods, fetchBanks, apiCreatePayment } from '../../services/payment.service';
+import BankSelector from '../../components/common/BankSelector';
 
 const CreatePaymentPage = () => {
     const navigate = useNavigate();
@@ -16,9 +17,14 @@ const CreatePaymentPage = () => {
     const [paymentMethods, setPaymentMethods] = useState([]);
     const [selectedMethodId, setSelectedMethodId] = useState("");
 
+    // Bancos
+    const [banks, setBanks] = useState([]);
+    const [selectedBankId, setSelectedBankId] = useState("");
+
     // Datos del pago
     const [monto, setMonto] = useState("");
-    const [fechaPago, setFechaPago] = useState("");
+    const [fechaRecepcion, setFechaRecepcion] = useState("");
+    const [fechaVencimiento, setFechaVencimiento] = useState("");
     const [comprobanteExterno, setComprobanteExterno] = useState("");
     const [observaciones, setObservaciones] = useState("");
 
@@ -28,15 +34,24 @@ const CreatePaymentPage = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
 
-    // Cargar los clientes y metodos de pago al select
+    // Los datos del cheque (banco, comprobante y vencimiento) solo aplican a los medios diferidos
+    const selectedMethod = paymentMethods.find(method => method.id_medio_pago === parseInt(selectedMethodId));
+    const esDiferido = !!(selectedMethod && selectedMethod.es_diferido);
+    const vencimientoInvalido = esDiferido && fechaRecepcion && fechaVencimiento && fechaVencimiento < fechaRecepcion;
+    const chequeIncompleto = esDiferido && (!selectedBankId || !comprobanteExterno.trim() || !fechaVencimiento);
+
+    // Cargar los clientes, metodos de pago y bancos a los selectores
     useEffect(() => {
         const loadInitialData = async () => {
             try {
                 const clientData = await fetchClients();
                 setClients(clientData);
-                
+
                 const paymentMethodData = await fetchPaymentMethods();
                 setPaymentMethods(paymentMethodData);
+
+                const bankData = await fetchBanks();
+                setBanks(bankData);
             } catch (err) {
                 setMessage(`Error al cargar datos: ${err.message}`);
                 setIsError(true);
@@ -56,11 +71,22 @@ const CreatePaymentPage = () => {
         );
     }
 
-    // Seleccion de un metodo de pago
+    // Seleccion de un metodo de pago: al pasar a un medio inmediato se descartan banco y vencimiento
     const handlePaymentMethodChange = async (e) => {
         const id = e.target.value;
         setSelectedMethodId(id);
+
+        const method = paymentMethods.find(m => m.id_medio_pago === parseInt(id));
+        if (!method || !method.es_diferido) {
+            setSelectedBankId("");
+            setFechaVencimiento("");
+        }
     }
+
+    // Incorpora al catalogo en memoria el banco dado de alta desde el selector, respetando el orden por nombre
+    const handleBankCreated = (bank) => {
+        setBanks(prevBanks => [...prevBanks, bank].sort((a, b) => a.nombre.localeCompare(b.nombre)));
+    };
 
     // Solo permite dígitos y un único separador decimal
     const handleMontoChange = (e) => {
@@ -70,9 +96,14 @@ const CreatePaymentPage = () => {
         }
     };
 
-    // Seleccion de la fecha de pago
-    const handleFechaPagoChange = (e) => {
-        setFechaPago(e.target.value);
+    // Seleccion de la fecha de recepcion del pago
+    const handleFechaRecepcionChange = (e) => {
+        setFechaRecepcion(e.target.value);
+    };
+
+    // Seleccion de la fecha de vencimiento del cheque
+    const handleFechaVencimientoChange = (e) => {
+        setFechaVencimiento(e.target.value);
     };
 
     // Edicion del numero de comprobante externo
@@ -109,6 +140,24 @@ const CreatePaymentPage = () => {
             return;
         }
 
+        if (!fechaRecepcion) {
+            setMessage("Por favor, indique la fecha de recepción del pago antes de guardar.");
+            setIsError(true);
+            return;
+        }
+
+        if (chequeIncompleto) {
+            setMessage("Para un medio de pago diferido debe indicar el banco emisor, el número de comprobante y la fecha de vencimiento.");
+            setIsError(true);
+            return;
+        }
+
+        if (vencimientoInvalido) {
+            setMessage("La fecha de vencimiento no puede ser anterior a la fecha de recepción.");
+            setIsError(true);
+            return;
+        }
+
         setIsSaving(true);
         setMessage(false);
 
@@ -117,10 +166,16 @@ const CreatePaymentPage = () => {
                 id_cliente: parseInt(selectedClientId),
                 id_medio_pago: parseInt(selectedMethodId),
                 monto: Number(monto),
-                fecha_pago: fechaPago || null,
-                numero_comprobante: comprobanteExterno || null,
+                fecha_recepcion: fechaRecepcion,
+                numero_comprobante: comprobanteExterno.trim() || null,
                 observaciones: observaciones || null,
             };
+
+            // El banco y el vencimiento solo viajan en los medios diferidos
+            if (esDiferido) {
+                payload.id_banco = parseInt(selectedBankId);
+                payload.fecha_vencimiento = fechaVencimiento;
+            }
 
             const result = await apiCreatePayment(payload);
 
@@ -142,8 +197,10 @@ const CreatePaymentPage = () => {
         setSelectedClientId("");
         setSelectedClient("");
         setSelectedMethodId("");
+        setSelectedBankId("");
         setMonto("");
-        setFechaPago("");
+        setFechaRecepcion("");
+        setFechaVencimiento("");
         setComprobanteExterno("");
         setObservaciones("");
         setMessage(false);
@@ -234,7 +291,7 @@ const CreatePaymentPage = () => {
                             <div>
                                 <label className="pay-field-label">Método de Pago *</label>
                                 <select
-                                    name="id_cliente"
+                                    name="id_medio_pago"
                                     value={selectedMethodId} // Controlamos el select con React
                                     onChange={handlePaymentMethodChange} // Disparamos la función al cambiar
                                     required
@@ -249,30 +306,71 @@ const CreatePaymentPage = () => {
                                 </select>
                             </div>
                             <div>
-                                <label className="pay-field-label">Fecha de recepción del pago</label>
+                                <label className="pay-field-label">Fecha de recepción del pago *</label>
                                 <input
                                     type="date"
-                                    name="fecha_pago"
-                                    value={fechaPago}
-                                    onChange={handleFechaPagoChange}
+                                    name="fecha_recepcion"
+                                    value={fechaRecepcion}
+                                    onChange={handleFechaRecepcionChange}
+                                    required
                                     className="pay-input"
                                 />
-                                <span className="pay-field-hint">Cargar solo si el pago fue recibido</span>
+                                <span className="pay-field-hint">Fecha en que el taller recibió el pago (en cheques, la entrega del cheque)</span>
                             </div>
                         </div>
                     </div>
 
+                    {/* DATOS DEL CHEQUE: solo para medios de pago diferidos */}
+                    {esDiferido && (
+                        <div className="pay-section">
+                            <div className="pay-grid">
+                                <div>
+                                    <label className="pay-field-label">Banco Emisor *</label>
+                                    <BankSelector
+                                        banks={banks}
+                                        value={selectedBankId}
+                                        onChange={setSelectedBankId}
+                                        onBankCreated={handleBankCreated}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="pay-field-label">Fecha de vencimiento *</label>
+                                    <input
+                                        type="date"
+                                        name="fecha_vencimiento"
+                                        value={fechaVencimiento}
+                                        onChange={handleFechaVencimientoChange}
+                                        min={fechaRecepcion || undefined}
+                                        required
+                                        className="pay-input"
+                                    />
+                                    {vencimientoInvalido ? (
+                                        <span className="pay-field-error">No puede ser anterior a la fecha de recepción</span>
+                                    ) : (
+                                        <span className="pay-field-hint">Fecha a partir de la cual el cheque puede presentarse al cobro</span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="pay-section">
                         <div className="pay-grid">
                             <div>
-                                <label className="pay-field-label">Identificacion de comprobante (externo)</label>
+                                <label className="pay-field-label">
+                                    Identificacion de comprobante (externo){esDiferido ? ' *' : ''}
+                                </label>
                                 <input
                                     type="text"
                                     name="comprobante_externo"
                                     value={comprobanteExterno}
                                     onChange={handleComprobanteExternoChange}
+                                    required={esDiferido}
                                     className="pay-text-input"
                                 />
+                                {esDiferido && (
+                                    <span className="pay-field-hint">Número impreso del cheque</span>
+                                )}
                             </div>
                             <div>
                                 <label className="pay-field-label">Observaciones sobre el pago</label>
@@ -313,9 +411,9 @@ const CreatePaymentPage = () => {
 
                         <button
                             type="button"
-                            disabled={isSaving}
+                            disabled={isSaving || chequeIncompleto || vencimientoInvalido}
                             onClick={() => handleSave(false)}
-                            className={`pay-btn-draft ${isSaving ? 'pay-btn-draft--disabled' : ''}`}
+                            className={`pay-btn-draft ${isSaving || chequeIncompleto || vencimientoInvalido ? 'pay-btn-draft--disabled' : ''}`}
                         >
                             Crear Pago en Borrador
                         </button>
