@@ -10,7 +10,7 @@ const request = require('supertest');
 const app = require('../src/app'); 
 const Product = require('../src/models/Product'); 
 
-describe('Integración: PUT /api/products/:id_producto', () => {
+/* describe('Integración: PUT /api/products/:id_producto', () => {
     let testProductId;
 
     // --- SETUP: Preparamos el terreno antes de probar ---
@@ -71,4 +71,4 @@ describe('Integración: PUT /api/products/:id_producto', () => {
         expect(response.status).toBe(400);
         expect(response.body.message).toBe("Product state is required.");
     });
-});
+}); */

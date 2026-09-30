@@ -22,11 +22,18 @@ import UpdateClientPage from './pages/Clients/UpdateClientPage';
 
 // Rutas del producto
 import ProductsPage from './pages/Products/ProductsPage';
-import RegisterReceptionPage from './pages/Products/RegisterReceptionPage';
+//import RegisterReceptionPage from './pages/Products/RegisterReceptionPage';
 import UpdateProductPage from './pages/Products/UpdateProductPage';
 import ProductTypesPage from './pages/Configuration/ProductTypesPage';
 import ProductModelsPage from './pages/Configuration/ProductModelsPage';
 import StateTransitionsPage from './pages/Configuration/StateTransitionsPage';
+
+// Rutas de Comprobantes de Recepcion
+import RegisterReceiptPage from './pages/Receipts/RegisterReceiptPage';
+import ReceiptsPage from './pages/Receipts/ReceiptsPage';
+import UpdateReceiptPage from './pages/Receipts/UpdateReceiptPage';
+
+
 
 // Componente que envuelve la lógica para rutas privadas
 const PrivateRoute = ({ children }) => {
@@ -70,7 +77,7 @@ function App() {
                     {/* --- GESTIÓN DE PRODUCTOS (VÁLVULAS) --- */}
                     <Route path="/productos-reparar" element={<ProductsPage />} />
                     <Route path="/producto/:id_producto" element={<UpdateProductPage />} />
-                    <Route path="/registrar-recepcion" element={<RegisterReceptionPage />} />
+                    {/* <Route path="/registrar-recepcion" element={<RegisterReceptionPage />} /> */}
 
                     {/* --- CONFIGURACIÓN --- */}
                     <Route path="/configuracion" element={<ConfigurationPage />} /> 
@@ -83,6 +90,10 @@ function App() {
                     <Route path="/configuracion/precio-productos" element={<PriceMatrixPage />} />
 
                     {/* --- PROCESOS ADMINISTRATIVOS --- */}
+                    <Route path="/registrar-recepcion" element={<RegisterReceiptPage />} />
+                    <Route path="/recepciones" element={<ReceiptsPage />} />
+                    <Route path="/recepcion/:id_comprobante" element={<UpdateReceiptPage />} />
+
                     <Route path="/crear-orden" element={<ConstructionPage />} />
                     <Route path="/consultar-stock" element={<ConstructionPage />} />
                     <Route path="/estados-cuenta" element={<ConstructionPage />} />

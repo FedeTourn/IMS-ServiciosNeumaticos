@@ -1,5 +1,3 @@
-const Client = require('../models/Client');
-const ClientCategory = require('../models/ClientCategory');
 const ClientService = require('../services/client.service');
 
 /**

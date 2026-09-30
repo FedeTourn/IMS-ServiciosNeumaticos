@@ -90,7 +90,7 @@ exports.findAll = async (options = {}) => {
     const { condition: whereClause, params } = _buildSearchClause(searchField, searchTerm);
     const orderClause = _buildOrderClause(orderBy, sortOrder);
 
-    // Ensamblaje final de la consulta
+    // Ensamble final de la consulta
     const query = `${baseQuery} ${whereClause} ${orderClause}`;
 
     try {
@@ -107,13 +107,26 @@ exports.findAll = async (options = {}) => {
  * @param {Object} productData - Objeto con la informacion del producto (modelo, fecha_recepcion, estado, id_cliente, observaciones).
  * @returns {Promise<number>} Id del producto creado.
  */
-exports.create = async (productData) => {
+exports.create = async (connection = db, productData) => {
     const query = `
-        INSERT INTO Producto (modelo, fecha_recepcion, estado, id_cliente, observaciones)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO Producto (modelo, fecha_recepcion, estado, id_cliente, observaciones, id_comprobante_recepcion)
+        VALUES (?, ?, ?, ?, ?, ?);
     `;
     // Nota: El tipo se infiere del modelo, por lo tanto no se incluye en el INSERT
-    try {
+    const values = [
+        productData.modelo,
+        productData.fecha_recepcion,
+        productData.estado || 1, // Asume el estado '1: Recibida' por defecto
+        productData.id_cliente,
+        productData.observaciones || null,
+        productData.id_comprobante_recepcion
+    ];
+
+    // Se ejecuta sobre la conexión inyectada (que puede ser la transacción del Servicio de Comprobantes)
+    const [result] = await connection.query(query,values);
+    return result.insertId;
+
+    /* try {
         const [result] = await db.query(query, [
             productData.modelo,
             productData.fecha_recepcion,
@@ -125,7 +138,7 @@ exports.create = async (productData) => {
     } catch (error) {
         console.error("Error creating product:", error);
         throw error;
-    }
+    } */
 };
 
 /**

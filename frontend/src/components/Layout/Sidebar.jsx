@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 const menuItems = [
     { name: 'Inicio', path: '/Inicio', icon: '🏠' },
     { name: 'Productos a Reparar', path: '/productos-reparar', icon: '🛠️' },
-    { name: 'Registrar Recepción', path: '/registrar-recepcion', icon: '📦' },
+    { name: 'Consultar Recepciones', path: '/recepciones', icon: '📦' },
     { name: 'Crear Orden', path: '/crear-orden', icon: '📝' },
     { name: 'Consultar Stock', path: '/consultar-stock', icon: '🛒' },
     { name: 'Estados de Cuenta', path: '/estados-cuenta', icon: '💰' },
@@ -19,7 +19,7 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
 
     return (
         <aside 
-            className={`bg-slate-800 text-white h-screen sticky top-0 left-0 transition-all duration-300 ease-in-out z-50 flex flex-col
+            className={`print:hidden bg-slate-800 text-white h-screen sticky top-0 left-0 transition-all duration-300 ease-in-out z-50 flex flex-col
                 ${isCollapsed ? 'w-20' : 'w-64'}`}
         >
             {/* 1. Header: Altura Fija */}
