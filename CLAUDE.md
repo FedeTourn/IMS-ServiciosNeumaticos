@@ -63,6 +63,37 @@ Create React App + React Router v7 + Tailwind CSS. Structure under `frontend/src
 
 When adding a new domain feature, follow the existing pattern end-to-end: backend route/controller/service/model files, a matching frontend `services/*.service.js`, and a `pages/<Domain>/` folder, wired into `App.js`.
 
+## Implementation order: always top-down
+
+When implementing any feature, work from the most important piece to the most
+auxiliary one, never the reverse. "Top" means business logic, not the HTTP layer.
+
+1. **Service first.** Write the service function that expresses the business
+   rule/flow (with its JSDoc in Spanish), even if the model methods it calls
+   don't exist yet.
+2. **Missing dependencies are declared as stubs**: signature + JSDoc describing
+   their responsibility, body `throw new Error('Not implemented')`. Names and
+   signatures must derive from how the service uses them.
+3. **Then implement the stubs**, from closest to the service to lowest level
+   (models → SQL → utilities).
+4. **Then controller and routes**, then the frontend `services/*.service.js`,
+   then the `pages/<Domain>/` UI.
+5. **Do not create helpers, utilities or abstractions before there is code
+   that calls them.** Nothing "just in case".
+6. **Present changes in the same order**: start with the main piece (the
+   service) and go down to the details.
+
+### Checkpoint
+- After steps 1–2, **stop and show me the service logic with its stubs** so I
+  can review it before the rest is implemented, unless the change is trivial
+  (fewer than ~3 functions).
+- If going down a level reveals that the logic above needs to change, tell me
+  and explain why before modifying it.
+
+### Order inside a file
+- Public/main functions first, private/auxiliary ones after, so the file reads
+  top to bottom.
+
 ## Commit message format
 
 Follow the Conventional Commits style already used throughout this repo's history:
