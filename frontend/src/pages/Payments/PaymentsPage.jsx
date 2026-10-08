@@ -435,110 +435,112 @@ const PaymentsPage = () => {
 
             {/* Contenedor de la Tabla Principal */}
             <div className="pay-list-table-card">
-
                 {/*Manejo de errores*/}
-                {error && (
+                {error ? 
+                (
                     <div className="pay-list-message--error">
                         {error}
                     </div>
-                )}
-
-                <div className="pay-list-table-wrapper">
-                    <table className="pay-list-table">
-                        <thead className="pay-list-table-head">
-                            <tr>
-                                <th className="pay-list-table-th--center" onClick={() => handleSort('medio_pago_nombre')}>
-                                    Medio de Pago {getSortIndicator('medio_pago_nombre')}
-                                </th>
-                                <th className="pay-list-table-th" onClick={() => handleSort('fecha_recepcion')}>
-                                    Fecha Recepción {getSortIndicator('fecha_recepcion')}
-                                </th>
-                                <th className="pay-list-table-th--center" onClick={() => handleSort('banco_nombre')}>
-                                    Banco Emisor {getSortIndicator('banco_nombre')}
-                                </th>
-                                <th className="pay-list-table-th" onClick={() => handleSort('fecha_vencimiento')}>
-                                    Fecha Vencimiento {getSortIndicator('fecha_vencimiento')}
-                                </th>
-                                <th className="pay-list-table-th" onClick={() => handleSort('numero_comprobante')}>
-                                    Comprobante Externo {getSortIndicator('numero_comprobante')}
-                                </th>
-                                <th className="pay-list-table-th" onClick={() => handleSort('monto')}>
-                                    Monto ($) {getSortIndicator('monto')}
-                                </th>
-                                <th className="pay-list-table-th" onClick={() => handleSort('cliente_nombre')}>
-                                    Cliente {getSortIndicator('cliente_nombre')}
-                                </th>
-                                <th className="pay-list-table-th--center" onClick={() => handleSort('estado_pago_nombre')}>
-                                    Estado {getSortIndicator('estado_pago_nombre')}
-                                </th>
-                                <th className="pay-list-table-th--actions">
-                                    Acciones
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="pay-list-table-body">
-
-                            {isLoading ? (
-                                <tr>
-                                    <td colSpan="9" className="pay-list-table-loading">
-                                        Cargando Pagos ...
-                                    </td>
-                                </tr>
-                            ) : payments.length === 0 ? (
-                                <tr>
-                                    <td colSpan="9" className="pay-list-table-empty">
-                                        No se encontraron pagos que coincidan con los filtros seleccionados.
-                                    </td>
-                                </tr>
-                            ) : (
-                                payments.map((pago) => (
-                                    <tr key={pago.id_pago} className="pay-list-table-row">
-                                        <td className="pay-list-cell-method">
-                                            {pago.medio_pago_nombre}
-                                        </td>
-                                        <td className="pay-list-cell-date">
-                                            {formatDate(pago.fecha_recepcion)}
-                                        </td>
-                                        <td className="pay-list-cell-bank">
-                                            {pago.banco_nombre || '-'}
-                                        </td>
-                                        <td className="pay-list-cell-date">
-                                            {pago.fecha_vencimiento ? formatDate(pago.fecha_vencimiento) : '-'}
-                                        </td>
-                                        <td className="pay-list-cell-voucher">
-                                            {pago.numero_comprobante || '-'}
-                                        </td>
-                                        <td className="pay-list-cell-amount">
-                                            {formatCurrency(pago.monto)}
-                                        </td>
-                                        <td className="pay-list-cell-client">
-                                            {pago.cliente_nombre}
-                                        </td>
-                                        <td className="pay-list-cell-status">
-                                            <PaymentStatusBadge status={pago.estado_pago_nombre} />
-                                        </td>
-                                        <td className="pay-list-cell-actions">
-                                            <button
-                                                type="button"
-                                                onClick={() => navigate(`/pagos/${pago.id_pago}`)}
-                                                className="pay-list-btn-detail"
-                                            >
-                                                Ver Detalle
-                                            </button>
-                                        </td>
+                ) :
+                (
+                    <div>
+                        <div className="pay-list-table-wrapper">
+                            <table className="pay-list-table">
+                                <thead className="pay-list-table-head">
+                                    <tr>
+                                        <th className="pay-list-table-th--center" onClick={() => handleSort('medio_pago_nombre')}>
+                                            Medio de Pago {getSortIndicator('medio_pago_nombre')}
+                                        </th>
+                                        <th className="pay-list-table-th" onClick={() => handleSort('fecha_recepcion')}>
+                                            Fecha Recepción {getSortIndicator('fecha_recepcion')}
+                                        </th>
+                                        <th className="pay-list-table-th--center" onClick={() => handleSort('banco_nombre')}>
+                                            Banco Emisor {getSortIndicator('banco_nombre')}
+                                        </th>
+                                        <th className="pay-list-table-th" onClick={() => handleSort('fecha_vencimiento')}>
+                                            Fecha Vencimiento {getSortIndicator('fecha_vencimiento')}
+                                        </th>
+                                        <th className="pay-list-table-th" onClick={() => handleSort('numero_comprobante')}>
+                                            Comprobante Externo {getSortIndicator('numero_comprobante')}
+                                        </th>
+                                        <th className="pay-list-table-th" onClick={() => handleSort('monto')}>
+                                            Monto ($) {getSortIndicator('monto')}
+                                        </th>
+                                        <th className="pay-list-table-th" onClick={() => handleSort('cliente_nombre')}>
+                                            Cliente {getSortIndicator('cliente_nombre')}
+                                        </th>
+                                        <th className="pay-list-table-th--center" onClick={() => handleSort('estado_pago_nombre')}>
+                                            Estado {getSortIndicator('estado_pago_nombre')}
+                                        </th>
+                                        <th className="pay-list-table-th--actions">
+                                            Acciones
+                                        </th>
                                     </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                                </thead>
+                                <tbody className="pay-list-table-body">
 
-                {/* Pie de tabla */}
-                <div className="pay-list-footer">
-                    <span className="pay-list-footer-text">
-                        Mostrando {payments.length} pago{payments.length !== 1 && 's'} listado{payments.length !== 1 && 's'}
-                    </span>
-                </div>
+                                    {isLoading ? (
+                                        <tr>
+                                            <td colSpan="9" className="pay-list-table-loading">
+                                                Cargando Pagos ...
+                                            </td>
+                                        </tr>
+                                    ) : payments.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="9" className="pay-list-table-empty">
+                                                No se encontraron pagos que coincidan con los filtros seleccionados.
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        payments.map((pago) => (
+                                            <tr key={pago.id_pago} className="pay-list-table-row">
+                                                <td className="pay-list-cell-method">
+                                                    {pago.medio_pago_nombre}
+                                                </td>
+                                                <td className="pay-list-cell-date">
+                                                    {formatDate(pago.fecha_recepcion)}
+                                                </td>
+                                                <td className="pay-list-cell-bank">
+                                                    {pago.banco_nombre || '-'}
+                                                </td>
+                                                <td className="pay-list-cell-date">
+                                                    {pago.fecha_vencimiento ? formatDate(pago.fecha_vencimiento) : '-'}
+                                                </td>
+                                                <td className="pay-list-cell-voucher">
+                                                    {pago.numero_comprobante || '-'}
+                                                </td>
+                                                <td className="pay-list-cell-amount">
+                                                    {formatCurrency(pago.monto)}
+                                                </td>
+                                                <td className="pay-list-cell-client">
+                                                    {pago.cliente_nombre}
+                                                </td>
+                                                <td className="pay-list-cell-status">
+                                                    <PaymentStatusBadge status={pago.estado_pago_nombre} />
+                                                </td>
+                                                <td className="pay-list-cell-actions">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => navigate(`/pagos/${pago.id_pago}`)}
+                                                        className="pay-list-btn-detail"
+                                                    >
+                                                        Detalle
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                        {/* Pie de tabla */}
+                        <div className="pay-list-footer">
+                            <span className="pay-list-footer-text">
+                                Mostrando {payments.length} pago{payments.length !== 1 && 's'} listado{payments.length !== 1 && 's'}
+                            </span>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

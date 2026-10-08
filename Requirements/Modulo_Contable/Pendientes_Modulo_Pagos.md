@@ -39,7 +39,7 @@ Endpoints del backend ya disponibles tras los cambios:
 * [x] **Requerimiento 31:** Implementar `fetchBanks()`, que consulta `GET /api/payment/banks` con las cabeceras de `getAuthHeaders()` y retorna la colección, con la misma estructura que `fetchPaymentMethods` y `fetchPaymentStates`.
 * [x] **Requerimiento 31:** Implementar `apiCreateBank(bankData)`, que despacha `POST /api/payment/banks`, propaga el `statusCode` en la excepción (en particular el `409` de nombre duplicado, que la interfaz debe distinguir de un error genérico) y retorna el banco creado.
 * [x] **Requerimiento 31.1:** En `fetchPayments(filters)`, serializar `id_banco`, `vencimiento_desde` y `vencimiento_hasta` con el mismo tratamiento que los demás criterios, y actualizar el JSDoc (`fecha_desde`/`fecha_hasta` describen ahora la fecha de recepción).
-* [x] **Requerimiento 32:** `apiUpdatePayment` y `fetchPaymentById` no requieren cambios en su forma; solo cambian los campos que transportan.
+* [x] **Requerimiento 32:** `apiUpdatePayment` no requiere cambios en su forma; solo cambian los campos que transporta. `fetchPaymentById` consume ahora el endpoint `GET /api/payment/:id` en lugar de filtrar la consulta multicriterio.
 
 ---
 
@@ -75,19 +75,19 @@ El control de búsqueda con alta asistida debe comportarse igual en el registro 
 
 #### 2.4. Modificación de pagos (`UpdatePaymentPage.jsx`), Requerimiento 32
 
-La página existe como copia sin adaptar de `CreatePaymentPage.jsx`: llama a `apiCreatePayment`, pide cliente, rotula el botón como "Crear Pago en Borrador" y no hidrata el formulario. La ruta `/pagos/:id_pago` ya está registrada en `App.js` y el botón de detalle de la lista ya navega a ella.
+La página partía de una copia sin adaptar de `CreatePaymentPage.jsx` y ya fue adaptada a la modificación de pagos. La ruta `/pagos/:id_pago` está registrada en `App.js` y el botón de detalle de la lista navega a ella.
 
-* [ ] Hidratar el formulario desde `fetchPaymentById(id_pago)` y cargar los catálogos de medios, estados y bancos. Incluir `id_pago` en las dependencias del `useEffect`.
-* [ ] Reemplazar el selector de cliente por un panel informativo: el cliente no puede reasignarse.
-* [ ] Campos editables: importe, medio de cobro, estado, banco emisor, fecha de recepción, fecha de vencimiento, número de comprobante y observaciones.
-* [ ] Mostrar la vista en solo lectura, con un aviso de bloqueo contable y sin controles de guardado ni de descarte, cuando el pago no está en "Borrador".
-* [ ] Identificar el estado en todo momento con `PaymentStatusBadge`.
-* [ ] Al seleccionar un medio diferido, advertir que el pago no puede pasar directamente a "Aceptado" y ofrecer "Pendiente de acreditación".
-* [ ] Condicionar banco y vencimiento al medio seleccionado con los mismos criterios que el registro. Al pasar a un medio inmediato, limpiarlos para que se persistan en `null`; al pasar a uno diferido, exigir los tres datos antes de habilitar el guardado.
-* [ ] Usar el control de selección de banco del punto 2.1, con el banco vigente preseleccionado.
-* [ ] Guardar con `apiUpdatePayment`, protegido por `isSaving`, mostrando los errores del servidor.
-* [ ] Descartar con `ConfirmationModal` y `apiDeletePayment`, y redirigir a `/pagos` tras el éxito.
-* [ ] Advertir antes de guardar que la promoción a un estado definitivo es irreversible.
+* [x] Hidratar el formulario desde `fetchPaymentById(id_pago)` y cargar los catálogos de medios, estados y bancos. Incluir `id_pago` en las dependencias del `useEffect`.
+* [x] Reemplazar el selector de cliente por un panel informativo: el cliente no puede reasignarse.
+* [x] Campos editables: importe, medio de cobro, estado, banco emisor, fecha de recepción, fecha de vencimiento, número de comprobante y observaciones.
+* [x] Mostrar la vista en solo lectura, con un aviso de bloqueo contable y sin controles de guardado ni de descarte, cuando el pago no está en "Borrador".
+* [x] Identificar el estado en todo momento con `PaymentStatusBadge`.
+* [x] Al seleccionar un medio diferido, advertir que el pago no puede pasar directamente a "Aceptado" y ofrecer "Pendiente de acreditación".
+* [x] Condicionar banco y vencimiento al medio seleccionado con los mismos criterios que el registro. Con un medio inmediato no se envían, para que el backend los persista en `null` (los valores cargados se conservan en el formulario al alternar de medio); al pasar a uno diferido, exigir los tres datos antes de habilitar el guardado.
+* [x] Usar el control de selección de banco del punto 2.1, con el banco vigente preseleccionado.
+* [x] Guardar con `apiUpdatePayment`, protegido por `isSaving`, mostrando los errores del servidor.
+* [x] Descartar con `ConfirmationModal` y `apiDeletePayment`, y redirigir a `/pagos` tras el éxito.
+* [x] Advertir antes de guardar que la promoción a un estado definitivo es irreversible.
 
 ---
 
@@ -124,6 +124,9 @@ No existen tests de la modificación ni de la baja, por lo que deben escribirse 
 * [x] **Servicio:** `404` si el pago no existe; `409` fuera de "Borrador"; `400` ante un importe inválido; descarte de `id_cliente`; `409` al asignar "Aceptado" a un medio diferido; `409` ante `affectedRows === 0`; reglas del cheque sobre el registro resultante de la edición (incluida la limpieza de banco y vencimiento al pasar de cheque a medio inmediato); baja solo en "Borrador".
 * [x] **Controlador:** `PUT` con `200`, `400` ante un `id` no numérico o un cuerpo vacío, y propagación de errores; `DELETE` con `200` y propagación de errores.
 * [x] **Integración:** modificación de importe y comprobante con `fecha_actualizacion` estampada; conversión de medio inmediato a diferido (con y sin los tres datos); conversión de diferido a inmediato con banco y vencimiento en `NULL`; recepción posterior al vencimiento rechazada; promoción a "Aceptado" según el medio; inmutabilidad y baja según el estado.
+* [x] **Consulta individual (`GET /api/payment/:id`), servicio:** `toPaymentDTO` (importe a dos decimales, fechas ISO y fechas ausentes en `null`) y `getPaymentById` (DTO con cliente y banco, y `404` si el pago no existe).
+* [x] **Consulta individual, controlador:** `200` con el pago, `400` ante un identificador inválido, y propagación del `404` y del `500`.
+* [x] **Consulta individual, integración:** pago con medio inmediato (banco y vencimiento en `null`), cheque con banco, comprobante y fechas ISO, `404`, `400` y no interpretación de `/banks` como identificador.
 
 #### 3.4. Estados de pago, Requerimiento 32.1
 

@@ -41,6 +41,7 @@ import UpdateRepairOrderPage from './pages/RepairOrders/UpdateRepairOrderPage';
 // Rutas Pagos
 import CreatePaymentPage from './pages/Payments/CreatePaymentPage';
 import PaymentsPage from './pages/Payments/PaymentsPage';
+import UpdatePaymentPage from './pages/Payments/UpdatePaymentPage';
 
 
 // Componente que envuelve la lógica para rutas privadas
@@ -111,6 +112,7 @@ function App() {
                     {/*-- PAGOS --*/}
                     <Route path="/crear-pago" element={<CreatePaymentPage />} />
                     <Route path="/pagos" element={<PaymentsPage />} />
+                    <Route path="/pagos/:id_pago" element={<UpdatePaymentPage />} />
 
                     <Route path="/estados-cuenta" element={<ConstructionPage />} />
 

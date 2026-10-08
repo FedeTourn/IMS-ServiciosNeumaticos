@@ -18,14 +18,34 @@ const statusStyles = {
   'RECHAZADO': 'bg-rose-100 text-rose-800 border-rose-200',
 };
 
+// Modificadores de color de la variante de encabezado (fondo oscuro), definidos en index.css.
+const headerStatusModifiers = {
+  'BORRADOR': 'pay-status-badge--draft',
+  'PENDIENTE DE ACREDITACION': 'pay-status-badge--pending',
+  'ACEPTADO': 'pay-status-badge--accepted',
+  'RECHAZADO': 'pay-status-badge--rejected',
+};
+
 /**
  * Componente funcional para mostrar el estado de un pago con estilos dinámicos.
+ * @param {Object} props - Propiedades del componente.
+ * @param {string} props.status - Nombre del estado del pago.
+ * @param {string} [props.variant='pill'] - 'pill' (por defecto, para grillas) o 'header' (para el encabezado oscuro de una página, con el aspecto de los demás badges del encabezado).
  */
-const PaymentStatusBadge = ({ status }) => {
+const PaymentStatusBadge = ({ status, variant = 'pill' }) => {
+  if (variant === 'header') {
+    const modifier = headerStatusModifiers[normalize(status)] || '';
+    return (
+      <span className={`pay-status-badge ${modifier}`}>
+        {status}
+      </span>
+    );
+  }
+
   const currentStyle = statusStyles[normalize(status)] || 'bg-gray-100 text-gray-600 border-gray-200';
 
   return (
-    <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${currentStyle}`}>
+    <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap ${currentStyle}`}>
       {status}
     </span>
   );

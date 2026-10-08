@@ -207,23 +207,31 @@ export const fetchPayments = async (filters = {}) => {
 };
 
 /**
- * Recupera un pago puntual por su número interno para hidratar la vista de modificación.
- * Se resuelve sobre la consulta multicriterio filtrando por identificador, dado que el backend
- * expone la lectura de pagos como una única operación de listado.
+ * Recupera un pago puntual por su número interno para hidratar la vista de modificación,
+ * consumiendo el endpoint de consulta individual GET /api/payment/:id.
  * @param {number|string} id - Número interno del pago a recuperar.
- * @returns {Promise<Object>} Pago hidratado con cliente, estado y medio de pago.
- * @throws {Error} Excepción con código 404 si el identificador no corresponde a ningún pago.
+ * @returns {Promise<Object>} Pago hidratado con cliente (nombre, CUIT y dirección), estado, medio de pago y banco.
+ * @throws {Error} Excepción con el `statusCode` devuelto por el backend (400 ante un identificador inválido, 404 si no existe).
  */
 export const fetchPaymentById = async (id) => {
-    const payments = await fetchPayments({ id_pago: id });
+    try {
+        const response = await fetch(`${API_URL}/${id}`, {
+            method: 'GET',
+            headers: getAuthHeaders(),
+        });
+        const data = await response.json();
 
-    if (!payments || payments.length === 0) {
-        const error = new Error(`No se encontró un pago registrado bajo el identificador #${id}.`);
-        error.statusCode = 404;
+        if (!response.ok) {
+            const error = new Error(data.message || 'Error al recuperar el pago.');
+            error.statusCode = response.status;
+            throw error;
+        }
+
+        return data.data;
+    } catch (error) {
+        console.error('[PaymentService Front Error] Falla de comunicación con el endpoint GET /api/payment/:id:', error.message);
         throw error;
     }
-
-    return payments[0];
 };
 
 /**
