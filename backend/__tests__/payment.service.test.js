@@ -633,6 +633,96 @@ describe('PaymentService - Pruebas Unitarias', () => {
         });
     });
 
+    describe('toPaymentDTO()', () => {
+
+        it('Debe expresar el importe con dos decimales y las fechas en formato ISO 8601', () => {
+            const dto = PaymentService.toPaymentDTO({
+                id_pago: 7,
+                monto: 1500,
+                fecha_recepcion: new Date('2026-05-10T03:00:00.000Z'),
+                fecha_vencimiento: new Date('2026-06-10T03:00:00.000Z'),
+                fecha_creacion: new Date('2026-05-10T15:30:00.000Z'),
+                fecha_actualizacion: new Date('2026-05-11T09:00:00.000Z')
+            });
+
+            expect(dto).toEqual({
+                id_pago: 7,
+                monto: '1500.00',
+                fecha_recepcion: '2026-05-10T03:00:00.000Z',
+                fecha_vencimiento: '2026-06-10T03:00:00.000Z',
+                fecha_creacion: '2026-05-10T15:30:00.000Z',
+                fecha_actualizacion: '2026-05-11T09:00:00.000Z'
+            });
+        });
+
+        it('Debe retornar null en las fechas ausentes y conservar el resto de los atributos', () => {
+            const dto = PaymentService.toPaymentDTO({
+                id_pago: 8,
+                monto: '99.5',
+                id_banco: null,
+                banco_nombre: null,
+                fecha_recepcion: new Date('2026-05-10T03:00:00.000Z'),
+                fecha_vencimiento: null,
+                fecha_creacion: new Date('2026-05-10T15:30:00.000Z'),
+                fecha_actualizacion: null
+            });
+
+            expect(dto.monto).toBe('99.50');
+            expect(dto.fecha_vencimiento).toBeNull();
+            expect(dto.fecha_actualizacion).toBeNull();
+            expect(dto.id_banco).toBeNull();
+            expect(dto.banco_nombre).toBeNull();
+        });
+    });
+
+    describe('getPaymentById()', () => {
+
+        const pagoCheque = {
+            id_pago: 7,
+            id_cliente: 1,
+            cliente_nombre: 'Cliente Test',
+            cliente_cuit: '30-999-1',
+            cliente_direccion: 'Calle Falsa 123',
+            id_estado_pago: 1,
+            estado_pago_nombre: 'Borrador',
+            id_medio_pago: 2,
+            es_diferido: 1,
+            id_banco: 5,
+            banco_nombre: 'Banco Nación',
+            monto: 2000,
+            fecha_recepcion: new Date('2026-05-10T03:00:00.000Z'),
+            fecha_vencimiento: new Date('2026-06-10T03:00:00.000Z'),
+            numero_comprobante: 'CH-7',
+            observaciones: null,
+            fecha_creacion: new Date('2026-05-10T15:30:00.000Z'),
+            fecha_actualizacion: null
+        };
+
+        it('Debe retornar el pago normalizado como DTO, con los datos del cliente y del banco', async () => {
+            Payment.findById.mockResolvedValue(pagoCheque);
+
+            const result = await PaymentService.getPaymentById(7);
+
+            expect(Payment.findById).toHaveBeenCalledWith(7);
+            expect(result).toEqual(expect.objectContaining({
+                id_pago: 7,
+                cliente_direccion: 'Calle Falsa 123',
+                banco_nombre: 'Banco Nación',
+                monto: '2000.00',
+                fecha_recepcion: '2026-05-10T03:00:00.000Z',
+                fecha_vencimiento: '2026-06-10T03:00:00.000Z',
+                fecha_actualizacion: null
+            }));
+        });
+
+        it('Debe lanzar 404 si el pago no existe', async () => {
+            Payment.findById.mockResolvedValue(null);
+
+            await expect(PaymentService.getPaymentById(99))
+                .rejects.toEqual(expect.objectContaining({ statusCode: 404 }));
+        });
+    });
+
     describe('getAllPaymentStates()', () => {
         it('Debe delegar directamente en Payment.findAllStates y retornar su resultado', async () => {
             const mockStates = [{ id_estado_pago: 1, nombre: 'Borrador' }];

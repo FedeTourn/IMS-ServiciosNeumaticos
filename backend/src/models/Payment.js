@@ -388,8 +388,9 @@ exports.findAll = async (filters = {}) => {
 
 /**
  * Busca un pago puntual por su número interno, hidratado con las entidades relacionadas
- * (cliente, estado, medio de pago y banco emisor), de modo que la capa de servicio pueda evaluar
- * el nombre del estado vigente y la bandera de acreditación diferida sin consultas adicionales.
+ * (cliente con su CUIT y dirección, estado, medio de pago y banco emisor), de modo que la capa de
+ * servicio pueda evaluar el nombre del estado vigente y la bandera de acreditación diferida sin
+ * consultas adicionales. Sustenta además la consulta individual de pagos para la vista de modificación.
  * @param {number} idPago - Identificador único del pago.
  * @returns {Promise<Object|null>} Registro del pago con sus entidades relacionadas o null si no existe.
  */
@@ -400,6 +401,7 @@ exports.findById = async (idPago) => {
             P.id_cliente,
             C.nombre AS cliente_nombre,
             C.cuit AS cliente_cuit,
+            C.direccion AS cliente_direccion,
             P.id_estado_pago,
             EP.nombre AS estado_pago_nombre,
             P.id_medio_pago,

@@ -134,6 +134,50 @@ describe('PaymentController - API REST Endpoints', () => {
         });
     });
 
+    describe('GET /api/payment/:id', () => {
+
+        it('Debe retornar 200 con el pago devuelto por el servicio, delegando el identificador numérico', async () => {
+            const mockPayment = { id_pago: 5, monto: '1500.00', cliente_direccion: 'Calle Falsa 123' };
+            PaymentService.getPaymentById.mockResolvedValue(mockPayment);
+
+            const res = await request(app).get('/api/payment/5');
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.data).toEqual(mockPayment);
+            expect(PaymentService.getPaymentById).toHaveBeenCalledWith(5);
+        });
+
+        it.each(['abc', '0', '-3'])('Debe retornar 400 si el identificador es inválido (%p), sin invocar al servicio', async (id) => {
+            const res = await request(app).get(`/api/payment/${id}`);
+
+            expect(res.statusCode).toBe(400);
+            expect(res.body.success).toBe(false);
+            expect(PaymentService.getPaymentById).not.toHaveBeenCalled();
+        });
+
+        it('Debe propagar el statusCode 404 de la excepción del servicio', async () => {
+            const error = new Error('Pago inexistente simulado');
+            error.statusCode = 404;
+            PaymentService.getPaymentById.mockRejectedValue(error);
+
+            const res = await request(app).get('/api/payment/5');
+
+            expect(res.statusCode).toBe(404);
+            expect(res.body.success).toBe(false);
+            expect(res.body.message).toBe('Pago inexistente simulado');
+        });
+
+        it('Debe retornar 500 ante un error no controlado del servicio', async () => {
+            PaymentService.getPaymentById.mockRejectedValue(new Error('Falla inesperada'));
+
+            const res = await request(app).get('/api/payment/5');
+
+            expect(res.statusCode).toBe(500);
+            expect(res.body.success).toBe(false);
+        });
+    });
+
     describe('PUT /api/payment/:id', () => {
 
         it('Debe retornar 200 con el pago actualizado, delegando el identificador numérico y el cuerpo', async () => {

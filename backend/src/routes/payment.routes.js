@@ -14,6 +14,9 @@ router.get('/banks', paymentController.getBanks);
 // POST /api/payment/banks
 router.post('/banks', paymentController.handleCreateBank);
 
+// GET /api/payment/:id
+router.get('/:id', paymentController.handleGetPaymentById);
+
 // GET /api/payment (consulta multicriterio por query params)
 router.get('/', paymentController.handleGetPayments);
 

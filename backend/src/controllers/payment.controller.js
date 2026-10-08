@@ -303,3 +303,39 @@ exports.handleCreateBank = async (req, res) => {
         });
     }
 };
+
+/**
+ * Endpoint encargado de recuperar un pago puntual por su número interno (GET /api/payment/:id).
+ * Valida que el identificador sea un entero positivo y delega en el servicio la búsqueda y el
+ * control de existencia, cuyo 404 se traslada como estado HTTP de la respuesta.
+ * @param {Object} req - Objeto de petición Express.
+ * @param {Object} res - Objeto de respuesta Express.
+ */
+exports.handleGetPaymentById = async (req, res) => {
+    try {
+        const idPago = parseInt(req.params.id, 10);
+
+        if (Number.isNaN(idPago) || idPago <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: "El identificador del pago debe ser un número entero y positivo."
+            });
+        }
+
+        const result = await PaymentService.getPaymentById(idPago);
+
+        return res.status(200).json({
+            success: true,
+            data: result
+        });
+
+    } catch (error) {
+        console.error(`[PaymentController Error] Falla al despachar endpoint de obtención de pago: ${error.message}`);
+
+        const statusCode = error.statusCode || 500;
+        return res.status(statusCode).json({
+            success: false,
+            message: error.message || 'Ocurrió un error interno en el servidor al obtener el pago.'
+        });
+    }
+};

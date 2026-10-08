@@ -455,6 +455,82 @@ describe('Módulo de Pagos - Pruebas de Integración', () => {
         });
     });
 
+    describe('GET /api/payment/:id (consulta individual)', () => {
+
+        beforeAll(async () => {
+            if (process.env.NODE_ENV === 'test') {
+                await db.execute('SET FOREIGN_KEY_CHECKS = 0;');
+                await db.execute('TRUNCATE TABLE Pago;');
+                await db.execute('SET FOREIGN_KEY_CHECKS = 1;');
+
+                await db.execute("UPDATE Cliente SET direccion = 'Calle Falsa 123' WHERE id_cliente = 1");
+
+                await db.execute(`
+                    INSERT INTO Pago (id_pago, id_cliente, id_estado_pago, id_medio_pago, id_banco, monto, fecha_recepcion, fecha_vencimiento, numero_comprobante) VALUES
+                    (20, 1, 1, 1, NULL, 1000, '2026-05-10', NULL, NULL),
+                    (21, 1, 2, 2, 1, 2000, '2026-05-10', '2026-06-10', 'CH-21')
+                `);
+            }
+        });
+
+        it('debe devolver un pago de medio inmediato con los datos del cliente y banco y vencimiento en null', async () => {
+            const res = await request(app).get('/api/payment/20');
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.data).toEqual(expect.objectContaining({
+                id_pago: 20,
+                cliente_nombre: 'Cliente Test Pagos',
+                cliente_cuit: '30-999-1',
+                cliente_direccion: 'Calle Falsa 123',
+                estado_pago_nombre: 'Borrador',
+                medio_pago_nombre: 'Efectivo',
+                monto: '1000.00',
+                id_banco: null,
+                banco_nombre: null,
+                fecha_vencimiento: null
+            }));
+        });
+
+        it('debe devolver un cheque con su banco emisor, comprobante y fechas en formato ISO', async () => {
+            const res = await request(app).get('/api/payment/21');
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.data).toEqual(expect.objectContaining({
+                id_pago: 21,
+                estado_pago_nombre: 'Pendiente de acreditación',
+                medio_pago_nombre: 'Cheque',
+                id_banco: 1,
+                banco_nombre: 'Banco Nación',
+                numero_comprobante: 'CH-21'
+            }));
+            expect(res.body.data.es_diferido).toBeTruthy();
+            expect(new Date(res.body.data.fecha_recepcion).toISOString()).toBe(res.body.data.fecha_recepcion);
+            expect(new Date(res.body.data.fecha_vencimiento).toISOString()).toBe(res.body.data.fecha_vencimiento);
+        });
+
+        it('debe retornar 404 si el pago no existe', async () => {
+            const res = await request(app).get('/api/payment/999');
+
+            expect(res.statusCode).toBe(404);
+            expect(res.body.success).toBe(false);
+        });
+
+        it('debe retornar 400 si el identificador no es un entero positivo', async () => {
+            const res = await request(app).get('/api/payment/abc');
+
+            expect(res.statusCode).toBe(400);
+            expect(res.body.success).toBe(false);
+        });
+
+        it('no debe interpretar las rutas literales de catálogo como un identificador', async () => {
+            const res = await request(app).get('/api/payment/banks');
+
+            expect(res.statusCode).toBe(200);
+            expect(Array.isArray(res.body.data)).toBe(true);
+        });
+    });
+
     describe('Catálogos de estados y medios de pago', () => {
 
         it('debe devolver los cuatro estados ordenados por identificador', async () => {

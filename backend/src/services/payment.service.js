@@ -160,16 +160,7 @@ class PaymentService {
         try {
             const payments = await Payment.findAll(queryCriteria);
 
-            // Normalización hacia un DTO plano optimizado para el consumo del cliente web. El banco
-            // y el vencimiento viajan en null en los cobros inmediatos: su representación es de la UI.
-            return payments.map(payment => ({
-                ...payment,
-                monto: Number(payment.monto).toFixed(2),
-                fecha_recepcion: payment.fecha_recepcion ? new Date(payment.fecha_recepcion).toISOString() : null,
-                fecha_vencimiento: payment.fecha_vencimiento ? new Date(payment.fecha_vencimiento).toISOString() : null,
-                fecha_creacion: payment.fecha_creacion ? new Date(payment.fecha_creacion).toISOString() : null,
-                fecha_actualizacion: payment.fecha_actualizacion ? new Date(payment.fecha_actualizacion).toISOString() : null
-            }));
+            return payments.map(payment => PaymentService.toPaymentDTO(payment));
 
         } catch (error) {
             console.error(`[PaymentService Error] Falla en subproceso getPayments: ${error.message}`);
@@ -295,6 +286,25 @@ class PaymentService {
         const mes = String(fecha.getMonth() + 1).padStart(2, '0');
         const dia = String(fecha.getDate()).padStart(2, '0');
         return `${anio}-${mes}-${dia}`;
+    }
+
+    /**
+     * Normaliza un registro de pago proveniente de la capa de datos hacia un DTO plano optimizado
+     * para el consumo del cliente web: el monto se expresa con dos decimales y las fechas en formato
+     * ISO 8601. El banco y el vencimiento viajan en null en los cobros inmediatos: su representación
+     * es responsabilidad de la UI.
+     * @param {Object} payment - Registro de pago hidratado con sus entidades relacionadas.
+     * @returns {Object} El pago normalizado, listo para ser devuelto al controlador.
+     */
+    static toPaymentDTO(payment) {
+        return {
+            ...payment,
+            monto: Number(payment.monto).toFixed(2),
+            fecha_recepcion: payment.fecha_recepcion ? new Date(payment.fecha_recepcion).toISOString() : null,
+            fecha_vencimiento: payment.fecha_vencimiento ? new Date(payment.fecha_vencimiento).toISOString() : null,
+            fecha_creacion: payment.fecha_creacion ? new Date(payment.fecha_creacion).toISOString() : null,
+            fecha_actualizacion: payment.fecha_actualizacion ? new Date(payment.fecha_actualizacion).toISOString() : null
+        };
     }
 
     /**
@@ -572,15 +582,7 @@ class PaymentService {
 
         const pagoActualizado = await Payment.findById(id);
 
-        // Normalización hacia un DTO plano optimizado para el consumo del cliente web
-        return {
-            ...pagoActualizado,
-            monto: Number(pagoActualizado.monto).toFixed(2),
-            fecha_recepcion: pagoActualizado.fecha_recepcion ? new Date(pagoActualizado.fecha_recepcion).toISOString() : null,
-            fecha_vencimiento: pagoActualizado.fecha_vencimiento ? new Date(pagoActualizado.fecha_vencimiento).toISOString() : null,
-            fecha_creacion: pagoActualizado.fecha_creacion ? new Date(pagoActualizado.fecha_creacion).toISOString() : null,
-            fecha_actualizacion: pagoActualizado.fecha_actualizacion ? new Date(pagoActualizado.fecha_actualizacion).toISOString() : null
-        };
+        return PaymentService.toPaymentDTO(pagoActualizado);
     }
 
     /**
@@ -615,6 +617,25 @@ class PaymentService {
         }
 
         return { id_pago: pagoVigente.id_pago };
+    }
+
+    /**
+     * Recupera un pago puntual por su número interno, hidratado con el cliente (nombre, CUIT y
+     * dirección), el estado, el medio de pago y el banco emisor, y lo normaliza como DTO plano.
+     * Resuelve el Requerimiento 32 de consulta individual para la vista de modificación de pagos.
+     * @param {number|string} id - Identificador del pago a recuperar.
+     * @returns {Promise<Object>} El pago normalizado con sus entidades relacionadas.
+     * @throws {Error} Excepción HTTP 404 si el identificador no corresponde a ningún pago.
+     */
+    static async getPaymentById(id) {
+        const pagoResuelto = await Payment.findById(id);
+        if (!pagoResuelto) {
+            const error = new Error(`No se encontró un pago registrado bajo el identificador #${id}.`);
+            error.statusCode = 404;
+            throw error;
+        }
+
+        return PaymentService.toPaymentDTO(pagoResuelto);
     }
 
 }
