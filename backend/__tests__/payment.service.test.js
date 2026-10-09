@@ -775,6 +775,32 @@ describe('PaymentService - Pruebas Unitarias', () => {
                 .resolves.toEqual(estadoAceptado);
         });
 
+        it('Debe resolver sin error al asignar "Pendiente de acreditación" a un medio diferido', async () => {
+            const estadoPendiente = { id_estado_pago: 2, nombre: 'Pendiente de acreditación' };
+            Payment.findMethodById.mockResolvedValue(medioDiferido);
+            Payment.findStateById.mockResolvedValue(estadoPendiente);
+
+            await expect(PaymentService.validatePaymentStatusAssignment(2, 2))
+                .resolves.toEqual(estadoPendiente);
+        });
+
+        it('Debe lanzar 409 si se intenta asignar "Pendiente de acreditación" a un medio inmediato', async () => {
+            Payment.findMethodById.mockResolvedValue(medioInmediato);
+            Payment.findStateById.mockResolvedValue({ id_estado_pago: 2, nombre: 'Pendiente de acreditación' });
+
+            await expect(PaymentService.validatePaymentStatusAssignment(1, 2))
+                .rejects.toEqual(expect.objectContaining({ statusCode: 409 }));
+        });
+
+        it.each([['diferido', 'medioDiferido', 2], ['inmediato', 'medioInmediato', 1]])('Debe lanzar 409 si se intenta asignar "Rechazado" a un medio %s', async (_, clave, idMedio) => {
+            const medios = { medioDiferido, medioInmediato };
+            Payment.findMethodById.mockResolvedValue(medios[clave]);
+            Payment.findStateById.mockResolvedValue({ id_estado_pago: 4, nombre: 'Rechazado' });
+
+            await expect(PaymentService.validatePaymentStatusAssignment(idMedio, 4))
+                .rejects.toEqual(expect.objectContaining({ statusCode: 409 }));
+        });
+
         it('Debe lanzar 400 si falta id_medio_pago o id_estado_pago', async () => {
             await expect(PaymentService.validatePaymentStatusAssignment(null, 1))
                 .rejects.toEqual(expect.objectContaining({ statusCode: 400 }));

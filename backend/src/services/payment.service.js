@@ -232,9 +232,11 @@ class PaymentService {
     }
 
     /**
-     * Valida la correspondencia entre el medio de cobro seleccionado y el estado de pago solicitado. 
-     * Un medio diferido (ej. cheque) no puede asignarse directamente al estado "Aceptado": 
-     * debe atravesar "Pendiente de acreditación" o nacer en "Borrador" como estado preliminar de edición.
+     * Valida la correspondencia entre el medio de cobro seleccionado y el estado de pago solicitado
+     * al editar un borrador. Un medio diferido (ej. cheque) no puede asignarse directamente al estado
+     * "Aceptado": debe atravesar "Pendiente de acreditación". Este último es exclusivo de los medios
+     * diferidos, y "Rechazado" no es asignable por edición: solo se alcanza desde "Pendiente de
+     * acreditación" mediante la transición de cobros diferidos (`transitionDeferredPayment`).
      * @param {number} idMedioPago - Identificador del medio de pago seleccionado.
      * @param {number} idEstadoPago - Identificador del estado de pago solicitado.
      * @returns {Promise<Object>} El registro de EstadoPago validado como asignación permitida.
@@ -261,10 +263,22 @@ class PaymentService {
         }
 
         const esDiferido = !!medio.es_diferido;
-        const esAceptado = estadoSolicitado.nombre === ESTADOS_PAGO.ACEPTADO;
+        const nombreEstado = estadoSolicitado.nombre;
 
-        if (esDiferido && esAceptado) {
-            const error = new Error(`El medio de pago "${medio.nombre}" admite acreditación diferida: no puede registrarse directamente en estado "Aceptado". Debe atravesar "Pendiente de acreditación" o nacer en "Borrador".`);
+        if (esDiferido && nombreEstado === ESTADOS_PAGO.ACEPTADO) {
+            const error = new Error(`El medio de pago "${medio.nombre}" admite acreditación diferida: no puede registrarse directamente en estado "Aceptado". Debe atravesar "Pendiente de acreditación".`);
+            error.statusCode = 409;
+            throw error;
+        }
+
+        if (!esDiferido && nombreEstado === ESTADOS_PAGO.PENDIENTE_ACREDITACION) {
+            const error = new Error(`El medio de pago "${medio.nombre}" es de acreditación inmediata: no puede quedar en estado "Pendiente de acreditación".`);
+            error.statusCode = 409;
+            throw error;
+        }
+
+        if (nombreEstado === ESTADOS_PAGO.RECHAZADO) {
+            const error = new Error('El estado "Rechazado" no puede asignarse por edición: solo se alcanza al resolver un cobro "Pendiente de acreditación".');
             error.statusCode = 409;
             throw error;
         }

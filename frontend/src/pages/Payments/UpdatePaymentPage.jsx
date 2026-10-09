@@ -7,8 +7,20 @@ import PaymentStatusBadge from '../../components/common/PaymentStatusBadge';
 
 // Nombre semantico del unico estado en el que un pago admite modificacion o baja
 const ESTADO_BORRADOR = 'Borrador';
-// Nombre semantico del estado que un medio de pago diferido no puede asumir directamente
+// Nombres semanticos de los estados que no se asignan libremente al editar un borrador
 const ESTADO_ACEPTADO = 'Aceptado';
+const ESTADO_PENDIENTE = 'Pendiente de acreditación';
+const ESTADO_RECHAZADO = 'Rechazado';
+
+// Regla de asignacion de estado al editar un borrador (espejo de la validacion del backend):
+// Pendiente es exclusivo de medios diferidos, Aceptado de medios inmediatos y Rechazado solo se
+// alcanza al resolver un cheque pendiente, nunca por edicion
+const esEstadoAsignable = (nombreEstado, esMedioDiferido) => {
+    if (nombreEstado === ESTADO_RECHAZADO) return false;
+    if (nombreEstado === ESTADO_PENDIENTE) return esMedioDiferido;
+    if (nombreEstado === ESTADO_ACEPTADO) return !esMedioDiferido;
+    return true;
+};
 
 // Convierte una fecha ISO del backend (YYYY-MM-DDTHH:mm:ss.sssZ) al formato YYYY-MM-DD que usan los input date
 const toDateInputValue = (isoDate) => (isoDate ? isoDate.split('T')[0] : '');
@@ -109,8 +121,8 @@ const UpdatePaymentPage = () => {
         // El banco y el vencimiento cargados se conservan al alternar de medio: con un medio inmediato
         // no se envian y el backend los persiste en null
         const method = paymentMethods.find(m => m.id_medio_pago === parseInt(id));
-        if (method && method.es_diferido && selectedState && selectedState.nombre === ESTADO_ACEPTADO) {
-            // Un medio diferido no puede quedar Aceptado: el estado vuelve a Borrador
+        if (method && selectedState && !esEstadoAsignable(selectedState.nombre, !!method.es_diferido)) {
+            // El estado elegido no es asignable al nuevo medio (ej. Aceptado en un cheque): vuelve a Borrador
             const borrador = paymentStates.find(s => s.nombre === ESTADO_BORRADOR);
             setEstado(borrador ? borrador.id_estado_pago : "");
         }
@@ -450,7 +462,7 @@ const UpdatePaymentPage = () => {
                                         <option
                                             key={state.id_estado_pago}
                                             value={state.id_estado_pago}
-                                            disabled={esDiferido && state.nombre === ESTADO_ACEPTADO}
+                                            disabled={esBorrador && !esEstadoAsignable(state.nombre, esDiferido)}
                                         >
                                             {state.nombre}
                                         </option>
@@ -458,9 +470,11 @@ const UpdatePaymentPage = () => {
                                 </select>
                             </div>
                             <div className="pay-field-notes">
-                                {esDiferido && esBorrador && (
+                                {esBorrador && (
                                     <span className="pay-field-warning">
-                                        Un medio de pago diferido no puede pasar directamente a Aceptado: utilice Pendiente de acreditación
+                                        {esDiferido
+                                            ? 'Un medio de pago diferido no puede pasar directamente a Aceptado: utilice Pendiente de acreditación. Rechazado solo se registra al resolver el cheque pendiente'
+                                            : 'Un medio de pago inmediato solo puede quedar en Borrador o Aceptado'}
                                     </span>
                                 )}
                                 {esPromocionDefinitiva && (

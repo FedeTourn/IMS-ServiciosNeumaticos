@@ -82,7 +82,7 @@ La página partía de una copia sin adaptar de `CreatePaymentPage.jsx` y ya fue 
 * [x] Campos editables: importe, medio de cobro, estado, banco emisor, fecha de recepción, fecha de vencimiento, número de comprobante y observaciones.
 * [x] Mostrar la vista en solo lectura, con un aviso de bloqueo contable y sin controles de guardado ni de descarte, cuando el pago no está en "Borrador".
 * [x] Identificar el estado en todo momento con `PaymentStatusBadge`.
-* [x] Al seleccionar un medio diferido, advertir que el pago no puede pasar directamente a "Aceptado" y ofrecer "Pendiente de acreditación".
+* [x] Filtrar el selector de estado según el medio: un medio diferido no admite "Aceptado" (se advierte y se ofrece "Pendiente de acreditación"), un medio inmediato no admite "Pendiente de acreditación" y "Rechazado" nunca es asignable por edición; al cambiar de medio, un estado ya no asignable se restablece a "Borrador".
 * [x] Condicionar banco y vencimiento al medio seleccionado con los mismos criterios que el registro. Con un medio inmediato no se envían, para que el backend los persista en `null` (los valores cargados se conservan en el formulario al alternar de medio); al pasar a uno diferido, exigir los tres datos antes de habilitar el guardado.
 * [x] Usar el control de selección de banco del punto 2.1, con el banco vigente preseleccionado.
 * [x] Guardar con `apiUpdatePayment`, protegido por `isSaving`, mostrando los errores del servidor.
@@ -121,7 +121,7 @@ No existen tests de la consulta, por lo que deben escribirse completos:
 
 No existen tests de la modificación ni de la baja, por lo que deben escribirse completos:
 
-* [x] **Servicio:** `404` si el pago no existe; `409` fuera de "Borrador"; `400` ante un importe inválido; descarte de `id_cliente`; `409` al asignar "Aceptado" a un medio diferido; `409` ante `affectedRows === 0`; reglas del cheque sobre el registro resultante de la edición (incluida la limpieza de banco y vencimiento al pasar de cheque a medio inmediato); baja solo en "Borrador".
+* [x] **Servicio:** `404` si el pago no existe; `409` fuera de "Borrador"; `400` ante un importe inválido; descarte de `id_cliente`; `409` al asignar "Aceptado" a un medio diferido, "Pendiente de acreditación" a un medio inmediato o "Rechazado" a cualquier medio; `409` ante `affectedRows === 0`; reglas del cheque sobre el registro resultante de la edición (incluida la limpieza de banco y vencimiento al pasar de cheque a medio inmediato); baja solo en "Borrador".
 * [x] **Controlador:** `PUT` con `200`, `400` ante un `id` no numérico o un cuerpo vacío, y propagación de errores; `DELETE` con `200` y propagación de errores.
 * [x] **Integración:** modificación de importe y comprobante con `fecha_actualizacion` estampada; conversión de medio inmediato a diferido (con y sin los tres datos); conversión de diferido a inmediato con banco y vencimiento en `NULL`; recepción posterior al vencimiento rechazada; promoción a "Aceptado" según el medio; inmutabilidad y baja según el estado.
 * [x] **Consulta individual (`GET /api/payments/:id`), servicio:** `toPaymentDTO` (importe a dos decimales, fechas ISO y fechas ausentes en `null`) y `getPaymentById` (DTO con cliente y banco, y `404` si el pago no existe).
