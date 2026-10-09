@@ -1,6 +1,6 @@
 import { API_BASE_URL } from '../config';
 
-const API_URL = `${API_BASE_URL}/payment`;
+const API_URL = `${API_BASE_URL}/payments`;
 
 /**
  * Construye las cabeceras estándar con el token de sesión.
@@ -35,7 +35,7 @@ export const apiCreatePayment = async (paymentData) => {
 
         return data.data;
     } catch (error) {
-        console.error('[PaymentService Front Error] Falla de comunicación con el endpoint POST /api/payment:', error.message);
+        console.error('[PaymentService Front Error] Falla de comunicación con el endpoint POST /api/payments:', error.message);
         throw error;
     }
 };
@@ -65,7 +65,7 @@ export const apiUpdatePayment = async (id, paymentData) => {
 
         return data.data;
     } catch (error) {
-        console.error('[PaymentService Front Error] Falla de comunicación con el endpoint PUT /api/payment:', error.message);
+        console.error('[PaymentService Front Error] Falla de comunicación con el endpoint PUT /api/payments:', error.message);
         throw error;
     }
 };
@@ -92,7 +92,7 @@ export const apiDeletePayment = async (id) => {
 
         return data.message;
     } catch (error) {
-        console.error('[PaymentService Front Error] Falla de comunicación con el endpoint DELETE /api/payment:', error.message);
+        console.error('[PaymentService Front Error] Falla de comunicación con el endpoint DELETE /api/payments:', error.message);
         throw error;
     }
 };
@@ -184,7 +184,7 @@ export const fetchPayments = async (filters = {}) => {
             queryParams.append('sort_order', filters.sort_order);
         }
 
-        // Construcción de la URL final (Ej: /api/payment?id_cliente=1&fecha_desde=2026-01-01)
+        // Construcción de la URL final (Ej: /api/payments?id_cliente=1&fecha_desde=2026-01-01)
         const url = `${API_URL}?${queryParams.toString()}`;
 
         const response = await fetch(url, {
@@ -201,14 +201,14 @@ export const fetchPayments = async (filters = {}) => {
 
         return data.data;
     } catch (error) {
-        console.error('[PaymentService Front Error] Falla de comunicación con el endpoint GET /api/payment:', error.message);
+        console.error('[PaymentService Front Error] Falla de comunicación con el endpoint GET /api/payments:', error.message);
         throw error;
     }
 };
 
 /**
  * Recupera un pago puntual por su número interno para hidratar la vista de modificación,
- * consumiendo el endpoint de consulta individual GET /api/payment/:id.
+ * consumiendo el endpoint de consulta individual GET /api/payments/:id.
  * @param {number|string} id - Número interno del pago a recuperar.
  * @returns {Promise<Object>} Pago hidratado con cliente (nombre, CUIT y dirección), estado, medio de pago y banco.
  * @throws {Error} Excepción con el `statusCode` devuelto por el backend (400 ante un identificador inválido, 404 si no existe).
@@ -229,7 +229,7 @@ export const fetchPaymentById = async (id) => {
 
         return data.data;
     } catch (error) {
-        console.error('[PaymentService Front Error] Falla de comunicación con el endpoint GET /api/payment/:id:', error.message);
+        console.error('[PaymentService Front Error] Falla de comunicación con el endpoint GET /api/payments/:id:', error.message);
         throw error;
     }
 };
@@ -254,7 +254,7 @@ export const fetchPaymentMethods = async () => {
 
         return data.data;
     } catch (error) {
-        console.error('[PaymentService Front Error] Falla de comunicación con el endpoint GET /api/payment/methods:', error.message);
+        console.error('[PaymentService Front Error] Falla de comunicación con el endpoint GET /api/payments/methods:', error.message);
         throw error;
     }
 };
@@ -279,7 +279,7 @@ export const fetchPaymentStates = async () => {
 
         return data.data;
     } catch (error) {
-        console.error('[PaymentService Front Error] Falla de comunicación con el endpoint GET /api/payment/states:', error.message);
+        console.error('[PaymentService Front Error] Falla de comunicación con el endpoint GET /api/payments/states:', error.message);
         throw error;
     }
 };
@@ -304,7 +304,7 @@ export const fetchBanks = async () => {
 
         return data.data;
     } catch (error) {
-        console.error('[PaymentService Front Error] Falla de comunicación con el endpoint GET /api/payment/banks:', error.message);
+        console.error('[PaymentService Front Error] Falla de comunicación con el endpoint GET /api/payments/banks:', error.message);
         throw error;
     }
 };
@@ -333,7 +333,7 @@ export const apiCreateBank = async (bankData) => {
 
         return data.data;
     } catch (error) {
-        console.error('[PaymentService Front Error] Falla de comunicación con el endpoint POST /api/payment/banks:', error.message);
+        console.error('[PaymentService Front Error] Falla de comunicación con el endpoint POST /api/payments/banks:', error.message);
         throw error;
     }
 };

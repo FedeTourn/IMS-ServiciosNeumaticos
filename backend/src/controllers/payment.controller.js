@@ -201,7 +201,7 @@ exports.handleGetPayments = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(`[PaymentController Error] Falla al resolver GET /api/payment: ${error.message}`);
+        console.error(`[PaymentController Error] Falla al resolver GET /api/payments: ${error.message}`);
 
         // Mapeo semántico de excepciones de validación (400) y errores técnicos (500)
         const statusCode = error.statusCode || 500;
@@ -305,7 +305,7 @@ exports.handleCreateBank = async (req, res) => {
 };
 
 /**
- * Endpoint encargado de recuperar un pago puntual por su número interno (GET /api/payment/:id).
+ * Endpoint encargado de recuperar un pago puntual por su número interno (GET /api/payments/:id).
  * Valida que el identificador sea un entero positivo y delega en el servicio la búsqueda y el
  * control de existencia, cuyo 404 se traslada como estado HTTP de la respuesta.
  * @param {Object} req - Objeto de petición Express.

@@ -32,7 +32,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/prices', priceRoutes);
 app.use('/api/receipts', receiptRoutes);
 app.use('/api/repair-orders', repairOrderRoutes);
-app.use('/api/payment', paymentRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // --- RUTAS DE DIAGNÓSTICO ---
 app.get('/', (req, res) => {

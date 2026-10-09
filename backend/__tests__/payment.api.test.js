@@ -40,7 +40,7 @@ describe('Módulo de Pagos - Pruebas de Integración', () => {
         await db.end();
     });
 
-    describe('POST /api/payment (registro)', () => {
+    describe('POST /api/payments (registro)', () => {
 
         it('debe registrar un pago con medio de pago inmediato en estado "Borrador" (no "Aceptado")', async () => {
             const payload = {
@@ -50,7 +50,7 @@ describe('Módulo de Pagos - Pruebas de Integración', () => {
                 fecha_recepcion: '2026-09-20'
             };
 
-            const res = await request(app).post('/api/payment').send(payload);
+            const res = await request(app).post('/api/payments').send(payload);
 
             expect(res.statusCode).toBe(201);
             expect(res.body.success).toBe(true);
@@ -72,7 +72,7 @@ describe('Módulo de Pagos - Pruebas de Integración', () => {
                 numero_comprobante: 'CH-0001'
             };
 
-            const res = await request(app).post('/api/payment').send(payload);
+            const res = await request(app).post('/api/payments').send(payload);
 
             expect(res.statusCode).toBe(201);
             expect(res.body.success).toBe(true);
@@ -91,7 +91,7 @@ describe('Módulo de Pagos - Pruebas de Integración', () => {
                 fecha_recepcion: '2026-09-21'
             };
 
-            const res = await request(app).post('/api/payment').send(payload);
+            const res = await request(app).post('/api/payments').send(payload);
 
             expect(res.statusCode).toBe(201);
 
@@ -115,7 +115,7 @@ describe('Módulo de Pagos - Pruebas de Integración', () => {
                 numero_comprobante: '  CH-0002  '
             };
 
-            const res = await request(app).post('/api/payment').send(payload);
+            const res = await request(app).post('/api/payments').send(payload);
 
             expect(res.statusCode).toBe(201);
             expect(res.body.data.banco_nombre).toBe('Banco Galicia');
@@ -142,7 +142,7 @@ describe('Módulo de Pagos - Pruebas de Integración', () => {
         ])('debe rechazar sin insertar fila si %s', async (_caso, payload, statusCode) => {
             const [pagosAntes] = await db.execute('SELECT COUNT(*) AS total FROM Pago');
 
-            const res = await request(app).post('/api/payment').send(payload);
+            const res = await request(app).post('/api/payments').send(payload);
 
             expect(res.statusCode).toBe(statusCode);
             expect(res.body.success).toBe(false);
@@ -161,24 +161,24 @@ describe('Módulo de Pagos - Pruebas de Integración', () => {
                 observaciones: 'Pago de integración'
             };
 
-            const res = await request(app).post('/api/payment').send(payload);
+            const res = await request(app).post('/api/payments').send(payload);
 
             expect(res.statusCode).toBe(201);
             expect(res.body.data).toHaveProperty('estado_pago_nombre', 'Borrador');
         });
     });
 
-    describe('Catálogo de bancos (GET y POST /api/payment/banks)', () => {
+    describe('Catálogo de bancos (GET y POST /api/payments/banks)', () => {
 
         it('debe devolver el catálogo de bancos ordenado por nombre', async () => {
-            const res = await request(app).get('/api/payment/banks');
+            const res = await request(app).get('/api/payments/banks');
 
             expect(res.statusCode).toBe(200);
             expect(res.body.data.map(b => b.nombre)).toEqual(['Banco Galicia', 'Banco Nación']);
         });
 
         it('debe dar de alta un banco con el nombre normalizado', async () => {
-            const res = await request(app).post('/api/payment/banks').send({ nombre: '  Banco   Provincia ' });
+            const res = await request(app).post('/api/payments/banks').send({ nombre: '  Banco   Provincia ' });
 
             expect(res.statusCode).toBe(201);
             expect(res.body.data.nombre).toBe('Banco Provincia');
@@ -190,7 +190,7 @@ describe('Módulo de Pagos - Pruebas de Integración', () => {
         it.each(['BANCO PROVINCIA', 'banco nacion'])('debe retornar 409 y no insertar fila al repetir un nombre con distinta caja o acentuación (%p)', async (nombre) => {
             const [bancosAntes] = await db.execute('SELECT COUNT(*) AS total FROM Banco');
 
-            const res = await request(app).post('/api/payment/banks').send({ nombre });
+            const res = await request(app).post('/api/payments/banks').send({ nombre });
 
             expect(res.statusCode).toBe(409);
             expect(res.body.success).toBe(false);
@@ -200,7 +200,7 @@ describe('Módulo de Pagos - Pruebas de Integración', () => {
         });
     });
 
-    describe('GET /api/payment (consulta)', () => {
+    describe('GET /api/payments (consulta)', () => {
 
         beforeAll(async () => {
             if (process.env.NODE_ENV === 'test') {
@@ -220,7 +220,7 @@ describe('Módulo de Pagos - Pruebas de Integración', () => {
         });
 
         it('debe devolver todos los pagos hidratados, incluidos los que no tienen banco, por fecha de recepción descendente', async () => {
-            const res = await request(app).get('/api/payment');
+            const res = await request(app).get('/api/payments');
 
             expect(res.statusCode).toBe(200);
             expect(res.body.data.map(p => p.id_pago)).toEqual([4, 3, 2, 1]);
@@ -240,21 +240,21 @@ describe('Módulo de Pagos - Pruebas de Integración', () => {
         });
 
         it('debe filtrar por banco, excluyendo los de otros bancos y los que no tienen banco', async () => {
-            const res = await request(app).get('/api/payment?id_banco=1');
+            const res = await request(app).get('/api/payments?id_banco=1');
 
             expect(res.statusCode).toBe(200);
             expect(res.body.data.map(p => p.id_pago)).toEqual([2]);
         });
 
         it('debe filtrar por rango de vencimiento inclusive en los extremos, excluyendo los cobros inmediatos', async () => {
-            const res = await request(app).get('/api/payment?vencimiento_desde=2026-03-01&vencimiento_hasta=2026-04-15');
+            const res = await request(app).get('/api/payments?vencimiento_desde=2026-03-01&vencimiento_hasta=2026-04-15');
 
             expect(res.statusCode).toBe(200);
             expect(res.body.data.map(p => p.id_pago)).toEqual([3, 2]);
         });
 
         it('debe ordenar por vencimiento sin que los pagos sin vencimiento provoquen error', async () => {
-            const res = await request(app).get('/api/payment?sort_by=fecha_vencimiento&sort_order=ASC');
+            const res = await request(app).get('/api/payments?sort_by=fecha_vencimiento&sort_order=ASC');
 
             expect(res.statusCode).toBe(200);
             expect(res.body.data.length).toBe(4);
@@ -263,63 +263,63 @@ describe('Módulo de Pagos - Pruebas de Integración', () => {
         });
 
         it('debe combinar criterios bajo lógica AND', async () => {
-            const res = await request(app).get('/api/payment?id_cliente=2&id_estado_pago=1');
+            const res = await request(app).get('/api/payments?id_cliente=2&id_estado_pago=1');
 
             expect(res.statusCode).toBe(200);
             expect(res.body.data.map(p => p.id_pago)).toEqual([3]);
         });
 
         it('debe buscar por fragmento del comprobante sin distinguir mayúsculas', async () => {
-            const res = await request(app).get('/api/payment?numero_comprobante=ab-1');
+            const res = await request(app).get('/api/payments?numero_comprobante=ab-1');
 
             expect(res.statusCode).toBe(200);
             expect(res.body.data.map(p => p.id_pago)).toEqual([2]);
         });
 
         it('debe filtrar por rango de importes inclusive en los extremos', async () => {
-            const res = await request(app).get('/api/payment?monto_min=2000&monto_max=3000');
+            const res = await request(app).get('/api/payments?monto_min=2000&monto_max=3000');
 
             expect(res.statusCode).toBe(200);
             expect(res.body.data.map(p => p.id_pago)).toEqual([4, 3]);
         });
 
         it('debe filtrar por rango de fechas de recepción inclusive en los extremos', async () => {
-            const res = await request(app).get('/api/payment?fecha_desde=2026-02-01&fecha_hasta=2026-02-15');
+            const res = await request(app).get('/api/payments?fecha_desde=2026-02-01&fecha_hasta=2026-02-15');
 
             expect(res.statusCode).toBe(200);
             expect(res.body.data.map(p => p.id_pago)).toEqual([3, 2]);
         });
 
         it('debe ordenar de forma ascendente por importe', async () => {
-            const res = await request(app).get('/api/payment?sort_by=monto&sort_order=ASC');
+            const res = await request(app).get('/api/payments?sort_by=monto&sort_order=ASC');
 
             expect(res.statusCode).toBe(200);
             expect(res.body.data.map(p => p.id_pago)).toEqual([1, 4, 3, 2]);
         });
 
         it('debe aplicar el orden por defecto ante un concepto de ordenamiento inexistente', async () => {
-            const res = await request(app).get('/api/payment?sort_by=columna_inexistente');
+            const res = await request(app).get('/api/payments?sort_by=columna_inexistente');
 
             expect(res.statusCode).toBe(200);
             expect(res.body.data.map(p => p.id_pago)).toEqual([4, 3, 2, 1]);
         });
 
         it('debe devolver 200 con una colección vacía cuando no hay coincidencias', async () => {
-            const res = await request(app).get('/api/payment?id_cliente=2&id_banco=1');
+            const res = await request(app).get('/api/payments?id_cliente=2&id_banco=1');
 
             expect(res.statusCode).toBe(200);
             expect(res.body.data).toEqual([]);
         });
 
         it('debe retornar 400 ante un rango de vencimiento invertido', async () => {
-            const res = await request(app).get('/api/payment?vencimiento_desde=2026-05-01&vencimiento_hasta=2026-04-01');
+            const res = await request(app).get('/api/payments?vencimiento_desde=2026-05-01&vencimiento_hasta=2026-04-01');
 
             expect(res.statusCode).toBe(400);
             expect(res.body.success).toBe(false);
         });
     });
 
-    describe('PUT y DELETE /api/payment/:id (modificación y baja)', () => {
+    describe('PUT y DELETE /api/payments/:id (modificación y baja)', () => {
 
         beforeAll(async () => {
             if (process.env.NODE_ENV === 'test') {
@@ -342,7 +342,7 @@ describe('Módulo de Pagos - Pruebas de Integración', () => {
         });
 
         it('debe modificar importe y comprobante, estampando la fecha de actualización', async () => {
-            const res = await request(app).put('/api/payment/10').send({ monto: 1500, numero_comprobante: '  REC-10 ' });
+            const res = await request(app).put('/api/payments/10').send({ monto: 1500, numero_comprobante: '  REC-10 ' });
 
             expect(res.statusCode).toBe(200);
             expect(res.body.data.monto).toBe('1500.00');
@@ -354,7 +354,7 @@ describe('Módulo de Pagos - Pruebas de Integración', () => {
         });
 
         it('debe rechazar con 400 la conversión a cheque sin los tres datos del instrumento', async () => {
-            const res = await request(app).put('/api/payment/14').send({ id_medio_pago: 2 });
+            const res = await request(app).put('/api/payments/14').send({ id_medio_pago: 2 });
 
             expect(res.statusCode).toBe(400);
 
@@ -363,7 +363,7 @@ describe('Módulo de Pagos - Pruebas de Integración', () => {
         });
 
         it('debe convertir un medio inmediato en cheque cuando se informan los tres datos', async () => {
-            const res = await request(app).put('/api/payment/14').send({
+            const res = await request(app).put('/api/payments/14').send({
                 id_medio_pago: 2,
                 id_banco: 2,
                 numero_comprobante: 'CH-14',
@@ -379,7 +379,7 @@ describe('Módulo de Pagos - Pruebas de Integración', () => {
         });
 
         it('debe dejar banco y vencimiento en NULL al convertir un cheque en un medio inmediato', async () => {
-            const res = await request(app).put('/api/payment/11').send({ id_medio_pago: 1 });
+            const res = await request(app).put('/api/payments/11').send({ id_medio_pago: 1 });
 
             expect(res.statusCode).toBe(200);
 
@@ -391,7 +391,7 @@ describe('Módulo de Pagos - Pruebas de Integración', () => {
         });
 
         it('debe rechazar con 400 una fecha de recepción posterior al vencimiento del cheque', async () => {
-            const res = await request(app).put('/api/payment/16').send({ fecha_recepcion: '2026-07-01' });
+            const res = await request(app).put('/api/payments/16').send({ fecha_recepcion: '2026-07-01' });
 
             expect(res.statusCode).toBe(400);
 
@@ -400,7 +400,7 @@ describe('Módulo de Pagos - Pruebas de Integración', () => {
         });
 
         it('debe rechazar con 409 la promoción directa a "Aceptado" de un cheque', async () => {
-            const res = await request(app).put('/api/payment/16').send({ id_estado_pago: 3 });
+            const res = await request(app).put('/api/payments/16').send({ id_estado_pago: 3 });
 
             expect(res.statusCode).toBe(409);
 
@@ -409,7 +409,7 @@ describe('Módulo de Pagos - Pruebas de Integración', () => {
         });
 
         it('debe promover a "Aceptado" un pago con medio inmediato', async () => {
-            const res = await request(app).put('/api/payment/15').send({ id_estado_pago: 3 });
+            const res = await request(app).put('/api/payments/15').send({ id_estado_pago: 3 });
 
             expect(res.statusCode).toBe(200);
             expect(res.body.data.estado_pago_nombre).toBe('Aceptado');
@@ -419,7 +419,7 @@ describe('Módulo de Pagos - Pruebas de Integración', () => {
         });
 
         it('debe rechazar con 409 la modificación de un pago en estado definitivo', async () => {
-            const res = await request(app).put('/api/payment/12').send({ monto: 1 });
+            const res = await request(app).put('/api/payments/12').send({ monto: 1 });
 
             expect(res.statusCode).toBe(409);
 
@@ -428,7 +428,7 @@ describe('Módulo de Pagos - Pruebas de Integración', () => {
         });
 
         it('debe rechazar con 409 la baja de un pago en estado definitivo', async () => {
-            const res = await request(app).delete('/api/payment/12');
+            const res = await request(app).delete('/api/payments/12');
 
             expect(res.statusCode).toBe(409);
 
@@ -437,7 +437,7 @@ describe('Módulo de Pagos - Pruebas de Integración', () => {
         });
 
         it('debe eliminar un pago en "Borrador"', async () => {
-            const res = await request(app).delete('/api/payment/13');
+            const res = await request(app).delete('/api/payments/13');
 
             expect(res.statusCode).toBe(200);
             expect(res.body.success).toBe(true);
@@ -447,15 +447,15 @@ describe('Módulo de Pagos - Pruebas de Integración', () => {
         });
 
         it('debe retornar 404 al modificar o eliminar un pago inexistente', async () => {
-            const resPut = await request(app).put('/api/payment/999').send({ monto: 100 });
-            const resDelete = await request(app).delete('/api/payment/999');
+            const resPut = await request(app).put('/api/payments/999').send({ monto: 100 });
+            const resDelete = await request(app).delete('/api/payments/999');
 
             expect(resPut.statusCode).toBe(404);
             expect(resDelete.statusCode).toBe(404);
         });
     });
 
-    describe('GET /api/payment/:id (consulta individual)', () => {
+    describe('GET /api/payments/:id (consulta individual)', () => {
 
         beforeAll(async () => {
             if (process.env.NODE_ENV === 'test') {
@@ -474,7 +474,7 @@ describe('Módulo de Pagos - Pruebas de Integración', () => {
         });
 
         it('debe devolver un pago de medio inmediato con los datos del cliente y banco y vencimiento en null', async () => {
-            const res = await request(app).get('/api/payment/20');
+            const res = await request(app).get('/api/payments/20');
 
             expect(res.statusCode).toBe(200);
             expect(res.body.success).toBe(true);
@@ -493,7 +493,7 @@ describe('Módulo de Pagos - Pruebas de Integración', () => {
         });
 
         it('debe devolver un cheque con su banco emisor, comprobante y fechas en formato ISO', async () => {
-            const res = await request(app).get('/api/payment/21');
+            const res = await request(app).get('/api/payments/21');
 
             expect(res.statusCode).toBe(200);
             expect(res.body.data).toEqual(expect.objectContaining({
@@ -510,21 +510,21 @@ describe('Módulo de Pagos - Pruebas de Integración', () => {
         });
 
         it('debe retornar 404 si el pago no existe', async () => {
-            const res = await request(app).get('/api/payment/999');
+            const res = await request(app).get('/api/payments/999');
 
             expect(res.statusCode).toBe(404);
             expect(res.body.success).toBe(false);
         });
 
         it('debe retornar 400 si el identificador no es un entero positivo', async () => {
-            const res = await request(app).get('/api/payment/abc');
+            const res = await request(app).get('/api/payments/abc');
 
             expect(res.statusCode).toBe(400);
             expect(res.body.success).toBe(false);
         });
 
         it('no debe interpretar las rutas literales de catálogo como un identificador', async () => {
-            const res = await request(app).get('/api/payment/banks');
+            const res = await request(app).get('/api/payments/banks');
 
             expect(res.statusCode).toBe(200);
             expect(Array.isArray(res.body.data)).toBe(true);
@@ -534,7 +534,7 @@ describe('Módulo de Pagos - Pruebas de Integración', () => {
     describe('Catálogos de estados y medios de pago', () => {
 
         it('debe devolver los cuatro estados ordenados por identificador', async () => {
-            const res = await request(app).get('/api/payment/states');
+            const res = await request(app).get('/api/payments/states');
 
             expect(res.statusCode).toBe(200);
             expect(res.body.data).toEqual([
@@ -546,7 +546,7 @@ describe('Módulo de Pagos - Pruebas de Integración', () => {
         });
 
         it('debe reflejar fielmente la bandera es_diferido de cada medio de pago', async () => {
-            const res = await request(app).get('/api/payment/methods');
+            const res = await request(app).get('/api/payments/methods');
 
             expect(res.statusCode).toBe(200);
             expect(res.body.data).toEqual([

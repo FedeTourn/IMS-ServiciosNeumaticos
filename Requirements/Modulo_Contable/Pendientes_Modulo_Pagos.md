@@ -26,20 +26,20 @@ Este documento enumera lo que falta implementar para completar esos cambios, ord
 
 Endpoints del backend ya disponibles tras los cambios:
 
-* `POST /api/payment`: recibe `fecha_recepcion` (ya no `fecha_pago`), `id_banco`, `fecha_vencimiento` y `numero_comprobante`, y responde con el registro creado, incluido `banco_nombre`.
-* `GET /api/payment`: acepta los nuevos criterios `id_banco`, `vencimiento_desde` y `vencimiento_hasta`, y los conceptos de ordenamiento `banco_nombre`, `numero_comprobante`, `fecha_recepcion` (por defecto) y `fecha_vencimiento`. Cada registro incluye `id_banco`, `banco_nombre` y `fecha_vencimiento` (en `null` para los cobros inmediatos).
-* `PUT /api/payment/:id`: admite mutar `id_banco`, `fecha_recepcion` y `fecha_vencimiento`, además de los campos ya existentes.
-* `GET /api/payment/banks`: devuelve el catálogo de bancos ordenado por nombre.
-* `POST /api/payment/banks`: da de alta un banco a partir de `{ nombre }`; responde `201` con `{ id_banco, nombre }`, `400` ante un nombre vacío o de más de 50 caracteres, y `409` si ya existe un banco con ese nombre (sin distinguir mayúsculas ni acentos).
+* `POST /api/payments`: recibe `fecha_recepcion` (ya no `fecha_pago`), `id_banco`, `fecha_vencimiento` y `numero_comprobante`, y responde con el registro creado, incluido `banco_nombre`.
+* `GET /api/payments`: acepta los nuevos criterios `id_banco`, `vencimiento_desde` y `vencimiento_hasta`, y los conceptos de ordenamiento `banco_nombre`, `numero_comprobante`, `fecha_recepcion` (por defecto) y `fecha_vencimiento`. Cada registro incluye `id_banco`, `banco_nombre` y `fecha_vencimiento` (en `null` para los cobros inmediatos).
+* `PUT /api/payments/:id`: admite mutar `id_banco`, `fecha_recepcion` y `fecha_vencimiento`, además de los campos ya existentes.
+* `GET /api/payments/banks`: devuelve el catálogo de bancos ordenado por nombre.
+* `POST /api/payments/banks`: da de alta un banco a partir de `{ nombre }`; responde `201` con `{ id_banco, nombre }`, `400` ante un nombre vacío o de más de 50 caracteres, y `409` si ya existe un banco con ese nombre (sin distinguir mayúsculas ni acentos).
 
 ---
 
 ### 1. Capa de Integración Frontend (`frontend/src/services/payment.service.js`)
 
-* [x] **Requerimiento 31:** Implementar `fetchBanks()`, que consulta `GET /api/payment/banks` con las cabeceras de `getAuthHeaders()` y retorna la colección, con la misma estructura que `fetchPaymentMethods` y `fetchPaymentStates`.
-* [x] **Requerimiento 31:** Implementar `apiCreateBank(bankData)`, que despacha `POST /api/payment/banks`, propaga el `statusCode` en la excepción (en particular el `409` de nombre duplicado, que la interfaz debe distinguir de un error genérico) y retorna el banco creado.
+* [x] **Requerimiento 31:** Implementar `fetchBanks()`, que consulta `GET /api/payments/banks` con las cabeceras de `getAuthHeaders()` y retorna la colección, con la misma estructura que `fetchPaymentMethods` y `fetchPaymentStates`.
+* [x] **Requerimiento 31:** Implementar `apiCreateBank(bankData)`, que despacha `POST /api/payments/banks`, propaga el `statusCode` en la excepción (en particular el `409` de nombre duplicado, que la interfaz debe distinguir de un error genérico) y retorna el banco creado.
 * [x] **Requerimiento 31.1:** En `fetchPayments(filters)`, serializar `id_banco`, `vencimiento_desde` y `vencimiento_hasta` con el mismo tratamiento que los demás criterios, y actualizar el JSDoc (`fecha_desde`/`fecha_hasta` describen ahora la fecha de recepción).
-* [x] **Requerimiento 32:** `apiUpdatePayment` no requiere cambios en su forma; solo cambian los campos que transporta. `fetchPaymentById` consume ahora el endpoint `GET /api/payment/:id` en lugar de filtrar la consulta multicriterio.
+* [x] **Requerimiento 32:** `apiUpdatePayment` no requiere cambios en su forma; solo cambian los campos que transporta. `fetchPaymentById` consume ahora el endpoint `GET /api/payments/:id` en lugar de filtrar la consulta multicriterio.
 
 ---
 
@@ -106,7 +106,7 @@ Los tests existentes todavía envían `fecha_pago` y deben actualizarse antes de
   * aceptación de un vencimiento ya pasado, siempre que no sea anterior a la recepción;
   * persistencia del comprobante recortado.
 * [x] **Servicio (`createBank`):** `400` ante un nombre vacío, solo espacios o de más de 50 caracteres; `409` ante un homónimo; normalización de espacios antes de insertar.
-* [x] **Controlador:** `400` ante la falta de `id_cliente`, `id_medio_pago` o `fecha_recepcion` (hoy solo se cubre `monto`); `POST /api/payment/banks` (`201`, `400` sin nombre sin invocar al servicio, propagación del `409`); `GET /api/payment/banks` (`200`).
+* [x] **Controlador:** `400` ante la falta de `id_cliente`, `id_medio_pago` o `fecha_recepcion` (hoy solo se cubre `monto`); `POST /api/payments/banks` (`201`, `400` sin nombre sin invocar al servicio, propagación del `409`); `GET /api/payments/banks` (`200`).
 * [x] **Integración:** sembrar `Banco` en el `beforeAll`; verificar las columnas persistidas para medios inmediatos y diferidos; verificar que cada rechazo no inserta filas; alta de banco con `409` al repetir el nombre con distinta caja.
 
 #### 3.2. Lista de pagos, Requerimiento 31.1
@@ -124,7 +124,7 @@ No existen tests de la modificación ni de la baja, por lo que deben escribirse 
 * [x] **Servicio:** `404` si el pago no existe; `409` fuera de "Borrador"; `400` ante un importe inválido; descarte de `id_cliente`; `409` al asignar "Aceptado" a un medio diferido; `409` ante `affectedRows === 0`; reglas del cheque sobre el registro resultante de la edición (incluida la limpieza de banco y vencimiento al pasar de cheque a medio inmediato); baja solo en "Borrador".
 * [x] **Controlador:** `PUT` con `200`, `400` ante un `id` no numérico o un cuerpo vacío, y propagación de errores; `DELETE` con `200` y propagación de errores.
 * [x] **Integración:** modificación de importe y comprobante con `fecha_actualizacion` estampada; conversión de medio inmediato a diferido (con y sin los tres datos); conversión de diferido a inmediato con banco y vencimiento en `NULL`; recepción posterior al vencimiento rechazada; promoción a "Aceptado" según el medio; inmutabilidad y baja según el estado.
-* [x] **Consulta individual (`GET /api/payment/:id`), servicio:** `toPaymentDTO` (importe a dos decimales, fechas ISO y fechas ausentes en `null`) y `getPaymentById` (DTO con cliente y banco, y `404` si el pago no existe).
+* [x] **Consulta individual (`GET /api/payments/:id`), servicio:** `toPaymentDTO` (importe a dos decimales, fechas ISO y fechas ausentes en `null`) y `getPaymentById` (DTO con cliente y banco, y `404` si el pago no existe).
 * [x] **Consulta individual, controlador:** `200` con el pago, `400` ante un identificador inválido, y propagación del `404` y del `500`.
 * [x] **Consulta individual, integración:** pago con medio inmediato (banco y vencimiento en `null`), cheque con banco, comprobante y fechas ISO, `404`, `400` y no interpretación de `/banks` como identificador.
 
@@ -132,8 +132,8 @@ No existen tests de la modificación ni de la baja, por lo que deben escribirse 
 
 La implementación está completa; solo faltan casos de test:
 
-* [x] **Controlador:** `500` con el sobre de error uniforme en `GET /api/payment/methods` y `GET /api/payment/states` cuando el servicio falla.
-* [x] **Integración:** `GET /api/payment/states` devuelve los cuatro estados ordenados por identificador, y `GET /api/payment/methods` refleja fielmente `es_diferido`.
+* [x] **Controlador:** `500` con el sobre de error uniforme en `GET /api/payments/methods` y `GET /api/payments/states` cuando el servicio falla.
+* [x] **Integración:** `GET /api/payments/states` devuelve los cuatro estados ordenados por identificador, y `GET /api/payments/methods` refleja fielmente `es_diferido`.
 
 ---
 

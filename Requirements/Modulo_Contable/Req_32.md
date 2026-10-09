@@ -20,7 +20,7 @@ Asimismo, el registro maneja tres fechas de naturaleza distinta que la edición 
 * **Service (`payment.service.js`):** A través de los métodos estáticos `updatePayment(id, updateData)` y `deletePayment(id)` de la clase `PaymentService`, esta capa orquesta la operación y centraliza las reglas de negocio. Su principal responsabilidad es consultar previamente la entidad mediante `Payment.findById(id)` e implementar una cláusula de guarda (Fail-Fast): si el pago no existe, interrumpe el flujo; si el nombre del estado actual es distinto de "Borrador", aborta inmediatamente arrojando una excepción de negocio semántica para impedir la alteración contable. Asimismo valida que el importe modificado permanezca estrictamente positivo (`monto > 0`), que el medio de pago informado exista en el catálogo, que la combinación resultante entre medio de cobro y estado solicitado sea legítima (un medio diferido no puede quedar "Aceptado"), y que el registro resultante de la edición sea coherente con la naturaleza del instrumento: banco emisor, número de comprobante y fecha de vencimiento presentes y válidos si el medio resultante es diferido, y banco y vencimiento en `null` si es inmediato. Los estados se referencian siempre por su nombre semántico a través del diccionario de constantes `ESTADOS_PAGO` definido en el módulo, resolviendo sus identificadores contra el catálogo en tiempo de ejecución, nunca por número fijo. Expone además el método estático `getPaymentById(id)`, que recupera un pago puntual para hidratar la vista de modificación y arroja un `404` si no existe, y concentra en el método estático `toPaymentDTO(payment)` la normalización del registro hacia un DTO plano (importe a dos decimales y fechas en formato ISO 8601), que reutilizan la consulta multicriterio, la modificación y la consulta individual.
 
 
-* **Controller (`payment.controller.js`):** Debe exponer los endpoints `GET /api/payment/:id` (consulta individual), `PUT /api/payment/:id` y `DELETE /api/payment/:id` construidos sobre Express.js, respetando el prefijo bajo el que está montado el enrutador de pagos en `app.js` (`/api/payment`, en singular). Su tarea es atrapar las peticiones HTTP, validar la sintaxis básica del parámetro de ruta (`id`) y del cuerpo (`req.body`), delegar el procesamiento a la capa de servicios y devolver la respuesta con el sobre JSON uniforme del módulo (`{ success, data }` o `{ success, message }`) junto al código semántico correspondiente (`200 OK`, `400 Bad Request`, `404 Not Found`, `409 Conflict`, `500 Internal Server Error`), propagando el `statusCode` que adjunta la excepción de negocio.
+* **Controller (`payment.controller.js`):** Debe exponer los endpoints `GET /api/payments/:id` (consulta individual), `PUT /api/payments/:id` y `DELETE /api/payments/:id` construidos sobre Express.js, respetando el prefijo bajo el que está montado el enrutador de pagos en `app.js` (`/api/payments`, en singular). Su tarea es atrapar las peticiones HTTP, validar la sintaxis básica del parámetro de ruta (`id`) y del cuerpo (`req.body`), delegar el procesamiento a la capa de servicios y devolver la respuesta con el sobre JSON uniforme del módulo (`{ success, data }` o `{ success, message }`) junto al código semántico correspondiente (`200 OK`, `400 Bad Request`, `404 Not Found`, `409 Conflict`, `500 Internal Server Error`), propagando el `statusCode` que adjunta la excepción de negocio.
 
 
 
@@ -140,22 +140,22 @@ Asimismo, el registro maneja tres fechas de naturaleza distinta que la edición 
 * **Tarea 3.2:** En `payment.controller.js`, implementar `handleDeletePayment(req, res)` extrayendo `req.params.id` y retornando `200 OK` con un mensaje descriptivo ante la baja exitosa.
 
 
-* **Tarea 3.3:** En `payment.routes.js`, declarar `PUT /:id` y `DELETE /:id` asociados a sus respectivos métodos de controlador, manteniéndolos por debajo de las rutas literales de catálogo (`/methods`, `/states`) para preservar el orden de resolución de Express. Los endpoints resultantes son `PUT /api/payment/:id` y `DELETE /api/payment/:id`. No se requieren cambios en `app.js`, dado que el enrutador de pagos ya está registrado bajo el prefijo `/api/payment`.
+* **Tarea 3.3:** En `payment.routes.js`, declarar `PUT /:id` y `DELETE /:id` asociados a sus respectivos métodos de controlador, manteniéndolos por debajo de las rutas literales de catálogo (`/methods`, `/states`) para preservar el orden de resolución de Express. Los endpoints resultantes son `PUT /api/payments/:id` y `DELETE /api/payments/:id`. No se requieren cambios en `app.js`, dado que el enrutador de pagos ya está registrado bajo el prefijo `/api/payments`.
 
 
-* **Tarea 3.4:** En `payment.controller.js`, implementar `handleGetPaymentById(req, res)` extrayendo `req.params.id`, rechazando con `400` un identificador que no sea un entero positivo, delegando en `PaymentService.getPaymentById` y retornando `200 OK` con el pago en `data`; el bloque `try/catch` propaga el `statusCode` de la excepción de negocio (en particular el `404`). En `payment.routes.js`, declarar `GET /:id` por debajo de las rutas literales de catálogo (`/methods`, `/states`, `/banks`) y por encima de la consulta multicriterio `GET /`, de modo que los segmentos literales no sean interpretados como un identificador. El endpoint resultante es `GET /api/payment/:id`.
+* **Tarea 3.4:** En `payment.controller.js`, implementar `handleGetPaymentById(req, res)` extrayendo `req.params.id`, rechazando con `400` un identificador que no sea un entero positivo, delegando en `PaymentService.getPaymentById` y retornando `200 OK` con el pago en `data`; el bloque `try/catch` propaga el `statusCode` de la excepción de negocio (en particular el `404`). En `payment.routes.js`, declarar `GET /:id` por debajo de las rutas literales de catálogo (`/methods`, `/states`, `/banks`) y por encima de la consulta multicriterio `GET /`, de modo que los segmentos literales no sean interpretados como un identificador. El endpoint resultante es `GET /api/payments/:id`.
 
 
 
 #### 4. Capa de Integración Frontend (`frontend/src/services/payment.service.js`)
 
-* **Tarea 4.1:** Implementar la función asíncrona `apiUpdatePayment(id, paymentData)` consumiendo mediante `fetch` el endpoint `PUT /api/payment/:id` con las cabeceras de `getAuthHeaders()` y el cuerpo serializado en JSON.
+* **Tarea 4.1:** Implementar la función asíncrona `apiUpdatePayment(id, paymentData)` consumiendo mediante `fetch` el endpoint `PUT /api/payments/:id` con las cabeceras de `getAuthHeaders()` y el cuerpo serializado en JSON.
 
 
-* **Tarea 4.2:** Implementar la función asíncrona `apiDeletePayment(id)` consumiendo mediante `fetch` el endpoint `DELETE /api/payment/:id`, controlando `!response.ok` y propagando el `statusCode` en la excepción.
+* **Tarea 4.2:** Implementar la función asíncrona `apiDeletePayment(id)` consumiendo mediante `fetch` el endpoint `DELETE /api/payments/:id`, controlando `!response.ok` y propagando el `statusCode` en la excepción.
 
 
-* **Tarea 4.3:** Implementar la función asíncrona de lectura puntual `fetchPaymentById(id)`, requerida por la página de edición para hidratar el formulario a partir del identificador de la URL, consumiendo mediante `fetch` el endpoint `GET /api/payment/:id` con las cabeceras de `getAuthHeaders()`, controlando `!response.ok` y propagando el `statusCode` en la excepción (`400` ante un identificador inválido y `404` si el pago no existe). El registro recuperado incluye `cliente_nombre`, `cliente_cuit`, `cliente_direccion`, `id_banco`, `banco_nombre` y `fecha_vencimiento`, estos últimos nulos cuando el pago corresponde a un medio inmediato.
+* **Tarea 4.3:** Implementar la función asíncrona de lectura puntual `fetchPaymentById(id)`, requerida por la página de edición para hidratar el formulario a partir del identificador de la URL, consumiendo mediante `fetch` el endpoint `GET /api/payments/:id` con las cabeceras de `getAuthHeaders()`, controlando `!response.ok` y propagando el `statusCode` en la excepción (`400` ante un identificador inválido y `404` si el pago no existe). El registro recuperado incluye `cliente_nombre`, `cliente_cuit`, `cliente_direccion`, `id_banco`, `banco_nombre` y `fecha_vencimiento`, estos últimos nulos cuando el pago corresponde a un medio inmediato.
 
 
 * **Tarea 4.4:** Reutilizar sin duplicar las funciones `fetchBanks()` y `apiCreateBank(bankData)` ya implementadas en este mismo archivo para el registro de pagos, que alimentan el control de selección de banco y su modal de alta también en la página de edición.
@@ -244,10 +244,10 @@ Siguiendo las dos modalidades de prueba establecidas en `backend/__tests__/` (pr
   * `deletePayment` debe lanzar `404` si el pago no existe y `409` si su estado no es "Borrador", invocando `Payment.delete` solo en el caso permitido.
 
 * **`payment.controller.test.js` (integración REST con `supertest`, mockeando `PaymentService`):**
-  * `PUT /api/payment/:id` debe retornar `200` con el `data` devuelto por `PaymentService.updatePayment` ante un payload válido.
-  * `PUT /api/payment/:id` debe retornar `400` ante un `id` no numérico o un cuerpo vacío, sin invocar al servicio.
-  * `PUT /api/payment/:id` y `DELETE /api/payment/:id` deben propagar el `statusCode` de la excepción del servicio (`404`, `409`, `400`).
-  * `DELETE /api/payment/:id` debe retornar `200` con un mensaje descriptivo ante la baja exitosa.
+  * `PUT /api/payments/:id` debe retornar `200` con el `data` devuelto por `PaymentService.updatePayment` ante un payload válido.
+  * `PUT /api/payments/:id` debe retornar `400` ante un `id` no numérico o un cuerpo vacío, sin invocar al servicio.
+  * `PUT /api/payments/:id` y `DELETE /api/payments/:id` deben propagar el `statusCode` de la excepción del servicio (`404`, `409`, `400`).
+  * `DELETE /api/payments/:id` debe retornar `200` con un mensaje descriptivo ante la baja exitosa.
 
 * **`payment.api.test.js` (integración end-to-end contra `DB_NAME_TEST`, sin mocks):**
   * Modificar el importe y el número de comprobante de un pago en "Borrador" y verificar en la fila persistida los nuevos valores y que `fecha_actualizacion` quedó estampada.

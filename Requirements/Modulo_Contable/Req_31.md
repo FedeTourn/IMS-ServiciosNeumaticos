@@ -28,7 +28,7 @@ Todo pago se registra siempre en estado "Borrador", con independencia de la natu
 * **Service (`payment.service.js`):** Orquesta la lógica del negocio mediante el método estático `createPayment(paymentData)` de la clase `PaymentService`. Valida la presencia de los campos obligatorios, la existencia y vigencia del cliente, la pertenencia del medio de pago al catálogo, la coherencia entre la naturaleza del medio de cobro y los datos propios del instrumento diferido (banco emisor, número de comprobante y fecha de vencimiento), y la consistencia del importe monetario. Por razones de seguridad contable, resuelve siempre el estado operativo inicial "Borrador" para el registro, sin excepción, previo a su inserción en la capa de datos. El estado se referencia por su nombre semántico a través del diccionario de constantes `ESTADOS_PAGO` definido en el módulo, resolviendo su identificador contra el catálogo en tiempo de ejecución y nunca por número fijo. El alta de entidades bancarias se resuelve en el método estático `createBank(bankData)`, que normaliza el nombre recibido y rechaza los duplicados lógicos antes de delegar la inserción.
 
 
-* **Controller (`payment.controller.js`):** Expone el endpoint `POST /api/payment` a través de Express.js, respetando el prefijo bajo el que está montado el enrutador de pagos en `app.js` (`/api/payment`, en singular). Intercepta el payload de la petición HTTP (`req.body`), ejecuta una validación sintáctica preliminar de los campos obligatorios, delega la ejecución a la capa de servicios y efectúa el mapeo semántico de errores a códigos de estado HTTP estandarizados (`201 Created`, `400 Bad Request`, `404 Not Found`, `500 Internal Server Error`) devolviendo el sobre JSON uniforme del módulo (`{ success, data }` o `{ success, message }`). Complementariamente expone los endpoints de catálogo de bancos `GET /api/payment/banks` y `POST /api/payment/banks`, declarados como rutas literales por encima de las rutas paramétricas del enrutador para preservar el orden de resolución de Express, tal como ya ocurre con `/methods` y `/states`.
+* **Controller (`payment.controller.js`):** Expone el endpoint `POST /api/payments` a través de Express.js, respetando el prefijo bajo el que está montado el enrutador de pagos en `app.js` (`/api/payments`, en singular). Intercepta el payload de la petición HTTP (`req.body`), ejecuta una validación sintáctica preliminar de los campos obligatorios, delega la ejecución a la capa de servicios y efectúa el mapeo semántico de errores a códigos de estado HTTP estandarizados (`201 Created`, `400 Bad Request`, `404 Not Found`, `500 Internal Server Error`) devolviendo el sobre JSON uniforme del módulo (`{ success, data }` o `{ success, message }`). Complementariamente expone los endpoints de catálogo de bancos `GET /api/payments/banks` y `POST /api/payments/banks`, declarados como rutas literales por encima de las rutas paramétricas del enrutador para preservar el orden de resolución de Express, tal como ya ocurre con `/methods` y `/states`.
 
 
 
@@ -201,7 +201,7 @@ Todo pago se registra siempre en estado "Borrador", con independencia de la natu
 * **Tarea 3.2:** Crear `payment.routes.js` y exponer el endpoint `POST /` asociándolo al método del controlador.
 
 
-* **Tarea 3.3:** Registrar el enrutador de pagos en `app.js` bajo el prefijo `/api/payment`, con lo que el endpoint resultante es `POST /api/payment`.
+* **Tarea 3.3:** Registrar el enrutador de pagos en `app.js` bajo el prefijo `/api/payments`, con lo que el endpoint resultante es `POST /api/payments`.
 
 
 * **Tarea 3.4:** Implementar en `payment.controller.js` el método `getBanks(req, res)` que delega en `PaymentService.getBanks` y devuelve `200 OK` con la colección de bancos en el sobre JSON uniforme del módulo, replicando la estructura de `getPaymentMethods` y `getPaymentStates`.
@@ -210,7 +210,7 @@ Todo pago se registra siempre en estado "Borrador", con independencia de la natu
 * **Tarea 3.5:** Implementar en `payment.controller.js` el método `handleCreateBank(req, res)` que extrae `nombre` de `req.body`, rechaza con `400` su ausencia antes de invocar al servicio, delega el alta y mapea las excepciones leyendo `error.statusCode` para devolver `201 Created`, `400 Bad Request`, `409 Conflict` o `500 Internal Server Error`.
 
 
-* **Tarea 3.6:** Declarar en `payment.routes.js` las rutas literales `GET /banks` y `POST /banks` enlazadas a los métodos anteriores, ubicándolas junto a `/methods` y `/states` y por encima de las rutas paramétricas (`/:id`) para preservar el orden de resolución de Express. Los endpoints resultantes son `GET /api/payment/banks` y `POST /api/payment/banks`.
+* **Tarea 3.6:** Declarar en `payment.routes.js` las rutas literales `GET /banks` y `POST /banks` enlazadas a los métodos anteriores, ubicándolas junto a `/methods` y `/states` y por encima de las rutas paramétricas (`/:id`) para preservar el orden de resolución de Express. Los endpoints resultantes son `GET /api/payments/banks` y `POST /api/payments/banks`.
 
 
 
@@ -221,13 +221,13 @@ Todo pago se registra siempre en estado "Borrador", con independencia de la natu
 * **Tarea 4.1:** Crear el archivo `frontend/src/services/payment.service.js` con el helper `getAuthHeaders()`, que construye las cabeceras `application/json` y adjunta el token de sesión (`Authorization: Bearer`) recuperado de `localStorage`.
 
 
-* **Tarea 4.2:** Implementar la función asíncrona `apiCreatePayment(paymentData)` utilizando `fetch` para enviar la carga útil JSON al endpoint `POST /api/payment`, controlando las respuestas no satisfactorias (`!response.ok`) y propagando el `statusCode` en la excepción elevada hacia la interfaz. La carga útil incluye `id_banco` y `fecha_vencimiento` cuando el medio de cobro seleccionado es diferido, y los omite en caso contrario.
+* **Tarea 4.2:** Implementar la función asíncrona `apiCreatePayment(paymentData)` utilizando `fetch` para enviar la carga útil JSON al endpoint `POST /api/payments`, controlando las respuestas no satisfactorias (`!response.ok`) y propagando el `statusCode` en la excepción elevada hacia la interfaz. La carga útil incluye `id_banco` y `fecha_vencimiento` cuando el medio de cobro seleccionado es diferido, y los omite en caso contrario.
 
 
-* **Tarea 4.3:** Implementar la función asíncrona `fetchBanks()` que consulta `GET /api/payment/banks` con las cabeceras de `getAuthHeaders()` y retorna la colección de bancos, siguiendo la estructura de `fetchPaymentMethods` y `fetchPaymentStates`.
+* **Tarea 4.3:** Implementar la función asíncrona `fetchBanks()` que consulta `GET /api/payments/banks` con las cabeceras de `getAuthHeaders()` y retorna la colección de bancos, siguiendo la estructura de `fetchPaymentMethods` y `fetchPaymentStates`.
 
 
-* **Tarea 4.4:** Implementar la función asíncrona `apiCreateBank(bankData)` que despacha `POST /api/payment/banks`, propaga el `statusCode` de las respuestas no satisfactorias —en particular el `409` de nombre duplicado, que la interfaz debe poder distinguir de un error genérico— y retorna el banco creado con su identificador para su selección inmediata en el formulario.
+* **Tarea 4.4:** Implementar la función asíncrona `apiCreateBank(bankData)` que despacha `POST /api/payments/banks`, propaga el `statusCode` de las respuestas no satisfactorias —en particular el `409` de nombre duplicado, que la interfaz debe poder distinguir de un error genérico— y retorna el banco creado con su identificador para su selección inmediata en el formulario.
 
 
 
@@ -312,11 +312,11 @@ Siguiendo las dos modalidades de prueba establecidas en `backend/__tests__/` (pr
   * `createBank` debe normalizar el nombre recibido (recorte de espacios en los extremos y colapso de espacios internos) antes de delegar la inserción.
 
 * **`payment.controller.test.js` (integración REST con `supertest`, mockeando `PaymentService`):**
-  * `POST /api/payment` debe retornar `201` y el `data` devuelto por `PaymentService.createPayment` cuando el payload es válido.
-  * `POST /api/payment` debe retornar `400` si falta `id_cliente`, `id_medio_pago`, `monto` o `fecha_recepcion`, sin invocar al servicio.
-  * `POST /api/payment` debe propagar el `statusCode` de la excepción del servicio (`404`, `400`) en la respuesta HTTP.
-  * `POST /api/payment/banks` debe retornar `201` con el banco devuelto por `PaymentService.createBank`, `400` si falta el nombre en el cuerpo —sin invocar al servicio— y propagar el `409` de la excepción de duplicado.
-  * `GET /api/payment/banks` debe retornar `200` con la colección devuelta por `PaymentService.getBanks`.
+  * `POST /api/payments` debe retornar `201` y el `data` devuelto por `PaymentService.createPayment` cuando el payload es válido.
+  * `POST /api/payments` debe retornar `400` si falta `id_cliente`, `id_medio_pago`, `monto` o `fecha_recepcion`, sin invocar al servicio.
+  * `POST /api/payments` debe propagar el `statusCode` de la excepción del servicio (`404`, `400`) en la respuesta HTTP.
+  * `POST /api/payments/banks` debe retornar `201` con el banco devuelto por `PaymentService.createBank`, `400` si falta el nombre en el cuerpo —sin invocar al servicio— y propagar el `409` de la excepción de duplicado.
+  * `GET /api/payments/banks` debe retornar `200` con la colección devuelta por `PaymentService.getBanks`.
 
 * **`payment.api.test.js` (integración end-to-end contra `DB_NAME_TEST`, sin mocks):**
   * `beforeAll` trunca `Pago`, `Cliente`, `EstadoPago`, `MedioPago` y `Banco`, y siembra un cliente activo, el catálogo de estados, al menos dos medios de pago (uno con `es_diferido = 0` y otro con `es_diferido = 1`) y al menos un banco.
@@ -327,7 +327,7 @@ Siguiendo las dos modalidades de prueba establecidas en `backend/__tests__/` (pr
   * Verificar que un pago con medio diferido y sin `fecha_vencimiento`, o con un vencimiento anterior a la fecha de recepción, retorna `400` y no inserta fila en `Pago`.
   * Verificar que un pago con medio diferido y un `id_banco` inexistente retorna `404` y no inserta fila en `Pago`.
   * Verificar que un pago con medio inmediato acompañado de un `id_banco` o de una `fecha_vencimiento` retorna `400` y no inserta fila en `Pago`.
-  * Dar de alta un banco mediante `POST /api/payment/banks` debe retornar `201`, insertar la fila con el nombre normalizado y hacerlo visible en la respuesta de `GET /api/payment/banks`; repetir el alta con el mismo nombre en distinta caja de letras debe retornar `409` sin insertar una segunda fila.
+  * Dar de alta un banco mediante `POST /api/payments/banks` debe retornar `201`, insertar la fila con el nombre normalizado y hacerlo visible en la respuesta de `GET /api/payments/banks`; repetir el alta con el mismo nombre en distinta caja de letras debe retornar `409` sin insertar una segunda fila.
   * Verificar que un pago con `id_cliente` inexistente retorna `404` y no inserta fila en `Pago`.
   * Verificar que un pago con `monto <= 0` retorna `400` y no inserta fila en `Pago`.
   * Verificar que la respuesta `201` incluye `estado_pago_nombre: 'Borrador'` en el DTO devuelto.
