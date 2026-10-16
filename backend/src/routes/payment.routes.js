@@ -26,6 +26,9 @@ router.post('/', paymentController.handleCreatePayment);
 // PUT /api/payments/:id
 router.put('/:id', paymentController.handleUpdatePayment);
 
+// PATCH /api/payments/:id/status
+router.patch('/:id/status', paymentController.handleUpdatePaymentStatus);
+
 // DELETE /api/payments/:id
 router.delete('/:id', paymentController.handleDeletePayment);
 

@@ -556,4 +556,117 @@ describe('Módulo de Pagos - Pruebas de Integración', () => {
             ]);
         });
     });
+
+    describe('PATCH /api/payments/:id/status (resolucion de cheques pendientes)', () => {
+
+        let idPagoPendiente;
+
+        beforeAll(async () => {
+            // Crear un cheque en estado "Pendiente de acreditación" para los tests
+            const [result] = await db.execute(
+                `INSERT INTO Pago (id_cliente, id_medio_pago, id_banco, monto, fecha_recepcion,
+                 fecha_vencimiento, numero_comprobante, id_estado_pago)
+                 VALUES (1, 2, 1, 3000, '2026-09-15', '2026-10-15', 'CH-PENDIENTE', 2)`
+            );
+            idPagoPendiente = result.insertId;
+        });
+
+        it('debe retornar 400 si el identificador no es un entero positivo', async () => {
+            const res = await request(app)
+                .patch('/api/payments/abc/status')
+                .send({ status: 'Aceptado' });
+
+            expect(res.statusCode).toBe(400);
+            expect(res.body.success).toBe(false);
+        });
+
+        it('debe retornar 400 si el campo status falta', async () => {
+            const res = await request(app)
+                .patch(`/api/payments/${idPagoPendiente}/status`)
+                .send({});
+
+            expect(res.statusCode).toBe(400);
+            expect(res.body.success).toBe(false);
+        });
+
+        it('debe retornar 400 si status está vacío', async () => {
+            const res = await request(app)
+                .patch(`/api/payments/${idPagoPendiente}/status`)
+                .send({ status: '' });
+
+            expect(res.statusCode).toBe(400);
+            expect(res.body.success).toBe(false);
+        });
+
+        it('debe retornar 404 si el pago no existe', async () => {
+            const res = await request(app)
+                .patch('/api/payments/999/status')
+                .send({ status: 'Aceptado' });
+
+            expect(res.statusCode).toBe(404);
+            expect(res.body.success).toBe(false);
+        });
+
+        it('debe acreditar exitosamente un cheque pendiente', async () => {
+            const res = await request(app)
+                .patch(`/api/payments/${idPagoPendiente}/status`)
+                .send({ status: 'Aceptado' });
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.data.estado_pago_nombre).toBe('Aceptado');
+
+            // Verificar en la BD
+            const [pagos] = await db.execute('SELECT id_estado_pago FROM Pago WHERE id_pago = ?', [idPagoPendiente]);
+            expect(pagos[0].id_estado_pago).toBe(3); // Aceptado
+        });
+
+        it('no debe permitir aceptar un pago que ya fue resuelto (carrera)', async () => {
+            // El pago ya está en Aceptado desde el test anterior
+            const res = await request(app)
+                .patch(`/api/payments/${idPagoPendiente}/status`)
+                .send({ status: 'Aceptado' });
+
+            expect(res.statusCode).toBe(409);
+            expect(res.body.success).toBe(false);
+        });
+
+        it('debe rechazar un nuevo cheque pendiente', async () => {
+            // Crear otro cheque pendiente
+            const [result] = await db.execute(
+                `INSERT INTO Pago (id_cliente, id_medio_pago, id_banco, monto, fecha_recepcion,
+                 fecha_vencimiento, numero_comprobante, id_estado_pago)
+                 VALUES (2, 2, 2, 1500, '2026-09-16', '2026-10-16', 'CH-RECHAZA', 2)`
+            );
+            const idPagoRechaza = result.insertId;
+
+            const res = await request(app)
+                .patch(`/api/payments/${idPagoRechaza}/status`)
+                .send({ status: 'Rechazado' });
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.data.estado_pago_nombre).toBe('Rechazado');
+
+            // Verificar en la BD
+            const [pagos] = await db.execute('SELECT id_estado_pago FROM Pago WHERE id_pago = ?', [idPagoRechaza]);
+            expect(pagos[0].id_estado_pago).toBe(4); // Rechazado
+        });
+
+        it('debe retornar 400 si el estado destino es inválido', async () => {
+            const [result] = await db.execute(
+                `INSERT INTO Pago (id_cliente, id_medio_pago, id_banco, monto, fecha_recepcion,
+                 fecha_vencimiento, numero_comprobante, id_estado_pago)
+                 VALUES (1, 2, 1, 2000, '2026-09-17', '2026-10-17', 'CH-INVALIDO', 2)`
+            );
+            const idPago = result.insertId;
+
+            const res = await request(app)
+                .patch(`/api/payments/${idPago}/status`)
+                .send({ status: 'Borrador' });
+
+            expect(res.statusCode).toBe(400);
+            expect(res.body.success).toBe(false);
+        });
+    });
 });

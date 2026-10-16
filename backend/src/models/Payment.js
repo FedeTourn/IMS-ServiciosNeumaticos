@@ -535,6 +535,33 @@ exports.update = async (idPago, paymentData, idEstadoActual, connection = null) 
 };
 
 /**
+ * Actualiza exclusivamente el estado de un pago. El estado vigente exigido forma parte de la
+ * cláusula WHERE para que la propia sentencia impida resolver un pago que fue transicionado de
+ * manera concurrente. Soporta la inyección explícita de una conexión transaccional.
+ * @param {number} idPago - Identificador del pago a transicionar.
+ * @param {number} idEstadoDestino - Identificador del estado que debe asumir el pago.
+ * @param {number} idEstadoActual - Estado que el pago debe conservar para admitir la transición.
+ * @param {Object} [connection=null] - Conexión transaccional inyectada por el Service (opcional).
+ * @returns {Promise<number>} Cantidad de filas afectadas por la actualización.
+ */
+exports.updateStatus = async (idPago, idEstadoDestino, idEstadoActual, connection = null) => {
+    const executor = connection || db;
+
+    const query = `
+        UPDATE Pago SET id_estado_pago = ?
+        WHERE id_pago = ? AND id_estado_pago = ?;
+    `;
+
+    try {
+        const [result] = await executor.execute(query, [idEstadoDestino, idPago, idEstadoActual]);
+        return result.affectedRows;
+    } catch (error) {
+        console.error("Error en Payment.updateStatus:", error);
+        throw new Error("Error en la capa de datos al actualizar el estado del pago.");
+    }
+};
+
+/**
  * Ejecuta la baja de un pago. El estado vigente exigido forma parte de la cláusula WHERE para que
  * la propia sentencia impida eliminar un pago que fue formalizado de manera concurrente.
  * Soporta la inyección explícita de una conexión transaccional.

@@ -284,6 +284,9 @@ Todo pago se registra siempre en estado "Borrador", con independencia de la natu
 6. **Ambigüedad Semántica entre las Tres Fechas:** El registro pasa a manejar tres marcas temporales de naturaleza distinta —creación en el sistema, recepción del cobro y vencimiento del cheque— y la confusión entre ellas distorsionaría tanto el libro de movimientos como la gestión de la cartera de cheques. El renombrado de `fecha_pago` a `fecha_recepcion` apunta precisamente a suprimir esa ambigüedad, pero por tratarse de una columna preexistente exige una migración cuidadosa: mientras convivan referencias al nombre anterior en el modelo, el DTO, los filtros o el frontend, las consultas fallarán de forma silenciosa o devolverán datos vacíos. El renombrado debe aplicarse de forma completa y en un único cambio, con `migracion_taller.sql` actualizado y la base de test `DB_NAME_TEST` recreada antes de ejecutar la suite.
 
 
+7. **Alta Concurrente de un Mismo Banco (Limitación Conocida):** Si dos altas simultáneas del mismo nombre superan la verificación previa del servicio (`Payment.findBankByName`), la restricción `UNIQUE` del esquema impide que el duplicado se materialice, pero `Payment.createBank` traduce el error de la base a un error genérico y la segunda petición responde `HTTP 500` en lugar de `409`. El catálogo no se corrompe: solo se degrada el mensaje que recibe el operador. La corrección consiste en detectar `ER_DUP_ENTRY` en el modelo y elevar el conflicto con `statusCode = 409`. Se acepta la limitación en esta fase por la baja probabilidad del escenario, dado que las altas de bancos son manuales y esporádicas.
+
+
 
 ---
 

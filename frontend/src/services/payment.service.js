@@ -71,6 +71,37 @@ export const apiUpdatePayment = async (id, paymentData) => {
 };
 
 /**
+ * Resuelve un cobro diferido "Pendiente de acreditación" hacia "Aceptado" o "Rechazado" mediante
+ * PATCH /api/payments/:id/status. Cualquier otro estado de origen es rechazado por el backend con
+ * un conflicto de negocio (409).
+ * @param {number|string} id - Identificador del pago a resolver.
+ * @param {string} targetStatus - Nombre del estado destino: "Aceptado" o "Rechazado".
+ * @returns {Promise<Object>} Pago resuelto, con su nuevo estado.
+ * @throws {Error} Excepción enriquecida con el código de estado HTTP para su manejo en la UI.
+ */
+export const apiUpdatePaymentStatus = async (id, targetStatus) => {
+    try {
+        const response = await fetch(`${API_URL}/${id}/status`, {
+            method: 'PATCH',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ status: targetStatus })
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+            const error = new Error(data.message || 'Error al resolver el cobro diferido.');
+            error.statusCode = response.status;
+            throw error;
+        }
+
+        return data.data;
+    } catch (error) {
+        console.error('[PaymentService Front Error] Falla de comunicación con el endpoint PATCH /api/payments/:id/status:', error.message);
+        throw error;
+    }
+};
+
+/**
  * Solicita la baja definitiva de un pago en estado "Borrador".
  * @param {number|string} id - Identificador del pago a eliminar.
  * @returns {Promise<string>} Mensaje de confirmación devuelto por el backend.

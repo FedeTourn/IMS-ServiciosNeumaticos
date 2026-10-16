@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { fetchPaymentMethods, fetchPaymentStates, fetchPaymentById, fetchBanks, apiUpdatePayment, apiDeletePayment } from '../../services/payment.service';
+import { fetchPaymentMethods, fetchPaymentStates, fetchPaymentById, fetchBanks, apiUpdatePayment, apiDeletePayment, apiUpdatePaymentStatus } from '../../services/payment.service';
 import BankSelector from '../../components/common/BankSelector';
 import ConfirmationModal from '../../components/common/ConfirmationModal';
+import DeferredActionModal from '../../components/common/DeferredActionModal';
 import PaymentStatusBadge from '../../components/common/PaymentStatusBadge';
 
 // Nombre semantico del unico estado en el que un pago admite modificacion o baja
@@ -57,6 +58,10 @@ const UpdatePaymentPage = () => {
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
+    // Resolucion de un cheque pendiente: estado destino a confirmar ("Aceptado" o "Rechazado") y operacion en curso
+    const [pendingStatus, setPendingStatus] = useState(null);
+    const [isUpdating, setIsUpdating] = useState(false);
+
     const loadPaymentData = async () => {
         setIsLoading(true);
         setMessage(false);
@@ -105,6 +110,8 @@ const UpdatePaymentPage = () => {
 
     // Solo un pago en Borrador admite modificaciones: se evalua contra el estado guardado, no contra el seleccionado en el formulario
     const esBorrador = payment.estado_pago_nombre === ESTADO_BORRADOR;
+    // La resolucion de un cheque se habilita segun el nombre del estado vigente del registro cargado, nunca por un id fijo
+    const esPendiente = payment.estado_pago_nombre === ESTADO_PENDIENTE;
     const selectedState = paymentStates.find(state => String(state.id_estado_pago) === String(estado));
     // Elegir un estado distinto de Borrador sobre un pago editable lo vuelve inmutable al guardar
     const esPromocionDefinitiva = esBorrador && !!selectedState && selectedState.nombre !== ESTADO_BORRADOR;
@@ -272,6 +279,49 @@ const UpdatePaymentPage = () => {
         }
     };
 
+
+    // Abre la confirmacion para acreditar o rechazar el cheque pendiente que se esta consultando
+    const openDeferredAction = (targetStatus) => {
+        setMessage(false);
+        setPendingStatus(targetStatus);
+    };
+
+    // Cancela la confirmacion; no se admite mientras la operacion esta en curso
+    const closeDeferredAction = () => {
+        if (isUpdating) return;
+        setPendingStatus(null);
+    };
+
+    // Despacha la resolucion del cheque y recarga el pago para reflejar su nuevo estado. Ante un
+    // conflicto (ej. otro operador lo resolvio antes) informa el mensaje del backend y recarga el
+    // registro vigente. El mensaje se asienta luego de la recarga, que lo limpia.
+    const confirmDeferredAction = async () => {
+        if (!pendingStatus || isUpdating) return;
+
+        const targetStatus = pendingStatus;
+        setIsUpdating(true);
+        setMessage(false);
+
+        try {
+            await apiUpdatePaymentStatus(id_pago, targetStatus);
+            setPendingStatus(null);
+            await loadPaymentData();
+
+            const resultado = targetStatus === ESTADO_ACEPTADO ? 'acreditado' : 'rechazado';
+            setMessage(`El pago NRO ${id_pago} fue ${resultado} correctamente.`);
+            setIsError(false);
+
+        } catch (error) {
+            setPendingStatus(null);
+            if (error.statusCode === 409) {
+                await loadPaymentData();
+            }
+            setMessage(`Error al resolver el pago: ${error.message}`);
+            setIsError(true);
+        } finally {
+            setIsUpdating(false);
+        }
+    };
 
     if (isLoading) return <div className="p-10 text-center animate-pulse text-gray-400">Cargando protocolo de recepción...</div>;
 
@@ -523,6 +573,28 @@ const UpdatePaymentPage = () => {
                                 Guardar Cambios
                             </button>
                         )}
+
+                        {/* Resolucion de un cheque pendiente: unica mutacion disponible fuera del Borrador */}
+                        {esPendiente && (
+                            <>
+                                <button
+                                    type="button"
+                                    disabled={isUpdating}
+                                    onClick={() => openDeferredAction(ESTADO_RECHAZADO)}
+                                    className="pay-btn-reject"
+                                >
+                                    Rechazar
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={isUpdating}
+                                    onClick={() => openDeferredAction(ESTADO_ACEPTADO)}
+                                    className="pay-btn-accept"
+                                >
+                                    Acreditar
+                                </button>
+                            </>
+                        )}
                     </div>
 
                 </div>
@@ -550,6 +622,15 @@ const UpdatePaymentPage = () => {
                 title="¿Descartar el pago?"
                 message={`Se eliminará definitivamente el pago NRO ${payment.id_pago}. Esta acción no se puede deshacer.`}
                 isDanger={true}
+            />
+
+            <DeferredActionModal
+                isOpen={!!pendingStatus}
+                payment={payment}
+                targetStatus={pendingStatus}
+                isUpdating={isUpdating}
+                onConfirm={confirmDeferredAction}
+                onClose={closeDeferredAction}
             />
         </div>
     );

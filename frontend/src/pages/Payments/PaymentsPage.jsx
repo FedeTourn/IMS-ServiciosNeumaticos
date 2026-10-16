@@ -6,10 +6,17 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { fetchClients } from '../../services/client.service';
 import PaymentStatusBadge from '../../components/common/PaymentStatusBadge';
 import AmountRangeSlider from '../../components/common/AmountRangeSlider';
-import { fetchPayments, fetchPaymentMethods, fetchPaymentStates, fetchBanks } from '../../services/payment.service';
+import DeferredActionModal from '../../components/common/DeferredActionModal';
+import RowActionsMenu from '../../components/common/RowActionsMenu';
+import { fetchPayments, fetchPaymentMethods, fetchPaymentStates, fetchBanks, apiUpdatePaymentStatus } from '../../services/payment.service';
 
 // Calendarios en español para toda la página
 registerLocale('es', es);
+
+// Nombres semanticos de los estados involucrados en la resolucion de un cheque pendiente
+const ESTADO_PENDIENTE = 'Pendiente de acreditación';
+const ESTADO_ACEPTADO = 'Aceptado';
+const ESTADO_RECHAZADO = 'Rechazado';
 
 // Criterios de búsqueda en su estado neutro, reutilizados por la carga inicial y por la limpieza del panel.
 const FILTROS_INICIALES = {
@@ -90,6 +97,14 @@ const PaymentsPage = () => {
 
     const [filters, setFilters] = useState(FILTROS_INICIALES);
 
+    // Resolucion de un cheque pendiente: pago y estado destino a confirmar, y resultado de la ultima operacion
+    const [pendingAction, setPendingAction] = useState(null);
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [notice, setNotice] = useState(null);
+
+    // Contador que fuerza la recarga del listado sin alterar los filtros
+    const [reloadToken, setReloadToken] = useState(0);
+
     useEffect(() => {
         const loadClients = async () => {
             try {
@@ -165,7 +180,7 @@ const PaymentsPage = () => {
 
         const temporizador = setTimeout(loadPayments, RETARDO_CONSULTA_MS);
         return () => clearTimeout(temporizador);
-    }, [filters]);
+    }, [filters, reloadToken]);
 
     // Manejador centralizado para actualizar el estado de los filtros
     const handleFilterChange = (e) => {
@@ -208,6 +223,40 @@ const PaymentsPage = () => {
     // Restablece todos los criterios, incluido el ordenamiento, a su estado neutro
     const handleClearFilters = () => {
         setFilters(FILTROS_INICIALES);
+    };
+
+    // Abre la confirmacion para acreditar o rechazar un cheque pendiente
+    const openDeferredAction = (pago, targetStatus) => {
+        setNotice(null);
+        setPendingAction({ pago, targetStatus });
+    };
+
+    // Cancela la confirmacion; no se admite mientras la operacion esta en curso
+    const closeDeferredAction = () => {
+        if (isUpdating) return;
+        setPendingAction(null);
+    };
+
+    // Despacha la resolucion del cheque, informa el resultado y recarga el listado. Ante un error
+    // (ej. 409 por otro operador que ya lo resolvio) tambien recarga, para mostrar el estado vigente.
+    const confirmDeferredAction = async () => {
+        if (!pendingAction || isUpdating) return;
+
+        const { pago, targetStatus } = pendingAction;
+        setIsUpdating(true);
+        setNotice(null);
+
+        try {
+            await apiUpdatePaymentStatus(pago.id_pago, targetStatus);
+            const resultado = targetStatus === ESTADO_ACEPTADO ? 'acreditado' : 'rechazado';
+            setNotice({ text: `El pago #${pago.id_pago} fue ${resultado} correctamente.`, isError: false });
+        } catch (err) {
+            setNotice({ text: `Error al resolver el pago #${pago.id_pago}: ${err.message}`, isError: true });
+        } finally {
+            setIsUpdating(false);
+            setPendingAction(null);
+            setReloadToken(prev => prev + 1);
+        }
     };
 
     const handleSort = (columnKey) => {
@@ -433,6 +482,23 @@ const PaymentsPage = () => {
             </div>
 
 
+            {/* Resultado de la ultima resolucion de un cheque pendiente */}
+            {notice && (
+                <div className={`pay-message animate-fade-in ${notice.isError ? 'pay-message--error' : 'pay-message--success'}`}>
+                    {notice.text}
+                </div>
+            )}
+
+            {/* Confirmacion de acreditacion o rechazo de un cheque pendiente */}
+            <DeferredActionModal
+                isOpen={!!pendingAction}
+                payment={pendingAction ? pendingAction.pago : null}
+                targetStatus={pendingAction ? pendingAction.targetStatus : null}
+                isUpdating={isUpdating}
+                onConfirm={confirmDeferredAction}
+                onClose={closeDeferredAction}
+            />
+
             {/* Contenedor de la Tabla Principal */}
             <div className="pay-list-table-card">
                 {/*Manejo de errores*/}
@@ -526,6 +592,15 @@ const PaymentsPage = () => {
                                                     >
                                                         Detalle
                                                     </button>
+                                                    {pago.estado_pago_nombre === ESTADO_PENDIENTE && (
+                                                        <RowActionsMenu
+                                                            disabled={isUpdating}
+                                                            items={[
+                                                                { label: 'Acreditar', tone: 'accept', onClick: () => openDeferredAction(pago, ESTADO_ACEPTADO) },
+                                                                { label: 'Rechazar', tone: 'reject', onClick: () => openDeferredAction(pago, ESTADO_RECHAZADO) }
+                                                            ]}
+                                                        />
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))

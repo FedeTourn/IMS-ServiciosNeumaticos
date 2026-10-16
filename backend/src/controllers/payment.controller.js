@@ -106,6 +106,51 @@ exports.handleUpdatePayment = async (req, res) => {
 };
 
 /**
+ * Endpoint encargado de resolver un cobro diferido (PATCH /api/payments/:id/status).
+ * Valida la forma del identificador y la presencia del estado destino, y delega en el servicio la
+ * máquina de estados, cuyos errores de negocio (400, 404, 409) se trasladan como estado HTTP.
+ * @param {Object} req - Objeto de petición Express.
+ * @param {Object} res - Objeto de respuesta Express.
+ */
+exports.handleUpdatePaymentStatus = async (req, res) => {
+    try {
+        const idPago = parseInt(req.params.id, 10);
+
+        if (Number.isNaN(idPago) || idPago <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: "El identificador del pago debe ser un número entero y positivo."
+            });
+        }
+
+        const status = req.body ? req.body.status : undefined;
+
+        if (typeof status !== 'string' || !status.trim()) {
+            return res.status(400).json({
+                success: false,
+                message: "El campo 'status' es obligatorio."
+            });
+        }
+
+        const result = await PaymentService.transitionDeferredPayment(idPago, status.trim());
+
+        return res.status(200).json({
+            success: true,
+            data: result
+        });
+
+    } catch (error) {
+        console.error(`[PaymentController Error] Falla al despachar endpoint de transición de estado de pago: ${error.message}`);
+
+        const statusCode = error.statusCode || 500;
+        return res.status(statusCode).json({
+            success: false,
+            message: error.message || 'Ocurrió un error interno en el servidor al actualizar el estado del pago.'
+        });
+    }
+};
+
+/**
  * Endpoint encargado de procesar la baja de un pago en estado Borrador.
  * Valida la forma del identificador y delega la guarda de negocio al servicio.
  * @param {Object} req - Objeto de petición Express.

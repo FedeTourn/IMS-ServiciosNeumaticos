@@ -823,4 +823,92 @@ describe('PaymentService - Pruebas Unitarias', () => {
                 .rejects.toEqual(expect.objectContaining({ statusCode: 404 }));
         });
     });
+
+    describe('transitionDeferredPayment()', () => {
+
+        const pagoEnPendiente = {
+            id_pago: 10,
+            estado_pago_nombre: 'Pendiente de acreditación',
+            id_estado_pago: 2,
+            id_cliente: 1,
+            cliente_nombre: 'Cliente Test',
+            monto: 2500,
+            id_medio_pago: 2,
+            medio_pago_nombre: 'Cheque',
+            es_diferido: 1,
+            id_banco: 1,
+            banco_nombre: 'Banco Nación',
+            numero_comprobante: 'CH-0001',
+            fecha_vencimiento: '2026-10-20',
+            fecha_recepcion: '2026-09-20'
+        };
+
+        it('Debe lanzar 400 si el estado destino no es "Aceptado" ni "Rechazado"', async () => {
+            await expect(PaymentService.transitionDeferredPayment(10, 'Borrador'))
+                .rejects.toEqual(expect.objectContaining({ statusCode: 400 }));
+
+            await expect(PaymentService.transitionDeferredPayment(10, 'Pendiente de acreditación'))
+                .rejects.toEqual(expect.objectContaining({ statusCode: 400 }));
+        });
+
+        it('Debe lanzar 404 si el pago no existe', async () => {
+            Payment.findById.mockResolvedValue(null);
+
+            await expect(PaymentService.transitionDeferredPayment(99, 'Aceptado'))
+                .rejects.toEqual(expect.objectContaining({ statusCode: 404 }));
+        });
+
+        it('Debe lanzar 409 si el pago no está en estado "Pendiente de acreditación"', async () => {
+            const pagoEnBorrador = { ...pagoEnPendiente, estado_pago_nombre: 'Borrador', id_estado_pago: 1 };
+            Payment.findById.mockResolvedValue(pagoEnBorrador);
+
+            await expect(PaymentService.transitionDeferredPayment(10, 'Aceptado'))
+                .rejects.toEqual(expect.objectContaining({ statusCode: 409 }));
+        });
+
+        it('Debe lanzar 409 si affectedRows es 0 (carrera con otro operador)', async () => {
+            Payment.findById.mockResolvedValue(pagoEnPendiente);
+            Payment.findAllStates.mockResolvedValue(estadosCatalogo);
+            Payment.updateStatus.mockResolvedValue(0); // Ninguna fila afectada
+
+            await expect(PaymentService.transitionDeferredPayment(10, 'Aceptado'))
+                .rejects.toEqual(expect.objectContaining({ statusCode: 409 }));
+        });
+
+        it('Debe lanzar 500 si el catálogo no posee el estado destino', async () => {
+            Payment.findById.mockResolvedValue(pagoEnPendiente);
+            Payment.findAllStates.mockResolvedValue(estadosCatalogo.filter(s => s.nombre !== 'Aceptado'));
+
+            await expect(PaymentService.transitionDeferredPayment(10, 'Aceptado'))
+                .rejects.toEqual(expect.objectContaining({ statusCode: 500 }));
+        });
+
+        it('Debe acreditar un cheque pendiente exitosamente', async () => {
+            const pagoAcreditado = { ...pagoEnPendiente, estado_pago_nombre: 'Aceptado', id_estado_pago: 3 };
+            Payment.findById
+                .mockResolvedValueOnce(pagoEnPendiente) // Primera lectura: valida el estado
+                .mockResolvedValueOnce(pagoAcreditado); // Segunda lectura: devuelve actualizado
+            Payment.findAllStates.mockResolvedValue(estadosCatalogo);
+            Payment.updateStatus.mockResolvedValue(1); // Una fila afectada
+
+            const result = await PaymentService.transitionDeferredPayment(10, 'Aceptado');
+
+            expect(result.estado_pago_nombre).toBe('Aceptado');
+            expect(Payment.updateStatus).toHaveBeenCalledWith(10, 3, 2);
+        });
+
+        it('Debe rechazar un cheque pendiente exitosamente', async () => {
+            const pagoRechazado = { ...pagoEnPendiente, estado_pago_nombre: 'Rechazado', id_estado_pago: 4 };
+            Payment.findById
+                .mockResolvedValueOnce(pagoEnPendiente)
+                .mockResolvedValueOnce(pagoRechazado);
+            Payment.findAllStates.mockResolvedValue(estadosCatalogo);
+            Payment.updateStatus.mockResolvedValue(1);
+
+            const result = await PaymentService.transitionDeferredPayment(10, 'Rechazado');
+
+            expect(result.estado_pago_nombre).toBe('Rechazado');
+            expect(Payment.updateStatus).toHaveBeenCalledWith(10, 4, 2);
+        });
+    });
 });

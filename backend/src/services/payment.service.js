@@ -634,6 +634,67 @@ class PaymentService {
     }
 
     /**
+     * Orquesta la resolución de un cobro diferido: transiciona un pago desde "Pendiente de
+     * acreditación" hacia "Aceptado" (acreditación exitosa) o "Rechazado" (rebote o falta de fondos).
+     * Ambos son estados terminales. La transición se rige por la máquina de estados: ningún pago en
+     * otro estado es elegible. El estado vigente oficia de guarda dentro de la propia sentencia SQL,
+     * de modo que si otro operador resolvió el cheque entre la lectura y la escritura, ninguna fila
+     * resulta afectada. La fecha de resolución queda asentada por `fecha_actualizacion`, que el motor
+     * estampa en cada UPDATE.
+     * Resuelve el Requerimiento 32.2 de transición de pagos diferidos.
+     * @param {number|string} id - Identificador del pago a resolver.
+     * @param {string} targetStatusName - Nombre del estado destino: "Aceptado" o "Rechazado".
+     * @returns {Promise<Object>} El pago resuelto, normalizado y con su nuevo estado.
+     * @throws {Error} Excepción HTTP 400 si el estado destino no es admisible, 404 si el pago no
+     * existe, 409 si el pago no está pendiente de acreditación o fue resuelto concurrentemente, o 500
+     * si el catálogo de estados no posee configurado el estado destino.
+     */
+    static async transitionDeferredPayment(id, targetStatusName) {
+        // Regla de negocio: solo se resuelve hacia un estado terminal de acreditación (Fail-Fast)
+        const estadosDestinoPermitidos = [ESTADOS_PAGO.ACEPTADO, ESTADOS_PAGO.RECHAZADO];
+        if (!estadosDestinoPermitidos.includes(targetStatusName)) {
+            const error = new Error(`El estado destino debe ser "${ESTADOS_PAGO.ACEPTADO}" o "${ESTADOS_PAGO.RECHAZADO}".`);
+            error.statusCode = 400;
+            throw error;
+        }
+
+        const pagoVigente = await Payment.findById(id);
+        if (!pagoVigente) {
+            const error = new Error(`No se encontró un pago registrado bajo el identificador #${id}.`);
+            error.statusCode = 404;
+            throw error;
+        }
+
+        // Regla de negocio: Máquina de estados, solo "Pendiente de acreditación" admite la transición (Fail-Fast)
+        if (pagoVigente.estado_pago_nombre !== ESTADOS_PAGO.PENDIENTE_ACREDITACION) {
+            const error = new Error(`El pago #${id} se encuentra en estado "${pagoVigente.estado_pago_nombre}" y no admite transiciones diferidas.`);
+            error.statusCode = 409;
+            throw error;
+        }
+
+        const estados = await Payment.findAllStates();
+        const estadoDestino = estados.find(e => e.nombre === targetStatusName);
+        if (!estadoDestino) {
+            const error = new Error(`El catálogo de estados de pago no posee configurado el estado "${targetStatusName}".`);
+            error.statusCode = 500;
+            throw error;
+        }
+
+        // El estado vigente oficia de guarda dentro de la sentencia SQL: neutraliza la condición de
+        // carrera entre dos operadores que acrediten y rechacen el mismo cheque a la vez.
+        const affectedRows = await Payment.updateStatus(id, estadoDestino.id_estado_pago, pagoVigente.id_estado_pago);
+        if (affectedRows === 0) {
+            const error = new Error(`El pago #${id} fue resuelto por otra operación y ya no admite transiciones diferidas.`);
+            error.statusCode = 409;
+            throw error;
+        }
+
+        const pagoResuelto = await Payment.findById(id);
+
+        return PaymentService.toPaymentDTO(pagoResuelto);
+    }
+
+    /**
      * Recupera un pago puntual por su número interno, hidratado con el cliente (nombre, CUIT y
      * dirección), el estado, el medio de pago y el banco emisor, y lo normaliza como DTO plano.
      * Resuelve el Requerimiento 32 de consulta individual para la vista de modificación de pagos.
