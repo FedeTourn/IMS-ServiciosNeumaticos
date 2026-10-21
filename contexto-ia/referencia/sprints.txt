@@ -1,0 +1,242 @@
+## Sheet name: Inicio
+Tiempo por story point
+1:30:14
+
+## Sheet name: Tareas Sprint 8
+,Datos Sprint,,,,Orden de desarrollo,Requerimiento Nro,Requerimiento Nombre,Descripcion Requerimiento,Tarea (Capa),Tarea Descripcion,,,,SP,Tiempo dedicado,Tiempo por SP
+,Parametro,,Resultado,,11,29,Estados de cuenta,"El sistema debe permitir consultar el saldo actualizado y los totales agregados (débitos y créditos confirmados) de un cliente, sin incluir el detalle línea por línea de cada movimiento.",Model,"Implementar la consulta agregada que calcule, para un cliente, el total de OR ""Cerrada"", el total de Pagos ""Aceptado"" y el saldo resultante (sin traer el detalle de cada registro).",,,,8,1:18:28,0:09:48
+,Inicio Sprint,,03/09/2026,,,,,,Service,"Formatear el resumen contable: total facturado/debitado, total cobrado/acreditado y saldo pendiente."
+,Fin Sprint,,28/09/2026,,,,,,Controller,Exponer GET /api/account-statements/:clientId/summary.
+,Dias Sprint,,26,,,,,,Servicio API,Función cliente para consumir el resumen de saldo por cliente.
+,Tiempo Total Sprint,,36:33:09,,,,,,UI,"Tarjetas resumen (Total Débitos, Total Créditos, Saldo Actual) en la cabecera de la pantalla del cliente, sin la grilla de movimientos."
+,Total Story Points,,30,,13,30,Creación de liquidaciones,"Desde el estado de cuenta, el sistema debe permitir previsualizar una liquidación para un rango de fechas, mostrando únicamente OR ""Cerrada"" y Pagos ""Aceptado"" del período, y luego exportarla/imprimirla en PDF con el mismo contenido.",Model,"Consulta parametrizada sobre la vista, filtrando por rango de fechas y por computa_saldo = true.",,,,3,2:18:28,0:46:09
+,Tiempo por Story Point,,1:38:59,,,,,,Service,"Armar el consolidado del período (detalle + subtotal + saldo), y en paralelo detectar qué OR/Pagos del mismo rango no entraron (Borrador/Pendiente/Rechazado) para el banner informativo."
+,Tiempo Planificación,,4:00:00,,,,,,Controller,"Exponer GET /api/settlements/:clientId?desde=&hasta=, devolviendo tanto el detalle a liquidar como la lista de excluidos."
+,Tiempo dividido,,0:18:28,,,,,,Servicio API,Función cliente que serialice el rango de fechas y consuma ambos listados (incluidos/excluidos).
+,Desglose Dias,,,,,,,,UI,"Selector de fechas + tabla de previsualización (solo lo que se va a liquidar) + banner no bloqueante listando qué OR/Pagos del período quedan afuera + botón ""Exportar/Imprimir"". Plantilla imprimible A4 con Tailwind (@media print), acción window.print(), con print:hidden sobre el banner de excluidos para que no aparezca en el PDF."
+,Fecha,Horas,REQ,,2,31,Registro de nuevo pago,El sistema debe permitir el registro de pagos realizados por los clientes.,BDD,"Crear la tabla Pago (columnas: id_pago, id_cliente, id_estado_pago, id_medio_pago, monto, fecha_pago, numero_comprobante, observaciones, created_at, updated_at).",,,,3,6:31:28,2:10:29
+,03/09/2026,3:30:00,PLAN,,,,,,Model,"Implementar el modelo de persistencia de pagos con el método de inserción relacional (create), preparado para ejecución transaccional."
+,06/09/2026,0:30:00,PLAN,,,,,,Service,"Implementar la lógica de creación de pagos: validar existencia del cliente, medio de pago, consistencia del monto (positivo) y asignar el estado inicial correspondiente."
+,06/09/2026,0:50:00,31,,,,,,Controller,"Crear el controlador para la captura y validación del payload (req.body) de registro de pagos.
+
+Declarar y exponer la ruta POST /api/payments."
+,06/09/2026,0:10:00,32.1,,,,,,Servicio API,Implementar en el cliente la función asíncrona para el envío de los datos del nuevo pago (POST).
+,08/09/2026,1:00:00,31.1,,,,,,UI,"Diseñar el formulario de registro de pago con TailwindCSS (selector de cliente, selección de medio de pago, campo numérico de importe, fecha y comprobante).
+
+Manejar el estado del formulario, validaciones de entrada y feedback de éxito/error ante el envío."
+,08/09/2026,1:00:00,32,,3,31.1,Consulta de pagos,"El sistema debe permitir consultar el listado de pagos registrados, con la posibilidad de filtrar por numero interno de pago, cliente, estado, medio de pago, monto, fecha de pago, numero de comprobante externo, fecha de creación y ultima modificación.",Model,"La capa de acceso a datos debe proveer un método de lectura general con filtrado multicriterio dinámico, realizando los cruzamientos relacionales (mediante sentencias `JOIN`) con las entidades `Cliente`, `EstadoPago` y `MedioPago` para retornar registros completamente hidratados y legibles.",,,,3,5:16:28,1:45:29
+,08/09/2026,1:00:00,32.2,,,,,,Service,"Actúa como orquestador de negocio procesando y sanitizando el objeto de filtros recibido desde la capa superior. Valida la consistencia de los tipos de datos (rango de fechas, valores numéricos no negativos) y normaliza la salida hacia un Data Transfer Object (DTO) plano optimizado para el consumo del cliente web."
+,08/09/2026,0:30:00,33,,,,,,Controller,"Debe exponer el endpoint `GET /api/payments` a través de Express.js. Su responsabilidad es atrapar los parámetros de consulta transmitidos por URL (*Query Strings* en `req.query`), delegar la búsqueda al servicio correspondiente y despachar respuestas semánticas en formato JSON estandarizado (`200 OK`, `400 Bad Request`, `500 Internal Server Error`)."
+,08/09/2026,0:10:00,33.1,,,,,,Servicio API,"Se debe implementar una función asíncrona cliente para consultar el catálogo de pagos, encargada de serializar dinámicamente el objeto de filtros a una cadena de parámetros URL (*Query String*) omitiendo atributos nulos o vacíos, despachando la petición mediante `fetch`."
+,08/09/2026,0:10:00,33.2,,,,,,UI,"Componente visual de tabla interactiva estilizado con clases de utilidad de TailwindCSS. Debe incluir un panel o barra de filtros colapsable para parametrizar búsquedas por identificador, cliente, estado, medio de cobro, montos, comprobante y rangos de fechas, manejando estados locales de carga (*loading spinner*) y renderizado ante listas vacías."
+,08/09/2026,1:00:00,29,,4,32,Modificación pago,"El sistema debe permitir la modificación y eliminación de pagos únicamente mientras se encuentren en estado ""Borrador"". Los pagos en estado ""Aceptado"" no podrán modificarse ni eliminarse.",Model,"Implementar el método de actualización (update) sobre la entidad Pago.
+
+Implementar el método de eliminación física o lógica (delete) sobre la entidad Pago.
+
+Implementar el método de consulta por identificador (findById) para verificar el estado previo a mutar.",,,,2,11:31:28,5:45:44
+,08/09/2026,0:45:00,34,,,,,,Service,"Implementar la lógica de modificación de pago con cláusula de guarda (Fail-Fast): verificar que el estado sea estrictamente Borrador; si es Aceptado, abortar lanzando una excepción de negocio (HTTP 409 o 403).
+
+Implementar la lógica de eliminación de pago aplicando la misma restricción de bloqueo sobre pagos que no se encuentren en Borrador."
+,08/09/2026,0:10:00,35,,,,,,Controller,"Implementar los manejadores en el controlador para actualizar (PUT /api/payments/:id) y eliminar (DELETE /api/payments/:id) pagos, capturando y mapeando las excepciones de dominio a respuestas semánticas."
+,09/09/2026,1:30:00,32.1,,,,,,Servicio API,Implementar las funciones cliente para la actualización (PUT) y baja (DELETE) de pagos.
+,09/09/2026,0:45:00,31,,,,,,UI,"Diseñar el modal/formulario de edición de pagos, permitiendo editar o descartar registros.
+
+Condicionar los controles en la interfaz: deshabilitar o no renderizar los botones de edición y eliminación si el pago se encuentra en estado Aceptado."
+,13/09/2026,1:00:00,31,,1,32.1,Estados de pago,"El sistema debe soportar los siguientes estados para un pago: ""Borrador"", ""Pendiente de acreditación"" (para cheques u otros medios diferidos), ""Aceptado"" y ""Rechazado"" (por ejemplo, un cheque rebotado).",BDD,"Crear la tabla maestra EstadoPago (columnas: id_estado_pago, nombre) y poblar los estados maestros: Borrador, Pendiente de acreditación, Aceptado y Rechazado.
+
+Crear la tabla maestra MedioPago (columnas: id_medio_pago, nombre, es_diferido) para parametrizar las vías de cobro.",,,,1,3:01:28,3:01:28
+,15/09/2026,1:45:00,31,,,,,,Model,Implementar el modelo de acceso a datos para consultar el catálogo de estados y medios de pago.
+,20/09/2026,0:50:00,31,,,,,,Service,Incorporar validaciones de asignación de estados según el medio de pago seleccionado (ej. asignar Pendiente de acreditación si el medio es diferido y no se guarda como borrador directo).
+,21/09/2026,0:30:00,31.1,,,,,,Controller,"Declarar endpoints para consultar los catálogos auxiliares de medios y estados de pago (GET /api/payment-methods, GET /api/payment-statuses)."
+,22/09/2026,2:00:00,31.1,,,,,,Servicio API,Implementar las funciones cliente para obtener los catálogos de estados y medios de pago.
+,24/09/2026,0:25:00,31.1,,,,,,UI,"Integrar badges visuales en la interfaz para identificar cada uno de los estados del pago con códigos de color diferenciales en TailwindCSS.
+
+Poblar dinámicamente los selectores en los formularios de pago con los estados y medios disponibles."
+,27/09/2026,1:30:00,32,,5,32.2,Transición de pagos diferidos,"Un pago en estado ""Pendiente de acreditación"" debe poder pasar a ""Aceptado"" (si se acredita correctamente) o a ""Rechazado"" (si el medio de pago no se hace efectivo, por ejemplo un cheque rebotado).",Model,"Implementar un método específico en el modelo de pagos para actualizar el estado del pago (updateStatus), registrando la fecha de acreditación o rechazo.",,,,1,5:28:28,5:28:28
+,28/09/2026,0:23:00,32.1,,,,,,Service,Implementar la máquina de estados / reglas de transición para pagos diferidos: validar que únicamente un pago en Pendiente de acreditación pueda evolucionar a Aceptado o Rechazado.
+,28/09/2026,0:23:00,31,,,,,,Controller,Implementar el controlador y declarar la ruta para el cambio de estado (PATCH /api/payments/:id/status).
+,28/09/2026,0:23:00,31.1,,,,,,Servicio API,Implementar la función cliente para enviar la transición de estado del pago diferido.
+,28/09/2026,0:23:00,32,,,,,,UI,"Incorporar en la grilla o vista de detalle de pagos diferidos los botones de acción rápida para ""Acreditar"" (Aceptado) o ""Rechazar"", con sus respectivos modales de confirmación."
+,29/09/2026,0:40:00,32.1,,10,32.3,Exclusión de pagos rechazados,"Un pago en estado ""Rechazado"" no debe computar en el saldo del cliente.",Model,Asegurar que las consultas de agregación de saldo excluyan explícitamente el estado Rechazado mediante cláusulas WHERE estrictas (id_estado_pago = [Aceptado]).,,,,1,0:18:28,0:18:28
+,29/09/2026,0:40:00,31,,,,,,Service,Validar en el servicio de cálculo de saldos que ningún monto asociado a pagos rechazados sume al balance de créditos.
+,29/09/2026,0:40:00,31.1,,,,,,UI,"Reflejar en la vista de cuenta corriente el importe de los pagos rechazados con estilo neutro / tachado o distintivo, aclarando que no impactan sobre el saldo computable."
+,01/10/2026,0:40:00,32,,6,33,Creación movimiento de cuenta,"El sistema debe implementar el estado de cuenta como una vista/consulta derivada de órdenes de reparación y pagos, sin persistir una tabla física de movimientos, indicando por registro si corresponde o no al cálculo del saldo.",BDD,"Definir la vista SQL MovimientoCuenta (UNION ALL entre OrdenReparacion y Pago), con columna calculada computa_saldo según estado. No se crea tabla física.",,,,2,0:48:28,0:24:14
+,05/10/2026,2:50:00,32,,,,,,Model,"Implementar el método de lectura sobre la vista, con soporte de filtro por cliente y rango de fechas."
+,06/10/2026,2:50:00,32,,7,33.1,Órdenes en borrador sin impacto contable,"Una orden de reparación en estado ""Borrador"" no debe generar movimiento de cuenta ni afectar el saldo del cliente.",Model,Asegurar que las queries que calculan saldos o movimientos contables firmes filtren las órdenes que no estén cerradas.,,,,1,0:28:28,0:28:28
+,07/10/2026,2:00:00,32,,,,,,Service,Incorporar una cláusula de salvaguarda en la lógica contable para garantizar que una orden con estado Borrador o Abierta no registre movimientos ni altere el saldo financiero del cliente.
+,08/10/2026,2:00:00,32.2,,8,33.2,Cierre contable de orden de reparación,"Al pasar una orden de reparación a estado ""Cerrada"", el sistema debe reflejarla automáticamente en el estado de cuenta del cliente.",UI,"Tras confirmar el cierre de una orden de reparación, notificar al usuario mediante un toast informativo que el movimiento fue incorporado a la cuenta corriente del cliente.",,,,1,0:28:28,0:28:28
+,14/10/2026,1:00:00,32.2,,9,33.3,Inmutabilidad de orden cerrada,"El estado ""Cerrada"" de una orden de reparación es final: el sistema no debe permitir su modificación ni anulación. (Pendiente de definición futura: posibilidad de marcar una orden cerrada como ""Anulada"".)",Service,Implementar la guarda de seguridad estricta en los métodos de mutación de órdenes de reparación: verificar el estado previo y rechazar cualquier operación de actualización o borrado si el estado es Cerrada.,,,,1,0:18:28,0:18:28
+,15/10/2026,1:10:00,32.2,,,,,,Controller,Asegurar que el controlador intercepte intentos de modificación sobre órdenes cerradas y retorne un error semántico (HTTP 409 Conflict o 403 Forbidden).
+,17/10/2026,2:00:00,30,,,,,,UI,"En la vista de detalle/edición de órdenes, bloquear de forma total todos los campos e inputs si la orden es Cerrada, mostrando un banner de solo lectura e inmutabilidad contable."
+,12:30,,,,12,34,Consulta movimientos de cuenta,"El sistema debe permitir consultar el listado completo de movimientos de un cliente (OR y Pagos, en cualquier estado), ordenados cronológicamente, con indicador de si cada uno computa o no para el saldo.",Model,"Consulta unificada (vista MovimientoCuenta) sin filtro de estado, con computa_saldo y saldo acumulado vía window function.",,,,3,1:03:28,0:21:09
+,,,,,,,,,Service,"Calcular el saldo acumulado fila a fila sobre el listado completo.
+"
+,,,,,,,,,Controller,"Implementar el controlador para la consulta unificada de movimientos del cliente.
+
+Declarar y exponer la ruta GET /api/account-movements/:clientId."
+,,,,,,,,,Servicio API,Implementar la función cliente para consumir el listado unificado de movimientos y saldos proyectados.
+,,,,,,,,,UI,"Grilla con indicador visual por fila (computa / no computa), pagos Rechazados con estilo distintivo (tachado/neutro), banner fijo aclaratorio de cómo se calcula el saldo."
+,,,,,13,35,Modificación movimientos de cuenta,"En caso de que se realicen modificaciones de Órdenes de Reparación o Pagos en estado ""Borrador"", el sistema debe actualizar de forma automática los movimientos de cuenta asociados.",Model,Invalidar/refrescar la query de movimientos tras editar un pago u OR en Borrador.,,,,3,0:28:28,0:09:29
+
+## Sheet name: Tareas Sprint 7
+,Datos Sprint,,,,Requerimiento Nro,Requerimiento Nombre,Descripcion Requerimiento,Tarea (Capa),Tarea Descripcion,,,,SP,Tiempo dedicado,Tiempo por SP
+,,,,,25,Creación y registro de orden de reparación,"El sistema debe permitir registrar órdenes de reparación, asociando el registro a un cliente y una o más válvulas o uno o más repuestos.",BDD,"Crear tabla maestra OrdenReparacion.
+Crear tabla EstadoOrdenReparacion.
+Modificar tabla Producto para vincular con OrdenReparacion y precio (decimal) de forma individual.",,,,5,12:43:45,2:32:45
+,Parametro,,Resultado,,,,,Model,"Implementar RepairOrder.create() en src/models/repairOrder.js. Regla estricta: Utilizar transacciones SQL. Debe insertar la orden y realizar un UPDATE masivo sobre los id_producto recibidos para setear su id_orden_reparacion, su precio final y su nuevo estado."
+,Inicio Sprint,,01/07/2026,,,,,Service,"Implementar createRepairOrder(data) en src/services/repairOrder.service.js.
+- Validar que el cliente exista y esté activo.
+- Validar que los productos asociados estén en estados que tengan transiciones a ""Reparado"" o ""No Reparable"". Transicionar automáticamente el estado de los productos a ""Reparado"" o ""No Reparable"".  Regla estricta: Debe usar Transacciones SQL (BEGIN, COMMIT, ROLLBACK) para garantizar la atomicidad al insertar la orden y actualizar el estado de los productos (válvulas).
+- Validar reglas de negocio: Si el flag es ""Guardar y Cerrar"", asignar el ID correspondiente a 'Cerrada' en id_estado_orden y transicionar el estado de los productos a 'Reparado' o 'No Reparable'. Si es ""Guardar"", asignar 'Abierta'."
+,Fin Sprint,,08/07/2026,,,,,Controller,"Crear el método createRepairOrder en src/controllers/repairOrder.controller.js mapeando el req.body, controlando las excepciones y despachando códigos HTTP unificados (201 Created). Validar el payload de entrada (DTO) asegurando que contenga un cliente y al menos un producto.
+Declarar el endpoint POST /api/repair-order en src/routes/repairOrder.routes.js."
+,Dias Sprint,,8,,,,,Servicio API,Implementar la función apiCreateRepairOrder(data) dentro de frontend/src/services/repairOrder.service.js para consumir el endpoint mediante fetch.
+,Tiempo Total Sprint,,31:13:45,,,,,UI,"Desarrollar componente CreateRepairOrder. 
+- Debe auto-cargar fecha y número de orden.
+- Implementar selector de clientes que dispare una petición para traer las válvulas disponibles del cliente (estado 'Recibido' o 'Libre').
+- Implementar agrupación visual por modelo en la UI para la carga de precios, calculando el total dinámicamente. Al hacer el submit, el formulario debe mapear (DTO) esta vista agrupada a un array de IDs de productos individuales para enviar al backend.
+- Implementar botones ""Guardar"" y ""Guardar y Cerrar"", este último disparando un Modal de Confirmación previo al submit."
+,Total Story Points,,17,,26,Consulta de órdenes de reparación,"El sistema debe permitir consultar las órdenes de reparación registradas, mostrando un listado con su información relevante.",Model,Implementar RepairOrder.findAll(). Debe hacer JOIN con Cliente y EstadoOrdenReparacion.,,,,2,5:53:45,2:56:53
+,Tiempo por Story Point,,2:00:02,,,,,Service,Implementar getRepairOrders(queryParams). Mapear los datos de la base a un formato limpio para la tabla del frontend.
+,Tiempo Planificación,,3:15:00,,,,,Controller,Implementar controlador getRepairOrders y exponer GET /api/repair-orders.
+,Tiempo dividido,,0:48:45,,,,,Servicio API,Implementar fetchRepairOrders(params).
+,Desglose Dias,,,,,,,UI,"Crear vista RepairOrderList.jsx utilizando DataGrid/Table con TailwindCSS, mostrando Estado, Fecha, Cliente y Total, con botones de acciones"
+,Fecha,Horas,REQ,,27.0,Vista en detalle de orden de reparacion,El sistema debe permitir seleccionar una orden de reparación para obtener el detalle de la misma,Model,"Implementar el método RepairOrder.findById(id) que recupere los metadatos de la orden, el cliente asociado, el estado actual, los productos vinculados, sus respectivos modelos y tipos.",,,,3,6:08:45,2:02:55
+,01/07/2026,1:00:00,PLAN,,,,,Service,Desarrollar getRepairOrderById(id). Aquí se construirá el DTO de salida que agrupe los productos por modelo de forma estructurada para el consumo de la API.
+,02/07/2026,2:15:00,PLAN,,,,,Controller
+,04/07/2026,1:15:00,25,,,,,Servicio API
+,07/07/2026,1:00:00,25,,,,,UI
+,09/07/2026,2:40:00,25,,27,Impresión de ordenes de reparación,El sistema debe permitir que una orden de reparación seleccionada sea exportada en un formato imprimible.,UI,Crear componente RepairOrderPrint.jsx. Usar utilidades de Tailwind para generar la vista formal del remito.,,,,2,3:53:45,1:56:53
+,11/07/2026,2:30:00,25,,28,Modificación de órdenes de reparación,El sistema debe permitir modificar la información de las órdenes de reparación.,Model,"En RepairOrder.js, implementar el método update(id, updateData, connection). Este método debe ser agnóstico y limitarse a ejecutar el UPDATE sobre la tabla OrdenReparacion (ej. actualizando importe_total, observaciones, id_estado_orden), operando sobre la transacción inyectada.
+En Product.js, implementar un método auxiliar (ej. unlinkFromRepairOrder(id_producto, connection)). Este método es vital para desvincular una válvula de la orden (seteando id_orden_reparacion = NULL) si el usuario decide quitarla durante la modificación de una orden abierta. No es necesario revertir el estado de la valvula.",,,,5,2:33:45,0:30:45
+,12/07/2026,1:00:00,25,,,,,Service,"Implementar el método principal updateRepairOrder(id, data).
+(Regla de Negocio Crítica): Consultar el estado actual de la orden invocando a RepairOrder.findById(id). Si el estado_nombre (o el id_estado_orden) corresponde a 'Cerrada', interrumpir inmediatamente el flujo (Fail-Fast) y lanzar una excepción de negocio (HTTP 403 o 409).
+(Enfoque Declarativo): Implementar la lógica de ""Diff"" (Diferencia) para las válvulas. El servicio debe comparar las válvulas que actualmente tiene la orden en la base de datos contra el nuevo arreglo de IDs enviado por el frontend.
+(Transaccionalidad): Abrir una transacción SQL (beginTransaction).
+- Ejecutar las desvinculaciones (unlinkFromRepairOrder) para las válvulas que ya no están en el payload.
+- Ejecutar las vinculaciones/actualizaciones (updateForRepairOrder) para las válvulas nuevas o que modificaron su precio.
+- Actualizar la orden base (RepairOrder.update).
+- Confirmar (commit) o revertir (rollback) ante cualquier excepción."
+,14/07/2026,2:35:00,25,,,,,Controller,"En repairOrder.controller.js, implementar el método updateRepairOrder. Su responsabilidad será extraer el req.params.id y el req.body, hacer validaciones de forma rápidas (ej. que items sea un array) y delegar al servicio.
+En repairOrder.routes.js, exponer el endpoint PUT /api/repair-orders/:id."
+,18/07/2026,0:55:00,25,,,,,Servicio API,"Implementar la función asíncrona updateRepairOrder(id, data) utilizando tu instancia de Axios/Fetch para apuntar al nuevo endpoint PUT."
+,18/07/2026,2:00:00,26,,,,,UI,"Modificar la lógica de carga (useEffect). Si la orden está en estado 'Cerrada', el componente debe pasivar todos los inputs interactivos e inyectar un banner visual indicando que es de solo lectura.
+Si la orden es 'Abierta', el componente debe comportarse como el flujo de creación. Se debe cargar la lista de productos disponibles del cliente seleccionado y pre-seleccionar los que ya pertenecen a la orden, permitiendo su modificación.
+Reutilizar la lógica de agrupación (Estado Derivado) para la cotización y mapear los datos al mismo formato de payload utilizado en la creación al hacer clic en ""Guardar"" o ""Guardar y Cerrar""."
+,25/07/2026,2:10:00,26
+,01/08/2026,0:55:00,26
+,01/08/2026,2:05:00,27.0
+,05/08/2026,1:00:00,27.0
+,08/08/2026,0:05:00,27.0
+,10/08/2026,1:50:00,27.0
+,15/08/2026,0:20:00,27.0
+,15/08/2026,1:20:00,27
+,17/08/2026,1:45:00,27
+,21/08/2026,1:25:00,28
+,24/08/2026,0:20:00,28
+
+## Sheet name: Tareas Sprint 6
+,Datos Sprint,,,,Requerimiento Nro,Requerimiento Nombre,Descripcion Requerimiento,Tarea (Capa),Tarea Descripcion,,,,SP,Tiempo dedicado,Tiempo por SP
+,,,,,21,Registro de comprobantes de recepción,"El sistema debe permitir la creación y registro automático de comprobantes de recepción, asociando el registro a un cliente y a las válvulas recibidas.",BDD,Generar la tabla ComprobanteRecepcion,,,,5,4:23:45,0:52:45
+,Parametro,,Resultado,,,,,Model,"Crear el archivo de persistencia src/models/Receipt.js, implementando la función para insertar el comprobante"
+,Inicio Sprint,,24/06/2026,,,,,Service,"Implementar el método createReceipt(receiptData, productIds) en src/services/receipt.service.js encapsulando la lógica en una transacción ACID (db.getConnection(), beginTransaction()).
+Dentro de la transacción del servicio, inyectar la lógica que realice un UPDATE masivo a los productIds provistos para modificar de forma obligatoria su columna estado al valor literal 'Recibido'."
+,Fin Sprint,,01/07/2026,,,,,Controller,"Crear el método createReceipt en src/controllers/receipt.controller.js mapeando el req.body, controlando las excepciones y despachando códigos HTTP unificados (201 Created).
+Declarar el endpoint POST /api/receipts en src/routes/receipt.routes.js asociando un middleware de validación sintáctica (utils/validation.js) para asegurar que el arreglo de productos no llegue vacío."
+,Dias Sprint,,8,,,,,Servicio API,Implementar la función apiCreateReceipt(data) dentro de frontend/src/services/receipt.service.js para consumir el endpoint mediante fetch.
+,Tiempo Total Sprint,,17:35:00,,,,,UI,Desarrollar el formulario interactivo ReceiptForm.jsx estilizado con TailwindCSS. Debe incluir un buscador dinámico para seleccionar el Cliente y un selector de filas dinámico para agregar múltiples válvulas a la lista de ingreso antes de realizar el envío.
+,Total Story Points,,15,,22,Consulta de comprobantes de recepción,"El sistema debe permitir la consulta de comprobantes de recepción registrados, mostrando un listado con su información relevante.",Model,Añadir al modelo src/models/Receipt.js la función de consulta relacional entre las tablas ComprobanteRecepcion y Cliente.,,,,2,5:13:45,2:36:53
+,Tiempo por Story Point,,1:22:24,,,,,Service,Diseñar la función getAllReceipts(filters) en src/services/receipt.service.js que resuelva las reglas de ordenamiento y criterios de filtrado opcionales (ej. filtrar por rango de fechas o por id de cliente).
+,Tiempo Planificación,,1:35:00,,,,,Controller,"Implementar el método getReceipts en src/controllers/receipt.controller.js.
+Declarar el endpoint GET /api/receipts en src/routes/receipt.routes.js."
+,Tiempo dividido,,0:23:45,,,,,Servicio API,Definir la función de consumo apiGetReceipts(queryParams) en los servicios del cliente frontend.
+,Desglose Dias,,,,,,,UI,"Diseñar la vista de grilla/tabla centralizada ReceiptList.jsx, renderizando columnas descriptivas (ID Comprobante, Fecha de Entrada, Cliente, Cantidad de Válvulas) e incluyendo barras de búsqueda."
+,Fecha,Horas,REQ,,23,Impresión de comprobantes de recepción,El sistema debe permitir que un comprobante de recepción seleccionado sea exportado en un formato imprimible.,Model,Añadir al modelo la función de consulta (findById) que recupere la información del comprobante y sus válvulas asociadas.,,,,5,4:53:45,0:58:45
+,24/06/2026,1:35:00,PLAN,,,,,Service,Implementar la función getReceiptDetails(id).
+,25/06/2026,1:30:00,21,,,,,Controller,Diseñar el método controlador getReceiptById y asociarlo al endpoint de la API pública REST bajo el formato GET /api/receipts/:id.
+,26/06/2026,2:30:00,21,,,,,Servicio API,Programar la llamada al servicio apiGetReceiptById(id) en la capa de comunicación del cliente frontend.
+,26/06/2026,1:30:00,22,,,,,UI,"Desarrollar el componente de previsualización formal del remito e inyectar hojas de estilos CSS especializadas mediante Media Queries (@media print) en TailwindCSS. Esto garantizará que, al ejecutarse la función nativa window.print(), se oculten dinámicamente componentes redundantes de la UI (Navbar, Sidebars, botones de acción) y se aplique una tipografía e interlineado limpios y monocromáticos adecuados para el cliente final."
+,27/06/2026,1:40:00,22,,24,Modificación de comprobantes de recepción,El sistema debe permitir modificar la información de los comprobantes de recepción.,Model,Añadir al modelo la query estructurada update para alterar únicamente los campos mutables autorizados por la arquitectura (descripcion u observaciones generales).,,,,3,3:03:45,1:01:15
+,28/06/2026,-,-,,,,,Service,"Implementar la función updateReceiptMetadata(id, updatedData).
+[Regla de Negocio Crítica - Clean Code] Inyectar una validación en el servicio que verifique si alguna de las válvulas vinculadas originalmente al comprobante ha migrado de su estado inicial (""Recibido"" a ""En Reparación"" o ""Reparado""). En caso afirmativo, debe arrojar una excepción controlada para impedir alteraciones que violen la consistencia e inmutabilidad histórica del proceso contable/administrativo."
+,29/06/2026,0:50:00,22,,,,,Controller,"Crear el método updateReceipt atrapando las excepciones de lógica de negocio y mapeando el código HTTP 400 (Bad Request) ante intentos de modificación inválidos.
+Declarar la ruta de acceso REST utilizando el verbo semántico apropiado: PUT /api/receipts/:id."
+,30/06/2026,0:50:00,22,,,,,Servicio API,"Implementar la función asíncrona apiUpdateReceipt(id, data) en el servicio del frontend."
+,30/06/2026,4:30:00,23 y 24,,,,,UI,"Diseñar una interfaz modal  ReceiptEditModal.jsx integrada mediante estados controlados de React, que deshabilite los campos de edición estructurales basándose en el estado operativo actual de los productos devueltos por la API."
+,01/07/2026,2:40:00,23 y 24
+
+## Sheet name: Tareas Sprint 5
+,,Requerimiento Nro,Requerimiento Nombre,Descripcion Requerimiento,Tarea (Capa),Tarea Descripcion,SP,Tiempo dedicado,Tiempo por SP,Tiempo dividido,Tiempo por SP,Tiempo Total Sprint
+,,60,Gestión de Tipos de Producto,"El sistema debe permitir realizar el Alta, Modificación y Consulta (AMC) de los Tipos de Producto guardados en el sistema.",Model,"Crear los métodos de persistencia: findAll, findById, create y update",3,2:21:00,0:47:00,0:21:00,0:59:30,11:48:00
+,,,,,Service,"Implementar las reglas de negocio:
+- Verificar que no existan nombres duplicados antes de insertar.
+- Validar que el nombre no sea un string vacío.
+- Documentación con JSDoc (obligatorio según estándares)."
+,,,,,Controller,Manejo de excepciones HTTP
+,,,,,Servicio API,Crear el módulo tipoProductoService.js para realizar los fetch a la API.
+,,,,,UI,"Tabla de consulta con botones de edición/borrado.
+Modal de formulario (Alta/Edición) con validaciones de campos requeridos.
+Feedback al usuario (mensajes de éxito/error)."
+,,61,Gestión de Modelos de Producto,"El sistema debe permitir realizar el Alta, Modificación y Consulta (AMC) de los Modelos de Producto guardados en el sistema.",Model,"Implementar métodos CRU. Al hacer un findAll, implementar el JOIN con TipoProducto para devolver el nombre del tipo.",3,1:46:00,0:35:20
+,,,,,Service,Validar que el id_tipo_producto enviado exista en la base antes de intentar la inserción. 
+,,,,,Controller,Gestión de errores estándar
+,,,,,UI,"El formulario de Alta/Edición debe incluir un <select> (desplegable) que cargue dinámicamente los Tipos de Producto disponibles.
+Mostrar la columna ""Tipo de Producto"" asociada, facilitando la lectura al usuario."
+,,62,Listas de Precios por Categoría,"El sistema debe permitir consultar, crear y modificar listas de precio por categoría de cliente.",BDD,"Tabla Producto
+- Modificar para persistir precio del producto al momento de generar la orden de reparacion
+Tabla Precios por categoria:
+- Transformar el esquema actual para soportar Listas de Precios con Vigencia temporal (Slowly Changing Dimensions - Tipo 2). Ningún precio se actualiza (UPDATE); los precios nuevos se insertan (INSERT) y los antiguos se sacan de vigencia.",8,4:41:00,0:35:08
+,,,,,Model,"Capa de Datos e Integridad Transaccional (Backend - Persistence & Services):
+- Crear el archivo de modelo PriceCategory.js (o mapearlo en tu pool de conexiones crudo) para representar la estructura física de la tabla PrecioPorCategoria.
+- Query de Catálogo Activo: Desarrollar la consulta SQL en el repositorio para obtener la matriz completa de precios vigentes (vigente = 1), haciendo un JOIN con ModeloProducto y CategoriaCliente para cruzar descripciones en la UI.
+- Query de Precio Sugerido: Desarrollar la función de búsqueda optimizada que reciba id_modelo e id_categoria y devuelva el escalar único de precio actualmente activo.
+- Lógica Transaccional de Modificación/Alta: Implementar la lógica del servicio que abre una transacción, ejecuta el UPDATE fijando la vigencia_hasta = CURRENT_TIMESTAMP para el registro viejo, e inserta el nuevo registro (INSERT) con el nuevo valor monetario."
+,,,,,Service,"- Consulta: Implementar la lógica comercial en price.service.js para procesar el catálogo plano devuelto por el modelo y, de ser necesario, aplicar reglas de validación básicas sobre los datos monetarios usando abstracciones seguras.
+- Carga Dinámica: Crear el método de negocio para recuperar el precio sugerido. Debe validar la preexistencia de ambos identificadores y lanzar una excepción controlada (ej: PriceNotFoundError) si la combinación no posee tarifa asignada.
+- Transaccionalidad Masiva/Individual: Desarrollar la lógica transaccional en el servicio para actualizar precios. Debe orquestar las operaciones del modelo abriendo un bloque START TRANSACTION en MySQL, cerrando la vigencia anterior mediante el modelo e insertando la nueva fila de forma atómica. Si algo falla, ejecuta el ROLLBACK."
+,,,,,Controller,"- Definir el archivo de rutas price.routes.js exponiendo los contratos de la API REST: GET /api/prices, GET /api/prices/suggested y POST /api/prices.
+- Handler de Listado: Desarrollar la función del controlador que intercepte la petición, invoque al servicio de consulta y despache la matriz de precios vigentes en formato JSON con estados de respuesta estándar (200 OK).
+- Handler de Sugerido: Desarrollar la función del controlador que capture los Query Strings (req.query.modelo y req.query.categoria), maneje el tipado de los datos y despache el escalar del precio de referencia.
+- Handler de Mutación: Desarrollar el punto de entrada para guardar variaciones de precios, capturar el payload en req.body, interceptar excepciones de negocio y mapear los códigos de error a respuestas REST semánticas (400 Bad Request, 500 Internal Server Error)."
+,,,,,Servicio API,"- Crear el archivo de servicios en el cliente React frontend/src/services/price.service.js.
+- Implementar la llamada asíncrona (fetch) apuntando a la constante global de red para consumir el catálogo de precios activos (GET /api/prices).
+- Implementar la función reactiva de consumo para el autocompletado (GET /api/prices/suggested?modelo=X&categoria=Y), parametrizando correctamente la URL de forma dinámica.
+- Implementar la petición mutadora (POST /api/prices) configurando las cabeceras HTTP de envío de JSON (application/json) y el método correspondiente para persistir los cambios desde la grilla."
+,,,,,UI,"- Matriz de Control Administrativo: Diseñar con TailwindCSS la pantalla de administración de listas de precios. Estructurar el componente para renderizar una tabla relacional interactiva (Filas: Modelos de Válvula, Columnas: Categorías de Cliente), con inputs controlados para modificar valores in-situ.
+- Formularios y Estado Local: Implementar la gestión de estados locales en React (useState) para capturar las modificaciones masivas del taller en caliente antes de gatillar la persistencia de datos.
+- Automatización de Órdenes: Modificar la vista existente de Creación de Órdenes de Reparación. Agregar un Hook de efectos (useEffect) que escuche los cambios en los selectores de cliente y modelo de válvula; cuando ambos dejen de ser nulos, disparar la función del servicio cliente y poblar automáticamente el input precio del producto con el valor sugerido."
+,,63,Trazabilidad/Historial de Producto,El sistema debe permitir consultar el historial de estados y modificaciones de un producto.,BDD,Crear un índice en id_producto para que las consultas del historial de una válvula específica sean extremadamente rápidas.,5
+,,,,,Model,"Crear los métodos de persistencia: findAll, findById, create, update y delete"
+,,,,,Service,"No exponer esta tabla para edición (sólo lectura).
+Crear una función registrarCambioEstado(id_producto, nuevo_estado, id_usuario, motivo) que se ejecute dentro de la misma transacción que el update del producto. Si falla el registro del historial, debe fallar el cambio de estado (ACID)."
+,,,,,Controller,Endpoint GET /api/productos/:id/historial que retorne el array de eventos ordenado cronológicamente (de más reciente a más antiguo).
+,,,,,UI,"Crear un componente ProductTimeline.jsx.
+Uso de elementos visuales (ej. un eje vertical) para mostrar la evolución del producto.
+Información clave por evento: Fecha, Estado, Usuario responsable y Motivo."
+,,64,Consulta de Categorías de Cliente,El sistema debe listar las categorías de clientes disponibles.,Service,"Dado que es una lista que no cambiará frecuentemente, implementaremos un método getAllCategorias que retorne todos los registros activos.",1,1:29:00,1:29:00
+,,,,,Controller,Endpoint GET /api/categorias.
+,,,,,UI,"Este endpoint será consumido principalmente por los formularios de ""Alta/Modificación de Clientes"" para popular el <select> de categorías.
+Reutilización: Crear un hook personalizado useCategorias() que maneje la llamada a la API y el estado de carga, para no repetir lógica de fetch en cada formulario."
+,,65,Diccionario de Estados,El sistema debe listar los estados disponibles para productos y mostrar cuáles son las transiciones disponibles para cada estado.,BDD,"Diseña la tabla DiccionarioEstado con columnas: estado_origen, estado_destino",1,1:31:00,1:31:00
+,,,,,Service,Implementar una función getTransicionesValidas(estadoActual) que devuelva los estados permitidos para el siguiente paso.
+,,,,,Servicio API,GET /api/estados/transiciones para que el frontend sepa qué botones mostrar en la interfaz de un producto.
+,,,,,UI,"Un ""Diccionario"" o vista administrativa donde el usuario pueda consultar visualmente el flujo del proceso.
+En el detalle de la válvula: condicionar la aparición de botones de acción basándose en este endpoint. Si el estado es Entregado, el botón de ""Editar Estado"" debe estar oculto o deshabilitado."
+,,15,Importacion de valvulas por lotes,El sistema debe permitir importar lotes de valvulas mediante archivos (definir tipo de archivo mas apto para las tecnologias).,BDD,"Transaccionalidad (ACID): El proceso de importación será una transacción única. Si un registro falla por formato incorrecto, toda la carga debe revertirse (ROLLBACK) para evitar estados inconsistentes (no queremos un ""partido"" de carga donde solo se subieron 500 de 1000 productos).
+Validación de Esquema: Las tablas destino (Valvula, Cliente) ya existen. El endpoint de importación simplemente mapeará el CSV a los campos de estas tablas.",5
+,,,,,Model,Transformaremos los datos del CSV a la estructura de nuestros modelos antes de persistir
+,,,,,Service,"ImportService: Responsable de leer el stream del archivo.
+Parser: Usaremos csv-parser para procesar el flujo de datos sin cargar todo el archivo en memoria (memoria eficiente).
+Validador: Antes de insertar, cada fila pasará por un validador (usaremos Joi o express-validator) para comprobar tipos, campos obligatorios y formato."
+,,,,,UI,"Un componente FileUploader (TailwindCSS) con:
+- Drag & Drop de archivos.
+- Indicador de progreso (progress bar).
+- Reporte de errores: Si la validación falla (ej. ""Fila 42: El campo 'modelo' es obligatorio""), el backend retornará un JSON de errores que el frontend mostrará de forma legible."
+,,20,Importacion de clientes por lote,El sistema debe permitir importar lotes de clientes mediante archivos (definir tipo de archivo mas apto para las tecnologias),BDD,"Tabla Destino: Cliente (PascalCase).
+Validaciones (Integridad): Asegurarse de tener un índice UNIQUE en campos clave como dni o email (dependiendo de cómo identifiquen a sus clientes en el taller).
+Transacción: Nuevamente, utilizaremos una transacción BEGIN / COMMIT para que la importación de clientes sea todo o nada.",5
+,,,,,Service,"Estrategia de Carga: Definir una política de ""Upsert"" (Update or Insert). Si el cliente (por ID o DNI) ya existe, actualizar sus datos; de lo contrario, crearlo.
+Validación de Formatos: Implementar esquemas de validación (usando Joi o similar) para asegurar que, por ejemplo, el campo telefono cumpla con el formato numérico esperado.
+Logging: Generar un reporte de resultados (ej. ""150 clientes procesados, 148 creados, 2 errores de formato"")."
+,,,,,UI,"Reutilizar el componente FileUploader que diseñamos
+Mostrar un resumen post-importación con los resultados, permitiendo al usuario descargar un CSV con los registros que no pudieron ser importados."
